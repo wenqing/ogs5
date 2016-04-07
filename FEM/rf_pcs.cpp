@@ -10132,7 +10132,6 @@ void CRFProcess::Extropolation_GaussValue()
 			elem = m_msh->ele_vector[i];
 			if (elem->GetMark()) // Marked for use
 			{
-				fem->ConfigElement(elem);
 				for(k = 0; k < NS; k++)
 					fem->ExtropolateGauss(this, k);
 			}
@@ -10191,7 +10190,6 @@ void CRFProcess::Extropolation_MatValue()
 			elem = m_msh->ele_vector[i];
 			if (elem->GetMark()) // Marked for use
 			{
-				fem->ConfigElement(elem);
 				fem->CalcNodeMatParatemer();
 			}
 		}
@@ -10755,7 +10753,6 @@ void CRFProcess::CalcSecondaryVariablesTNEQ()
 		elem = m_msh->ele_vector[i];
 		if (elem->GetMark()) // Marked for use
 		{
-			fem->ConfigElement(elem);
 			fem->UpdateSolidDensity(i);          // HS, thermal storage reactions
 			fem->ExtrapolateGauss_ReactRate_TNEQ_TES( this ); // HS added 19.02.2013
 		}
@@ -10791,7 +10788,6 @@ void CRFProcess::CalcSecondaryVariablesTES()
 		CElem* const elem = m_msh->ele_vector[i];
 		if (elem->GetMark()) // Marked for use
 		{
-			fem->ConfigElement(elem);
 			fem->UpdateSolidDensity(i);          // HS, thermal storage reactions
 			fem->ExtrapolateGauss_ReactRate_TNEQ_TES( this ); // HS added 19.02.2013
 		}
