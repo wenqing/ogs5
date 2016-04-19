@@ -10133,7 +10133,7 @@ void CRFProcess::Extropolation_GaussValue()
 			if (elem->GetMark()) // Marked for use
 			{
 				for(k = 0; k < NS; k++)
-					fem->ExtropolateGauss(this, k);
+					fem->ExtropolateGauss(*elem, this, k);
 			}
 		}
 	}
@@ -10190,7 +10190,7 @@ void CRFProcess::Extropolation_MatValue()
 			elem = m_msh->ele_vector[i];
 			if (elem->GetMark()) // Marked for use
 			{
-				fem->CalcNodeMatParatemer();
+				fem->CalcNodeMatParatemer(*elem);
 			}
 		}
 	}
@@ -10704,8 +10704,7 @@ void CRFProcess::CalcSecondaryVariablesUnsaturatedFlow(bool initial)
 				if (elem->GetMark()) // Marked for use
 				{
 					elem->SetOrder(false);
-					fem->ConfigElement(elem, false);
-					fem->CalcSatuation();
+					fem->CalcSatuation(*elem);
 				}
 			}
 		}
@@ -10753,8 +10752,8 @@ void CRFProcess::CalcSecondaryVariablesTNEQ()
 		elem = m_msh->ele_vector[i];
 		if (elem->GetMark()) // Marked for use
 		{
-			fem->UpdateSolidDensity(i);          // HS, thermal storage reactions
-			fem->ExtrapolateGauss_ReactRate_TNEQ_TES( this ); // HS added 19.02.2013
+			fem->UpdateSolidDensity(elem->GetIndex());          // HS, thermal storage reactions
+			fem->ExtrapolateGauss_ReactRate_TNEQ_TES( *elem, this ); // HS added 19.02.2013
 		}
 	}
 }
@@ -10788,8 +10787,8 @@ void CRFProcess::CalcSecondaryVariablesTES()
 		CElem* const elem = m_msh->ele_vector[i];
 		if (elem->GetMark()) // Marked for use
 		{
-			fem->UpdateSolidDensity(i);          // HS, thermal storage reactions
-			fem->ExtrapolateGauss_ReactRate_TNEQ_TES( this ); // HS added 19.02.2013
+			fem->UpdateSolidDensity(elem->GetIndex());          // HS, thermal storage reactions
+			fem->ExtrapolateGauss_ReactRate_TNEQ_TES( *elem, this ); // HS added 19.02.2013
 		}
 	}
 }
