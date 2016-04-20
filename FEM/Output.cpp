@@ -1688,8 +1688,6 @@ double COutput::NODWritePLYDataTEC(int number)
 		tec_file << " ZONE T=\"TIME=" << _time << "\""
 		         << "\n";
 
-	tec_file << " ZONE T=\"TIME=" << _time << "\""
-	         << "\n";
 	//----------------------------------------------------------------------
 	// Write data
 	//======================================================================
@@ -3798,10 +3796,11 @@ void COutput::CalculateTotalFlux(CFEMesh* msh, vector<long>& nodes_on_geo, vecto
 				fac = 0.5; // Not a surface face
 			face->SetFace(elem, j);
 			face->SetOrder(msh->getOrder());
+			face->FillTransformMatrix();
 			face->ComputeVolume();
-			face->SetNormalVector();
-			face->DirectNormalVector();
-			fem_assembler->setOrder(msh->getOrder() + 1);
+			face->SetNormalVector();  // to get it directly from TransformMatrix
+			face->DirectNormalVector(); //
+			fem_assembler->setOrder(msh->getOrder() + 1);  // to get it directly from TransformMatrix
 			fem_assembler->ConfigElement(face, true); // 2D fem
 
 			for (k = 0; k < nfn; k++)
