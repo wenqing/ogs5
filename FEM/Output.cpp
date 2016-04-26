@@ -936,8 +936,8 @@ void COutput::NODDomainWriteBinary_Header()
 
 	string file_name;
 
-	file_name
-	    = file_base_name + "_" + convertProcessTypeToString(getProcessType()) + "_domain_" + "node_value_header.txt";
+	file_name = file_base_name + "_" + convertProcessTypeToString(getProcessType()) + "_domain_"
+	            + "node_value_header.txt";
 	std::cout << "Name of the header file: " << file_name << "\n";
 
 	ofstream os(file_name.data(), ios::trunc | ios::out);
@@ -2021,8 +2021,8 @@ void COutput::NODWritePNTDataTEC(double time_current, int time_step_number)
 				double val_n;
 
 				if (_nod_value_vector[i].find("DELTA") == 0) // JOD 2014-11-10
-					val_n
-					    = m_pcs->GetNodeValue(msh_node_number, 1) - m_pcs->GetNodeValue(msh_node_number, NodeIndex[i]);
+					val_n = m_pcs->GetNodeValue(msh_node_number, 1)
+					        - m_pcs->GetNodeValue(msh_node_number, NodeIndex[i]);
 				else
 					val_n = m_pcs->GetNodeValue(msh_node_number, NodeIndex[i]);
 				tec_file << val_n << " ";
@@ -2064,8 +2064,7 @@ void COutput::NODWritePNTDataTEC(double time_current, int time_step_number)
 		// OK411
 		for (size_t k = 0; k < mfp_value_vector.size(); k++)
 			tec_file << MFPGetNodeValue(msh_node_number, mfp_value_vector[k],
-			                            atoi(&mfp_value_vector[k][mfp_value_vector[k].size() - 1]) - 1)
-			         << " "; // NB
+			                            atoi(&mfp_value_vector[k][mfp_value_vector[k].size() - 1]) - 1) << " "; // NB
 	}
 	tec_file << "\n";
 	//----------------------------------------------------------------------
@@ -3798,9 +3797,9 @@ void COutput::CalculateTotalFlux(CFEMesh* msh, vector<long>& nodes_on_geo, vecto
 			face->SetOrder(msh->getOrder());
 			face->FillTransformMatrix();
 			face->ComputeVolume();
-			face->SetNormalVector();  // to get it directly from TransformMatrix
+			face->SetNormalVector(); // to get it directly from TransformMatrix
 			face->DirectNormalVector(); //
-			fem_assembler->setOrder(msh->getOrder() + 1);  // to get it directly from TransformMatrix
+			fem_assembler->setOrder(msh->getOrder() + 1); // to get it directly from TransformMatrix
 			fem_assembler->ConfigElement(face, true); // 2D fem
 
 			for (k = 0; k < nfn; k++)
@@ -3819,8 +3818,10 @@ void COutput::CalculateTotalFlux(CFEMesh* msh, vector<long>& nodes_on_geo, vecto
 					                   * mfp_vector[0]->SpecificHeatCapacity() * mfp_vector[0]->Density();
 			}
 			///
-			fem_assembler->FaceNormalFluxIntegration(elements_at_geo[i], nodesFVal, nodesFVal_adv, nodesFace, face, m_pcs, face->normal_vector);
-			for (k = 0; k < nfn; k++) {
+			fem_assembler->FaceNormalFluxIntegration(elements_at_geo[i], nodesFVal, nodesFVal_adv, nodesFace, face,
+			                                         m_pcs, face->normal_vector);
+			for (k = 0; k < nfn; k++)
+			{
 				e_node = elem->GetNode(nodesFace[k]);
 				// -->PETSC
 				NVal_diff[G2L[e_node->GetIndex()]] += fac * nodesFVal[k];
