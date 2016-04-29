@@ -664,6 +664,10 @@ public:
 	void SetNODValues(); // OK
 	void CalcFluxesForCoupling(); // MB
 	void SetNODFlux(); // OK
+
+
+	double computeMass();
+
 	//
 	void AssembleParabolicEquationRHSVector(); // OK
 	// 15-EQS

@@ -15960,3 +15960,20 @@ delete node_concs;
 }
 
 */
+
+
+double CRFProcess::computeMass()
+{
+	double mass = 0.;
+		for (size_t i = 0; i < m_msh->ele_vector.size(); i++)
+		{
+			CElem* elem = m_msh->ele_vector[i];
+			if (elem->GetMark() && elem->GetExcavState() == -1)
+			{
+				elem->SetOrder(false);
+				mass += fem->calcElementMass(*elem);
+			}
+		}
+
+		return mass;
+}

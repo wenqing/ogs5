@@ -11652,6 +11652,38 @@ double CFiniteElementStd::Get_ctx_(long ele_index, int gaussp, int i_dim){
     return val;
 }*/
 
+double CFiniteElementStd::calcElementMass(MeshLib::CElem& elem)
+{
+	ConfigElement(&elem);
+
+	Config();
+
+	double mass_g = 0.;
+
+	// Loop over Gauss points
+	int gp_r, gp_s, gp_t;
+	double dens_arg[3];
+	const double Sg0 = 1.057330976827e-001;
+	for (gp = 0; gp < nGaussPoints; gp++)
+	{
+		double fkt = GetGaussData(gp, gp_r, gp_s, gp_t);
+
+		getShapefunctValues(gp, 1); // For thoese used in the material parameter caculation
+
+		double poro = MediaProp->Porosity(elem.GetIndex(), pcs->m_num->ls_theta);
+		PG = interpolate(NodalVal1); // Capillary pressure
+		Sw = MediaProp->SaturationCapillaryPressureFunction(PG);
+
+		PG2 = interpolate(NodalVal_p2);
+		dens_arg[0] = PG2;
+		rho_ga = GasProp->Density(dens_arg);
+
+		mass_g += poro * (1. - Sw - Sg0) * rho_ga * fkt;  
+	}
+
+	return mass_g;
+}
+
 } // end namespace
 
 //////////////////////////////////////////////////////////////////////////

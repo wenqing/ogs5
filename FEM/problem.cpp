@@ -2046,6 +2046,8 @@ inline double Problem::MultiPhaseFlow()
 	if (m_pcs->OutputMassOfGasInModel == true) // 05/2012 BG
 		OutputMassOfGasInModel(m_pcs);
 
+	double mass = m_pcs->computeMass();
+
 	return error;
 }
 
