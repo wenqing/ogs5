@@ -180,6 +180,8 @@ private:
 	int msize;
 
 	static const size_t max_processes = 16;
+
+	std::fstream* _ofile;
 };
 
 extern bool MODCreate(); // OK

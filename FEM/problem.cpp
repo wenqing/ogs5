@@ -118,6 +118,11 @@ Problem::Problem (char* filename) :
 	_geo_obj (new GEOLIB::GEOObjects), _geo_name (filename),
 	mrank(0), msize(0)
 {
+
+	std::string m_file_name = FileName + "_total_mass.txt";
+	_ofile = new std::fstream(m_file_name.c_str(), ios::trunc | ios::out);
+
+
 	if (filename != NULL)
 	{
 		// read data
@@ -564,6 +569,7 @@ Problem::Problem (char* filename) :
 		}
 	}
 #endif
+
 }
 
 /**************************************************************************
@@ -635,6 +641,9 @@ Problem::~Problem()
 #endif
 		std::cout << "\n^O^: Your simulation is terminated normally ^O^ "
 		          << "\n";
+
+		delete _ofile;
+
 }
 
 /*-------------------------------------------------------------------------
@@ -2046,7 +2055,8 @@ inline double Problem::MultiPhaseFlow()
 	if (m_pcs->OutputMassOfGasInModel == true) // 05/2012 BG
 		OutputMassOfGasInModel(m_pcs);
 
-	double mass = m_pcs->computeMass();
+
+	*_ofile << current_time << " " << m_pcs->computeMass() << std::endl;
 
 	return error;
 }
