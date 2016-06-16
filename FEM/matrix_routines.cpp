@@ -3550,8 +3550,8 @@ void MXDumpGLS(const char* name, int modus, double* rechts, double* ergebnis)
 			for (j = 0; j < dim; j++)
 				if (fabs(MXGet(i, j)) > 0.0)
 				{
-					FilePrintDouble(dumpfile, (double)i);
-					FilePrintDouble(dumpfile, (double)j);
+					FilePrintLong(dumpfile, i);
+					FilePrintLong(dumpfile, j);
 					FilePrintDouble(dumpfile, MXGet(i, j));
 					FilePrintString(dumpfile, "\n");
 				}
@@ -3567,8 +3567,8 @@ void MXDumpGLS(const char* name, int modus, double* rechts, double* ergebnis)
 			if (ergebnis)
 				if (fabs(ergebnis[i]) > MKleinsteZahl)
 				{
-					FilePrintDouble(dumpfile, (double)i);
-					FilePrintDouble(dumpfile, (double)(dim + 2));
+					FilePrintLong(dumpfile, i);
+					FilePrintLong(dumpfile, dim + 2);
 					FilePrintDouble(dumpfile, ergebnis[i]);
 					FilePrintString(dumpfile, "\n");
 				}
@@ -3578,7 +3578,7 @@ void MXDumpGLS(const char* name, int modus, double* rechts, double* ergebnis)
 		FilePrintString(dumpfile, "RHS\n");
 		for (i = 0; i < dim; i++)
 		{
-			FilePrintDouble(dumpfile, (double)i);
+			FilePrintLong(dumpfile, i);
 			FilePrintDouble(dumpfile, rechts[i]);
 			FilePrintString(dumpfile, "\n");
 		}
@@ -3603,8 +3603,8 @@ void MXDumpGLS(const char* name, int modus, double* rechts, double* ergebnis)
 			for (j = 0; j < dim; j++)
 				if (fabs(MXGet(i, j)) > MKleinsteZahl)
 				{
-					FilePrintDouble(dumpfile, (double)i);
-					FilePrintDouble(dumpfile, (double)j);
+					FilePrintLong(dumpfile, i);
+					FilePrintLong(dumpfile, j);
 					FilePrintDouble(dumpfile, MXGet(i, j));
 					FilePrintString(dumpfile, "\n");
 				}

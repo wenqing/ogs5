@@ -647,10 +647,10 @@ int FilePrintLong(FILE* f, long x)
 int FilePrintDouble(FILE* f, double x)
 {
 #ifdef FORMAT_DOUBLE
-	if (fprintf(f, " % #*.*g ", FPD_GESAMT, FPD_NACHKOMMA, x) < 0)
+	if (fprintf(f, " % #*.*e ", FPD_GESAMT, FPD_NACHKOMMA, x) < 0)
 		return 0;
 #else
-	if (fprintf(f, " % #g ", x) < 0)
+	if (fprintf(f, " % #e ", x) < 0)
 		return 0;
 #endif
 	return 1;
