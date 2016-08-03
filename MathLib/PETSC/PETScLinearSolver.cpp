@@ -269,6 +269,11 @@ void PETScLinearSolver::Solver()
 	}
 	else if (reason < 0)
 	{
+		const char* slv_type;
+		const char* prc_type;
+		KSPGetType(lsolver, &slv_type);
+		PCGetType(prec, &prc_type);
+		PetscPrintf(PETSC_COMM_WORLD, "\nLinear solver %s with %s preconditioner", slv_type, prc_type);
 		PetscPrintf(PETSC_COMM_WORLD, "\nOther kind of divergence: this should not happen.\n");
 	}
 	else

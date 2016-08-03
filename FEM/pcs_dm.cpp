@@ -681,13 +681,13 @@ double CRFProcessDeformation::Execute(int loop_process_number)
 				std::cout << "      Assembling equation system..."
 				          << "\n";
 
-#if defined(USE_MPI) || defined(USE_PETSC) // WW
+#if defined(USE_MPI) // WW
 			clock_t cpu_time = 0; // WW
 			cpu_time = -clock();
 #endif
 			if (m_num->nls_method != 2) // Not JFNK method. 05.08.2010. WW
 				GlobalAssembly();
-#if defined(USE_MPI) || defined(USE_PETSC) // WW
+#if defined(USE_MPI) // WW
 			cpu_time += clock();
 			cpu_time_assembly += cpu_time;
 #endif
@@ -858,6 +858,9 @@ double CRFProcessDeformation::Execute(int loop_process_number)
 	// Load step
 	//
 	// For coupling control
+#if defined(USE_MPI) || defined(USE_PETSC)
+	if (myrank == 0)
+#endif
 	std::cout << "      Deformation process converged."
 	          << "\n";
 	Error = 0.0;
@@ -2644,6 +2647,16 @@ void CRFProcessDeformation::GlobalAssembly()
 	// STD
 	else
 #endif //#if !defined(USE_PETSC) // && !defined(other parallel libs)//10.3012. WW
+
+#ifdef USE_PETSC
+	PetscLogDouble v1, v2;
+#ifdef USEPETSC34
+	PetscTime(&v1);
+#else
+	PetscGetTime(&v1);
+#endif
+#endif
+
 	{
 		GlobalAssembly_DM();
 
@@ -2712,6 +2725,15 @@ void CRFProcessDeformation::GlobalAssembly()
 #endif
 		//
 	}
+
+#ifdef USE_PETSC
+#ifdef USEPETSC34
+PetscTime(&v2);
+#else
+		PetscGetTime(&v2);
+#endif
+cpu_time_assembly += v2 - v1;
+#endif
 }
 
 /*!  \brief Assembe matrix and vectors

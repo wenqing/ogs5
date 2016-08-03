@@ -299,8 +299,10 @@ public:
 #endif
 
 //
-#if defined(USE_MPI) || defined(USE_PETSC) // WW
+#if defined(USE_MPI)// WW
 	clock_t cpu_time_assembly;
+#elif defined(USE_PETSC) 
+	PetscLogDouble cpu_time_assembly;
 #endif
 	// Position of unknowns from different DOFs in the system equation
 	//....................................................................
@@ -895,14 +897,7 @@ public:
 	int PCS_ExcavState; // WX
 	int Neglect_H_ini; // WX
 	int UpdateIniState; // WX
-#if defined(USE_MPI) || defined(USE_PETSC) // WW
-	void Print_CPU_time_byAssembly(std::ostream& os = std::cout) const
-	{
-		os << "\n***\nCPU time elapsed in the linear equation of " << convertProcessTypeToString(getProcessType())
-		   << "\n";
-		os << "--Global assembly: " << (double)cpu_time_assembly / CLOCKS_PER_SEC << "\n";
-	}
-#endif
+
 	// HS 10.2011
 	double m_rho_s_0;
 	conversion_rate* m_conversion_rate;

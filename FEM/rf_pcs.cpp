@@ -411,11 +411,21 @@ Problem* CRFProcess::getProblemObjectPointer() const
 **************************************************************************/
 CRFProcess::~CRFProcess(void)
 {
-#ifdef USE_PETSC
-	PetscPrintf(PETSC_COMM_WORLD, "\t\n>>Total Wall clock time in the assembly for %s (with PETSC):%f s\n",
-	            FiniteElement::convertProcessTypeToString(this->getProcessType()).c_str(), cpu_time_assembly);
-
+#if defined(USE_MPI)// WW
+	void Print_CPU_time_byAssembly(std::ostream& os = std::cout) const
+	{
+		os << "\n***\nCPU time elapsed in the linear equation of "
+		   << convertProcessTypeToString(getProcessType())
+		   << "\n";
+		os << "--Global assembly: " << (double)cpu_time_assembly / CLOCKS_PER_SEC << "\n";
+	}
+#elif defined(USE_PETSC) 
+	PetscPrintf(PETSC_COMM_WORLD,
+		      "\t\n>>Total Wall clock time in the assembly for %s (with PETSC):%f s\n",
+		  FiniteElement::convertProcessTypeToString(this->getProcessType()).c_str(),
+		  cpu_time_assembly);
 #endif
+
 	long i;
 	//----------------------------------------------------------------------
 	// Finite element
@@ -1538,10 +1548,6 @@ void PCSDestroyAllProcesses(void)
 	for (j = 0; j < (int)pcs_vector.size(); j++)
 	{
 		m_process = pcs_vector[j];
-#ifdef USE_MPI // WW
-		//  if(myrank==0)
-		m_process->Print_CPU_time_byAssembly();
-#endif
 		if (m_process->pcs_nval_data)
 			m_process->pcs_nval_data = (PCS_NVAL_DATA*)Free(m_process->pcs_nval_data);
 		if (m_process->pcs_eval_data)
@@ -4837,14 +4843,14 @@ double CRFProcess::Execute()
 #endif
 
 // Assembly
-#if defined(USE_MPI) || defined(USE_PETSC)
+#if defined(USE_MPI)
 		clock_t cpu_time = 0; // WW
 		cpu_time = -clock();
 #endif
 		femFCTmode = true;
 		GlobalAssembly();
 		femFCTmode = false;
-#if defined(USE_MPI) || defined(USE_PETSC)
+#if defined(USE_MPI)
 		cpu_time += clock();
 		cpu_time_assembly += cpu_time;
 #endif
