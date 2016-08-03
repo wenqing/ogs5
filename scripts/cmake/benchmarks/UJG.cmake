@@ -30,6 +30,16 @@ Benchmark(AUTHOR UJG
 )
 
 Benchmark(AUTHOR UJG
+	PATH HM/hm_dyn_tri
+	CONFIG FEM
+	RUNTIME 4
+	OUTPUT_FILES
+		hm_dyn_tri_domain_DEFORMATION_FLOW_tri.tec
+		hm_dyn_tri_ply_ex2_Out_axis_t1_DEFORMATION_FLOW.tec
+		hm_dyn_tri_ply_ex2_out_Bedge_t2_DEFORMATION_FLOW.tec
+)
+
+Benchmark(AUTHOR UJG
 	PATH HM/hm_unsat
 	CONFIG FEM
 	RUNTIME 4
