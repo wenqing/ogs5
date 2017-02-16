@@ -1398,6 +1398,9 @@ double CFluidProperties::MATCalcFluidDensityMethod8(double Press, double TempK, 
 	int i;
 	double salinity;
 
+	if (TempK < 273.15) // in Celsius
+       TempK += 273.17;
+
 	pressure_average = Press;
 	temperature_average = TempK;
 	salinity = C_0;
@@ -3632,6 +3635,13 @@ double CFluidProperties::drhodP(double* variables)
 		case 7: // use of fct file
 			drhodP = 1.0 / p; // to be done
 			break;
+		case 8:
+			{
+                const double perturbation = 1.e-4;
+				drhodP = (MATCalcFluidDensityMethod8(p+perturbation, T, 0.0)
+					      -MATCalcFluidDensityMethod8(p, T, 0.0)) / perturbation;
+			    break;
+			}
 
 		case 15: // volume translated Peng-Robinson
 			if (eos_name == "VTPR" || eos_name == "PR" || eos_name == "IDEAL")
@@ -3756,7 +3766,13 @@ double CFluidProperties::drhodT(double* variables)
 		case 7: // use of fct file
 			drhodT = 1.0 / T;
 			break;
-
+		case 8:
+			{
+                const double perturbation = 1.e-4;
+				drhodT = (MATCalcFluidDensityMethod8(p, T+perturbation, 0.0)
+					      -MATCalcFluidDensityMethod8(p, T, 0.0)) / perturbation;
+			    break;
+			}
 		case 15: // volume translated Peng-Robinson
 			if (eos_name == "VTPR" || eos_name == "PR" || eos_name == "IDEAL")
 			{
