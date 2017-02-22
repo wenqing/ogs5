@@ -27,6 +27,8 @@
 #include "eos.h"
 #include "tools.h"
 
+#include "Material/Fluid/Viscosity/WaterViscosityIAPWS.h"
+
 using namespace std;
 
 /**********************************************************************
@@ -960,8 +962,10 @@ double Fluid_Viscosity(double rho, double T, double p, int fluid)
 			h = co2_viscosity(rho, T);
 			break;
 		case 1: // WATER
-			// h = 1E-3;
-			h = h2o_viscosity_IAPWS(rho, T);
+			{
+				const double absT = (T<273.15) ? T+273.15 : T;
+				h = MaterialLib::Fluid::WaterViscosityIAPWS::getValue(absT, rho);
+			}
 			break;
 		case 2: // METHANE
 			// h = ch4_viscosity_295K(p);
