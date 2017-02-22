@@ -12,7 +12,7 @@
 
 #include "WaterViscosityIAPWS.h"
 
-#include <array>
+#include <vector>
 #include <cmath>
 
 namespace MaterialLib
@@ -30,11 +30,11 @@ static const double Hij[6][7] = {
 
 static double computeBarMu0Factor(const double barT);
 
-static std::array<double, 6> computeSeriesFactorTForMu1(const double barT);
-static std::array<double, 7> computeSeriesFactorRhoForMu1(const double bar_rho);
+static std::vector<double> computeSeriesFactorTForMu1(const double barT);
+static std::vector<double> computeSeriesFactorRhoForMu1(const double bar_rho);
 static double computeBarMu1Factor(
-    const std::array<double, 6>& series_factorT,
-    const std::array<double, 7>& series_factorRho);
+    const std::vector<double>& series_factorT,
+    const std::vector<double>& series_factorRho);
 
 static double computedBarMu_dbarT(const double barT, double bar_rho);
 static double computedBarMu_dbarRho(const double barT, double bar_rho);
@@ -94,9 +94,9 @@ double computeBarMu0Factor(const double barT)
     return sum_val;
 }
 
-std::array<double, 6> computeSeriesFactorTForMu1(const double barT)
+std::vector<double> computeSeriesFactorTForMu1(const double barT)
 {
-    std::array<double, 6> series_factorT;
+    std::vector<double> series_factorT(6);
     series_factorT[0] = 1.;
     const double barT_fac = 1 / barT - 1.0;
     for (int i = 1; i < 6; i++)
@@ -107,9 +107,9 @@ std::array<double, 6> computeSeriesFactorTForMu1(const double barT)
     return series_factorT;
 }
 
-std::array<double, 7> computeSeriesFactorRhoForMu1(const double bar_rho)
+std::vector<double> computeSeriesFactorRhoForMu1(const double bar_rho)
 {
-    std::array<double, 7> series_factorRho;
+    std::vector<double> series_factorRho(7);
     series_factorRho[0] = 1.;
     for (int i = 1; i < 7; i++)
     {
@@ -119,8 +119,8 @@ std::array<double, 7> computeSeriesFactorRhoForMu1(const double bar_rho)
     return series_factorRho;
 }
 
-double computeBarMu1Factor(const std::array<double, 6>& series_factorT,
-                           const std::array<double, 7>& series_factorRho)
+double computeBarMu1Factor(const std::vector<double>& series_factorT,
+                           const std::vector<double>& series_factorRho)
 {
     double sum_val = 0.;
     for (int i = 0; i < 6; i++)
