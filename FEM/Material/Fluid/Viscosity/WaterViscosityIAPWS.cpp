@@ -50,8 +50,8 @@ double WaterViscosityIAPWS::getValue(const double T, const double rho)
 
     const double mu0 = 100. * std::sqrt(bar_T) / computeBarMu0Factor(bar_T);
 
-    const auto& series_factorT = computeSeriesFactorTForMu1(bar_T);
-    const auto& series_factorRho = computeSeriesFactorRhoForMu1(bar_rho);
+    const std::vector<double>& series_factorT = computeSeriesFactorTForMu1(bar_T);
+    const std::vector<double>& series_factorRho = computeSeriesFactorRhoForMu1(bar_rho);
     const double mu1 = std::exp(
         bar_rho * computeBarMu1Factor(series_factorT, series_factorRho));
 
@@ -76,7 +76,7 @@ double WaterViscosityIAPWS::getdValuedRho(const double T, const double rho)
     const double _ref_rho = 322.0;  // reference density in `kg/m^3`
     const double _ref_mu = 1.0e-6;  // reference viscosity in Pa.s
 
-	const double bar_T = T / _ref_T;
+    const double bar_T = T / _ref_T;
     const double bar_rho = rho / _ref_rho;
 
     return _ref_mu * computedBarMu_dbarRho(bar_T, bar_rho) / _ref_rho;
@@ -153,8 +153,8 @@ double computedBarMu_dbarT(const double barT, double bar_rho)
         50. / (mu0_factor * sqrt_barT) -
         100. * sqrt_barT * dmu0_factor_dbarT / (mu0_factor * mu0_factor);
 
-    const auto& series_factorT = computeSeriesFactorTForMu1(barT);
-    const auto& series_factorRho = computeSeriesFactorRhoForMu1(bar_rho);
+    const std::vector<double>& series_factorT = computeSeriesFactorTForMu1(barT);
+    const std::vector<double>& series_factorRho = computeSeriesFactorRhoForMu1(bar_rho);
 
     double dmu1_factor_dbarT = 0.0;
     for (int i = 1; i < 6; i++)
@@ -179,8 +179,8 @@ double computedBarMu_dbarT(const double barT, double bar_rho)
 
 double computedBarMu_dbarRho(const double barT, double bar_rho)
 {
-    const auto& series_factorT = computeSeriesFactorTForMu1(barT);
-    const auto& series_factorRho = computeSeriesFactorRhoForMu1(bar_rho);
+    const std::vector<double>& series_factorT = computeSeriesFactorTForMu1(barT);
+    const std::vector<double>& series_factorRho = computeSeriesFactorRhoForMu1(bar_rho);
 
     double dmu1_factor_dbar_rho = 0.0;
     for (int i = 0; i < 6; i++)
