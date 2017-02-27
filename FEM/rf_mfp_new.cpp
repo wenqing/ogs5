@@ -2897,6 +2897,8 @@ double CFluidProperties::MATCalcHeatConductivityMethod2(double Press, double Tem
 	double TstarTilda, PstarTilda, RhostarTilda;
 	double First_derivative, Second_derivative;
 
+	TempK = (TempK<273.15) ? TempK+273.15 : TempK;
+
 	pressure_average = Press;
 	temperature_average = TempK;
 	Salinity = C_0;

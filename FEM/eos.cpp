@@ -1002,7 +1002,10 @@ double Fluid_Heat_Conductivity(double rho, double T, int fluid)
 			break;
 		case 1: // WATER
 			// h = 0.598; // [W/m/K] at 293K and 1 bar
-			h = h2o_heat_conductivity_IAPWS_ind(rho, T);
+			{
+				const double absT = (T<273.15) ? T+273.15 : T;
+				h = h2o_heat_conductivity_IAPWS_ind(rho, absT);
+			}
 			break;
 		case 2: // METHANE
 			h = ch4_heat_conductivity(rho, T);
