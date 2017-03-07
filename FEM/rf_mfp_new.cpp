@@ -3253,6 +3253,7 @@ double CFluidProperties::MATCalcFluidHeatCapacityMethod2(double Press, double Te
 	int i;
 	// WW double salinity;
 	double Cp; // WW , Cv;
+	TempK = (TempK<273.15) ? TempK+273.15 : TempK;
 
 	pressure_average = Press;
 	temperature_average = TempK;
