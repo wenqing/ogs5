@@ -1193,7 +1193,7 @@ void Problem::Euler_TimeDiscretize()
 #endif
 			std::cout << "\n\n#############################################################\n";
 			std::cout << "Time step: " << aktueller_zeitschritt << "|  Time: " << current_time
-			          << "|  Time step size: " << dt << "\n";
+			          << "|  Time step size: " << dt << std::flush;
 			if (dt_rec > dt)
 			{
 				std::cout << "This time step size was modified to match a critical time!"
