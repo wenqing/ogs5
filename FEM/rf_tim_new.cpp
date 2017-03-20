@@ -350,6 +350,8 @@ std::ios::pos_type CTimeDiscretization::Read(std::ifstream* tim_file)
 					}
 					else
 						max_time_step = 0.0;
+					if (real_type  = 3)
+						line >> min_time_step;
 					line.clear();
 				}
 				else if (time_control_type == TimeControlType::DYNAMIC_VARIABLE) // JT2012

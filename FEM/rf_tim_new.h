@@ -137,7 +137,7 @@ public:
 	int GetPITimeStepCrtlType() const { return PI_tsize_ctrl_type; }
 	double GetTimeStep() const { return this_stepsize; }
 	double GetEndTime() const { return time_end; }
-	void SetTimeStep(double hnew) { this_stepsize = hnew; }
+	void SetTimeStep(double hnew) { this_stepsize = std::max(hnew, min_time_step); }
 	double GetRTol() const { return relative_error; }
 	double GetATol() const { return absolute_error; }
 	double GetMaximumTSizeRestric() const { return h_max; }
