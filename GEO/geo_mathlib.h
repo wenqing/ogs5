@@ -37,7 +37,7 @@ extern double CalcPyramidVolume(double* x, double* y, double* z); // CC
 extern double CalcPrismVolume(double* x, double* y, double* z); // CC
 extern double MCalcProjectionOfPointOnPlane(double* pt, double* e1, double* e2, double* e3, double* proj);
 extern double MCalcProjectionOfPointOnPlane(double* pt, double* e1, double* e2, double* e3, double* proj);
-extern double MCalcDistancePointToPoint(double* pt1, double* pt2);
+extern double MCalcDistancePointToPoint(const double* pt1, const double* pt2);
 extern long* TOLSortNodes1(long*, double*, int);
 extern int MPhi2D(double* vf, double r, double s);
 #ifdef RFW_FRACTURE

@@ -480,7 +480,7 @@ double M3Determinante(double* m)
 	       - m[1] * m[3] * m[8];
 }
 
-double MCalcDistancePointToPoint(double* pt1, double* pt2)
+double MCalcDistancePointToPoint(const double* pt1, const double* pt2)
 {
 	double vec[3];
 
