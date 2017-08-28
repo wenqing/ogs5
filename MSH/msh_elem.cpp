@@ -457,9 +457,9 @@ void CElem::SetFace(CElem* onwer, const int Face)
 	patch_index = owner->patch_index;
 	switch (owner->geo_type)
 	{
-		// case MshElemType::LINE:  // 1-D bar element
-		case MshElemType::QUAD: // 2-D quadrilateral element
-			this->setElementProperties(MshElemType::LINE); // JOD 2014-11-10
+		case MshElemType::QUAD:
+		case MshElemType::TRIANGLE:
+			this->setElementProperties(MshElemType::LINE);
 			break;
 		case MshElemType::HEXAHEDRON: // 3-D hexahedral element
 			this->setElementProperties(MshElemType::QUAD8);

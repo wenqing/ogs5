@@ -4022,7 +4022,8 @@ void COutput::NODWriteTotalFlux(double time_current, int time_step_number)
 	// File handling
 	char number_char[3];
 	string number_string = number_char;
-	string tec_file_name = convertProcessTypeToString(getProcessType()) + "_" + geo_name + "_TOTAL_FLUX.txt";
+	string tec_file_name = file_base_name + convertProcessTypeToString(getProcessType())
+							+ "_" + geo_name + "_TOTAL_FLUX.txt";
 
 	if (time_step_number == 0)
 	{
