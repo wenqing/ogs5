@@ -461,11 +461,13 @@ void REACT::ExecutePQCString(void)
 			// signal = myrank_all;
 			MPI_Isend(&strlength, 1, MPI_INT, idy, myrank, MPI_COMM_WORLD, &req1);
 			std::string tmp = rankliststringstore[myrank][j]->str();
-			char message[tmp.length() + 1];
+			// char message[tmp.length() + 1];
+			const std::size_t size_message = tmp.length() +1;
+			std::string message(size_message, ' ');
 			for (std::size_t i = 0; i < tmp.length(); i++)
 				message[i] = tmp[i];
 			message[tmp.length()] = '\0';
-			MPI_Send(message, tmp.length() + 1, MPI_CHAR, idy, myrank, MPI_COMM_WORLD);
+			MPI_Send(&message[0], tmp.length() + 1, MPI_CHAR, idy, myrank, MPI_COMM_WORLD);
 		}
 #endif
 
@@ -490,8 +492,10 @@ void REACT::ExecutePQCString(void)
 		while (num_signal < static_cast<int>(rankrankliststore[myrank].size()))
 		{
 			MPI_Recv(&strlength, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status1);
-			char string_RT[strlength + 1];
-			MPI_Recv(string_RT, strlength + 1, MPI_CHAR, status1.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status2);
+			const int string_length = strlength + 1;
+			//char string_RT[string_length + 1];
+			std::string string_RT(string_length, ' ');
+			MPI_Recv(&string_RT[0], strlength + 1, MPI_CHAR, status1.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status2);
 			std::size_t rank_RT = 0;
 			for (std::size_t j = 1; j < rankrankliststore[myrank].size(); j++)
 			{
@@ -501,7 +505,7 @@ void REACT::ExecutePQCString(void)
 					break;
 				}
 			}
-			(*ranklistoutstringstore[myrank][rank_RT]) << string_RT;
+			(*ranklistoutstringstore[myrank][rank_RT]) << &string_RT[0];
 			num_signal++;
 		}
 	MPI_Barrier(comm_DDC);
