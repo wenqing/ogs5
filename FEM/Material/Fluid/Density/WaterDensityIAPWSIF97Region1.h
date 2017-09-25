@@ -28,8 +28,8 @@ class WaterDensityIAPWSIF97Region1
 {
 public:
     WaterDensityIAPWSIF97Region1()
-        : _ref_T(1386.0), _ref_p(1.653e7), _sR(461.526),
-          _gibbs_free_energy(DimensionLessGibbsFreeEnergyRegion1()){};
+        : _gibbs_free_energy(DimensionLessGibbsFreeEnergyRegion1()),
+          _ref_T(1386.0), _ref_p(1.653e7), _sR(461.526) {}
 
     /**  Get density value.
          \param p   Pressure.
