@@ -1544,7 +1544,11 @@ double CFiniteElementStd::CalCoefMass()
 			val = MediaProp->StorageFunction(Index, unit, pcs->m_num->ls_theta);
 
 			// get drho/dp/rho from material model or direct input
+#ifdef USE_FREESTEAM
+			if (FluidProp->compressibility_model_pressure > 0 || FluidProp->density_model == 8)
+#else
 			if (FluidProp->compressibility_model_pressure > 0)
+#endif
 			{
 				rho_val = FluidProp->Density();
 				arg[0] = interpolate(NodalVal1); //   p
