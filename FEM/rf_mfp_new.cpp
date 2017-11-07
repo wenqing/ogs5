@@ -1068,8 +1068,7 @@ double CFluidProperties::Density(double* variables)
 				}
 #else
 				{
-					const double T = ( variables[1] < 273.15) ? variables[1] + 273.15 :  variables[1];
-					density = densityIAPWS->getValue(variables[0], T);
+					density = densityIAPWS->getValue(variables[0], variables[1]);
 					// // M14 von JdJ // 25.1.12 Added by CB for density output AB-model, 
 					//MATCalcFluidDensityMethod8(variables[0], variables[1], variables[2]);
 				}
@@ -1242,8 +1241,7 @@ double CFluidProperties::Density(double* variables)
 				}
 #else
 				{
-					const double T = ( primary_variable[1] < 273.15) ? primary_variable[1] + 273.15 :  primary_variable[1];
-					density = densityIAPWS->getValue(primary_variable[0], T);
+					density = densityIAPWS->getValue(primary_variable[0], primary_variable[1]);
 					// // M14 von JdJ // 25.1.12 Added by CB for density output AB-model, 
 					//MATCalcFluidDensityMethod8(primary_variable[0], primary_variable[1], primary_variable[2]);
 				}
@@ -1497,9 +1495,6 @@ double CFluidProperties::MATCalcFluidDensityMethod8(double Press, double TempK, 
 	double L[35], J[35], n[35];
 	int i;
 	double salinity;
-
-	if (TempK < 273.15) // in Celsius
-       TempK += 273.17;
 
 	pressure_average = Press;
 	temperature_average = TempK;
@@ -2244,7 +2239,7 @@ double MFPCalcFluidsHeatCapacity(CFiniteElementStd* assem)
 		PG = assem->interpolate(assem->NodalValC1);
 		Sw = assem->MediaProp->SaturationCapillaryPressureFunction(PG);
 		double PG2 = assem->interpolate(assem->NodalVal_p2);
-		TG = assem->interpolate(assem->NodalVal1) + PhysicalConstant::CelsiusZeroInKelvin;
+		TG = assem->interpolate(assem->NodalVal1);
 		rhow = assem->FluidProp->Density();
 		rho_gw = assem->FluidProp->vaporDensity(TG) * exp(-PG / (rhow * SpecificGasConstant::WaterVapour * TG));
 		p_gw = rho_gw * SpecificGasConstant::WaterVapour * TG;
@@ -2253,8 +2248,6 @@ double MFPCalcFluidsHeatCapacity(CFiniteElementStd* assem)
 		m_mfp = mfp_vector[1];
 		// 2 Dec 2010 AKS
 		rho_g = rho_gw + m_mfp->Density(dens_aug);
-		// double rho_g = PG2*FluidConstant::ComponentMolarMassAir()
-		// /(FluidConstant::GasConstant()*(assem->TG+273.15));\\WW
 		//
 		m_mfp = mfp_vector[0];
 		heat_capacity_fluids = Sw * m_mfp->Density() * m_mfp->SpecificHeatCapacity();
@@ -2579,8 +2572,6 @@ double CFluidProperties::MATCalcHeatConductivityMethod2(double Press, double Tem
 	double Tstar, Pstar;
 	double TstarTilda, PstarTilda, RhostarTilda;
 	double First_derivative, Second_derivative;
-
-	TempK = (TempK<273.15) ? TempK+273.15 : TempK;
 
 	pressure_average = Press;
 	temperature_average = TempK;
@@ -2936,7 +2927,6 @@ double CFluidProperties::MATCalcFluidHeatCapacityMethod2(double Press, double Te
 	int i;
 	// WW double salinity;
 	double Cp; // WW , Cv;
-	TempK = (TempK<273.15) ? TempK+273.15 : TempK;
 
 	pressure_average = Press;
 	temperature_average = TempK;

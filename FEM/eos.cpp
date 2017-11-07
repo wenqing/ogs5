@@ -807,7 +807,6 @@ double h2o_viscosity_IAPWS(double rho, double T)
 	double sum1 = 0, sum2 = 0, sum3 = 0;
 	int i, j;
 
-	T = (T<273.15) ? T+273.15 : T;
 	T = T / 647.096;
 	rho = rho / 322.0;
 
@@ -963,8 +962,7 @@ double Fluid_Viscosity(double rho, double T, double p, int fluid)
 			break;
 		case 1: // WATER
 			{
-				const double absT = (T<273.15) ? T+273.15 : T;
-				h = MaterialLib::Fluid::WaterViscosityIAPWS::getValue(absT, rho);
+				h = MaterialLib::Fluid::WaterViscosityIAPWS::getValue(T, rho);
 			}
 			break;
 		case 2: // METHANE
@@ -1003,8 +1001,7 @@ double Fluid_Heat_Conductivity(double rho, double T, int fluid)
 		case 1: // WATER
 			// h = 0.598; // [W/m/K] at 293K and 1 bar
 			{
-				const double absT = (T<273.15) ? T+273.15 : T;
-				h = h2o_heat_conductivity_IAPWS_ind(rho, absT);
+				h = h2o_heat_conductivity_IAPWS_ind(rho, T);
 			}
 			break;
 		case 2: // METHANE
