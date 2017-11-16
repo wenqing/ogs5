@@ -13,6 +13,7 @@
  */
 
 #include <cfloat>
+#include <algorithm>
 //#include "makros.h"
 //#include <iostream>
 // Sytem matrix
@@ -1138,9 +1139,13 @@ void CFiniteElementVec::LocalAssembly(const int update)
 			if (static_cast<size_t>(pcs->ExcavMaterialGroup) == MeshElement->GetPatchIndex())
 			{
 				double const* ele_center(MeshElement->GetGravityCenter());
-				if ((GetCurveValue(pcs->ExcavCurve, 0, aktuelle_zeit, &valid) + pcs->ExcavBeginCoordinate)
-				        > (ele_center[pcs->ExcavDirection])
-				    && (ele_center[pcs->ExcavDirection] - pcs->ExcavBeginCoordinate) > -0.001)
+				const double expected_coordinate =
+					GetCurveValue(pcs->ExcavCurve, 0, aktuelle_zeit, &valid) + pcs->ExcavBeginCoordinate;
+				const double element_center_x_in_excavation_direction = ele_center[pcs->ExcavDirection];
+				const double max_excavation_range = std::max(expected_coordinate, pcs->ExcavBeginCoordinate);
+				const double min_excavation_range = std::min(expected_coordinate, pcs->ExcavBeginCoordinate);
+				if ( element_center_x_in_excavation_direction > min_excavation_range &&
+					 element_center_x_in_excavation_direction < max_excavation_range )
 				{
 					excavation = true;
 					*(eleV_DM->Stress) = 0.;
@@ -1709,8 +1714,10 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 					else if (pcs->ExcavMaterialGroup > -1)
 					{
 						double const* ele_center(elem->GetGravityCenter());
-						if ((GetCurveValue(pcs->ExcavCurve, 0, aktuelle_zeit, &valid) + pcs->ExcavBeginCoordinate)
-						    < (ele_center[pcs->ExcavDirection]))
+						const double expected_coordinate =
+							GetCurveValue(pcs->ExcavCurve, 0, aktuelle_zeit, &valid) + pcs->ExcavBeginCoordinate;
+						const double max_excavation_range = std::max(expected_coordinate, pcs->ExcavBeginCoordinate);
+						if ( ele_center[pcs->ExcavDirection] > max_excavation_range)
 						{
 							onExBoundary = true;
 							break;
@@ -2031,8 +2038,10 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 					else if (pcs->ExcavMaterialGroup > -1)
 					{
 						double const* ele_center(elem->GetGravityCenter());
-						if ((GetCurveValue(pcs->ExcavCurve, 0, aktuelle_zeit, &valid) + pcs->ExcavBeginCoordinate)
-						    < (ele_center[pcs->ExcavDirection]))
+						const double expected_coordinate =
+							GetCurveValue(pcs->ExcavCurve, 0, aktuelle_zeit, &valid) + pcs->ExcavBeginCoordinate;
+						const double max_excavation_range = std::max(expected_coordinate, pcs->ExcavBeginCoordinate);
+						if ( ele_center[pcs->ExcavDirection] > max_excavation_range)
 						{
 							onExBoundary = true;
 							break;
