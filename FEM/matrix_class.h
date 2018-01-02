@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /*========================================================================
    GeoSys - class Matrix, Sparse matrix (Declaration)
    Task:       Matrix object for full matrices.  If the size of matrix is
@@ -37,192 +28,77 @@ class CPARDomain;
 
 namespace Math_Group
 {
-
-/// Base class for matrix objects
-class MatrixBase
+class SymMatrix;
+class Matrix
 {
 public:
-	/**
-	 * Constructor
-	 * @param rows  the number of rows
-	 * @param cols  the number of columns
-	 * @param size  data size
-	 */
-	MatrixBase(size_t rows, size_t cols, size_t size);
-
-	MatrixBase(const MatrixBase &m);
-
-	virtual ~MatrixBase();
-
-	void ReleaseMemory();
-	size_t Rows() const {return nrows; }
-	size_t Cols() const {return ncols; }
-	size_t Size() const {return size; }
-
-	// Access to members
-	virtual double& operator() (const size_t i, const size_t j = 0) const = 0;
-	double *getEntryArray() { return data; }
-	const double *getEntryArray() const { return data; }
-	double& operator[] (const size_t i) const { return data[i]; }
-
-	// Operators
-	inline void operator= (double a)
-	{
-		for(size_t i = 0; i < size; i++)
-			data[i] = a;
-	}
-
-	inline void operator*= (double a)
-	{
-		for(size_t i = 0; i < size; i++)
-			data[i] *= a;
-	}
-
-	inline void operator/= (double a)
-	{
-		for(size_t i = 0; i < size; i++)
-			data[i] /= a;
-	}
-
-	inline void operator+= (double a)
-	{
-		for(size_t i = 0; i < size; i++)
-			data[i] += a;
-	}
-
-	inline void operator-= (double a)
-	{
-		for(size_t i = 0; i < size; i++)
-			data[i] -= a;
-	}
-
-	inline void operator= (const MatrixBase& m)
-	{
-#ifdef gDEBUG
-		if(nrows != m.Rows() || ncols != m.Cols())
-		{
-			std::cout << "\n The sizes of the two matrices are not matched" << "\n";
-			abort();
-		}
-#endif
-		for(size_t i = 0; i < nrows; i++)
-			for(size_t j = 0; j < ncols; j++)
-				data[i * ncols + j] = m(i,j);
-	}
-
-	inline void operator+= (const MatrixBase& m)
-	{
-#ifdef gDEBUG
-		if(nrows != m.Rows() || ncols != m.Cols())
-		{
-			std::cout << "\n The sizes of the two matrices are not matched" << "\n";
-			abort();
-		}
-#endif
-		for(size_t i = 0; i < nrows; i++)
-			for(size_t j = 0; j < ncols; j++)
-				data[i * ncols + j] += m(i,j);
-	}
-
-	inline void operator-= (const MatrixBase& m)
-	{
-#ifdef gDEBUG
-		if(nrows != m.Rows() || ncols != m.Cols()) //Assertion, will be removed
-		{
-			std::cout << "\n The sizes of the two matrices are not matched" << "\n";
-			abort();
-		}
-#endif
-		for(size_t i = 0; i < nrows; i++)
-			for(size_t j = 0; j < ncols; j++)
-				data[i * ncols + j] -= m(i,j);
-	}
-
-	// vec_result = This*vec. vec_result must be initialized.
-	virtual void multi(const double* vec, double* vec_result, double fac = 1.0);
-	// m_result = this*m. m_result must be initialized.
-	virtual void multi(const MatrixBase& m, MatrixBase& m_result, double fac = 1.0);
-	// m_result = this*m1*m2. m_result must be initialized.To be removed
-	virtual void multi(const MatrixBase& m1, const MatrixBase& m2, MatrixBase& m_result);
-
-	// Print
-	void Write(std::ostream& os = std::cout);
-	void Write_BIN(std::fstream& os);
-	void Read_BIN(std::fstream& is);
-
-protected:
-	size_t nrows, nrows0;
-	size_t ncols, ncols0;
-	size_t size;
-	double* data;
-};
-
-#ifdef _MSC_VER
-#pragma warning( disable: 4522 )
-#endif
-
-/// Dense matrix
-class Matrix : public MatrixBase
-{
-public:
-	using MatrixBase::operator=;
-	using MatrixBase::operator+=;
-	using MatrixBase::operator-=;
-	using MatrixBase::operator*=;
-	using MatrixBase::operator/=;
-
-	explicit Matrix(size_t rows, size_t cols = 1);
+	Matrix(size_t rows, size_t cols = 1);
 	Matrix();
-	Matrix(const Matrix& m);
+	explicit Matrix(const Matrix& m);
 	//
 	void resize(size_t rows, size_t cols = 1);
 	//
 	virtual ~Matrix();
+	void ReleaseMemory();                 //06.2010. WW
 
 	// Operators
-	inline void operator= (const Matrix& m)
+	virtual inline void operator= (double a)
 	{
-#ifdef gDEBUG
-	if(nrows != m.Rows() || ncols != m.Cols())
-	{
-		std::cout << "\n The sizes of the two matrices are not matched" << "\n";
-		abort();
+	   for(size_t i = 0; i < size; i++)
+		  data[i] = a;
 	}
-#endif
-		const double *m_data = m.getEntryArray() ;
-		for(size_t i = 0; i < size; i++)
-			data[i] = m_data[i];
+	virtual inline void operator*= (double a)
+	{
+	   for(size_t i = 0; i < size; i++)
+		  data[i] *= a;
 	}
 
-	inline void operator+= (const Matrix& m)
+	virtual inline void operator/= (double a)
 	{
-#ifdef gDEBUG
-	if(nrows != m.Rows() || ncols != m.Cols())
-	{
-		std::cout << "\n The sizes of the two matrices are not matched" << "\n";
-		abort();
-	}
-#endif
-		const double *m_data = m.getEntryArray();
-		for (size_t i = 0; i < size; i++)
-			data[i] += m_data[i];
+	   for(size_t i = 0; i < size; i++)
+		  data[i] /= a;
 	}
 
-	inline void operator-= (const Matrix& m)
+	virtual inline void operator+= (double a)
 	{
-#ifdef gDEBUG
-	if(nrows != m.Rows() || ncols != m.Cols()) //Assertion, will be removed
-	{
-		std::cout << "\n The sizes of the two matrices are not matched" << "\n";
-		abort();
+	    for(size_t i = 0; i < size; i++)
+		  data[i] += a;
 	}
-#endif
-		const double *m_data = m.getEntryArray();
-		for (size_t i = 0; i < size; i++)
-			data[i] -= m_data[i];
+
+	//void operator= (const SymMatrix& m);
+
+	virtual inline void operator= (const Matrix& m)
+	{
+        const double *m_data = m.getEntryArray_const() ; 
+	    for(size_t i = 0; i < size; i++)
+		  data[i] = m_data[i];
+	}
+
+	virtual inline void operator+= (const Matrix& m)
+	{
+        const double *m_data = m.getEntryArray_const() ; 
+	    for(size_t i = 0; i < size; i++)
+		  data[i] += m_data[i];
+	}
+
+	virtual inline void operator-= (const Matrix& m)
+	{
+        const double *m_data = m.getEntryArray_const() ; 
+	    for(size_t i = 0; i < size; i++)
+		  data[i] -= m_data[i];
 	}
 
 	void GetTranspose(Matrix& m);
+
+     double *getEntryArray() 
+     {
+         return data;
+     }
+
+	 double *getEntryArray_const() const
+     {
+        return data;
+     }
 
 	// vec_result = This*vec. vec_result must be initialized.
 	virtual void multi(const double* vec, double* vec_result, double fac = 1.0);
@@ -233,71 +109,81 @@ public:
 
 	// Access to members
 	virtual double& operator() (const size_t i, const size_t j = 0) const;
+
+    // Operator: set or get an entry of the raw data array. 03.2014. WW
+    double& operator[] (const size_t i) const
+    {
+        return data[i];
+    }
+
 	void LimitSize(size_t nRows, size_t nCols = 1);
+
+	size_t Rows() const {return nrows; }
+	size_t Cols() const {return ncols; }
+	size_t Size() const {return size; }
+
+	// Print
+	void Write(std::ostream& os = std::cout);
+	void Write_BIN(std::fstream& os);
+	void Read_BIN(std::fstream& is);
+protected:
+	size_t nrows, nrows0;
+	size_t ncols, ncols0;
+	size_t size;
+	double* data;
 };
 
 // Symmetrical matrix. 12-01-2005. WW
-class SymMatrix : public MatrixBase
+class SymMatrix : public Matrix
 {
 public:
-	using MatrixBase::operator=;
-	using MatrixBase::operator+=;
-	using MatrixBase::operator-=;
-	using MatrixBase::operator*=;
-	using MatrixBase::operator/=;
-
-	explicit SymMatrix(size_t dim);
-	SymMatrix();
-	SymMatrix(const SymMatrix& m);
+	SymMatrix(size_t dim);
+	SymMatrix() : Matrix() { }
+	explicit SymMatrix(const SymMatrix& m);
 
 	void resize(size_t dim);
-	virtual ~SymMatrix() {}
+	~SymMatrix() {}
 
-	// Operators
-	inline void operator= (const SymMatrix& m)
+	// Forwarded operators
+	virtual inline void operator= (double a)
 	{
-#ifdef gDEBUG
-		if(nrows != m.Rows())
-		{
-			std::cout << "\n The sizes of the two matrices are not matched" << "\n";
-			abort();
-		}
-#endif
-		for (size_t i = 0; i < size; i++)
-			data[i] = m.data[i];
+	   return Matrix::operator=(a);
+	}
+	virtual inline void operator*= (double a)
+	{
+	   return Matrix::operator*=(a);
 	}
 
-	inline void operator+= (const SymMatrix& m)
+	virtual inline void operator/= (double a)
 	{
-#ifdef gDEBUG
-		if(nrows != m.Rows())
-		{
-			std::cout << "\n The sizes of the two matrices are not matched" << "\n";
-			abort();
-		}
-#endif
-		for (size_t i = 0; i < size; i++)
-			data[i] += m.data[i];
+	   return Matrix::operator/=(a);
 	}
 
-	inline void operator-= (const SymMatrix& m)
+	virtual inline void operator+= (double a)
 	{
-#ifdef gDEBUG
-		if(nrows != m.Rows())                 //Assertion, will be removed
-		{
-			std::cout << "\n The sizes of the two matrices are not matched" << "\n";
-			abort();
-		}
-#endif
-		for (size_t i = 0; i < size; i++)
-			data[i] -= m.data[i];
+	   return Matrix::operator+=(a);
+	}
+
+	virtual inline void operator= (const Matrix& m)
+	{
+	   return Matrix::operator=(m);
+	}
+
+	virtual inline void operator+= (const Matrix& m)
+	{
+	   return Matrix::operator+=(m);
+	}
+
+	virtual inline void operator-= (const Matrix& m)
+	{
+	   return Matrix::operator-=(m);
 	}
 
 	// Access the element
 	virtual inline double& operator() (const size_t i, const size_t j = 1) const
-	{
-		return data[getArrayIndex(i, j)];
-	}
+    {
+	    	return data[getArrayIndex(i, j)];
+    }
 
 	// Access to members
 	void LimitSize(size_t dim);
@@ -305,113 +191,69 @@ public:
 	// vec_result = This*vec. vec_result must be initialized
 	virtual void multi(const double* vec, double* vec_result, double fac = 1.0);
 	// m_result = this*m. m_result must be initialized. m_result must be a full stored matrix
-	virtual void multi(const SymMatrix& m, Matrix& m_result, double fac = 1.0);
+	virtual void multi(const Matrix& m, Matrix& m_result, double fac = 1.0);
 	// m_result = this*m1*m2. m_result must be initialized.  m_result must be a full stored matrix
-	virtual void multi(const SymMatrix& m1, const Matrix& m2, Matrix& m_result);
+	virtual void multi(const Matrix& m1, const Matrix& m2, Matrix& m_result);
 
-	inline size_t getArrayIndex(const size_t i, const size_t j)  const
-	{
-		if(i >= j)
-			return static_cast<size_t>(i * (i + 1) / 2) + j;
-		else
-			return static_cast<size_t>(j * (j + 1) / 2) + i;
-	}
+	inline size_t getArrayIndex(const size_t i, const size_t j)  const    
+    {
+     	if(i >= j)
+	    	return static_cast<size_t>(i * (i + 1) / 2) + j;
+	   else
+		   return static_cast<size_t>(j * (j + 1) / 2) + i;
+    }
+
 };
 
-class DiagonalMatrix : public MatrixBase
+class DiagonalMatrix : public Matrix
 {
 private:
 	mutable double dummy_zero;
 public:
-	using MatrixBase::operator=;
-	using MatrixBase::operator+=;
-	using MatrixBase::operator-=;
-	using MatrixBase::operator*=;
-	using MatrixBase::operator/=;
-
-	explicit DiagonalMatrix(size_t dim);
+	DiagonalMatrix(size_t dim);
 	DiagonalMatrix();
-	DiagonalMatrix(const DiagonalMatrix& m);
+	explicit DiagonalMatrix(const DiagonalMatrix& m);
 
 	void resize(size_t dim);
 
-	virtual ~DiagonalMatrix() {}
+	~DiagonalMatrix() {}
 
 	// Forwarded operators
-	inline void operator = (const DiagonalMatrix& m)
+	virtual inline void operator= (double a)
 	{
-#ifdef gDEBUG
-		if(nrows != m.Rows() || ncols != m.Cols())
-		{
-			cout << "\n The sizes of the two matrices are not matched" << "\n";
-			abort();
-		}
-#endif
-		for(size_t i = 0; i < size; i++)
-			data[i] = m.data[i];
+	   return Matrix::operator=(a);
+	}
+	virtual inline void operator*= (double a)
+	{
+	   return Matrix::operator*=(a);
 	}
 
-	inline void operator += (const DiagonalMatrix& m)
+	virtual inline void operator+= (double a)
 	{
-#ifdef gDEBUG
-		if(nrows != m.Rows())
-		{
-			cout << "\n The sizes of the two matrices are not matched" << "\n";
-			abort();
-		}
-#endif
-		for(size_t i = 0; i < size; i++)
-			data[i] += m.data[i];
+	   return Matrix::operator+=(a);
 	}
 
-	inline void operator -= (const DiagonalMatrix& m)
+	virtual inline void operator= (const Matrix& m)
 	{
-#ifdef gDEBUG
-		if(nrows != m.Rows())                 //Assertion, will be removed
-		{
-			cout << "\n The sizes of the two matrices are not matched" << "\n";
-			abort();
-		}
-#endif
-		for(size_t i = 0; i < size; i++)
-			data[i] -= m.data[i];
+	   return Matrix::operator=(m);
+	}
+
+	virtual inline void operator+= (const Matrix& m)
+	{
+	   return Matrix::operator+=(m);
+	}
+
+	virtual inline void operator-= (const Matrix& m)
+	{
+	   return Matrix::operator-=(m);
 	}
 
 	void LimitSize(size_t dim);
 
 	// Access to members
-	inline double& operator() (const size_t i, const size_t j) const
-	{
-#ifdef gDEBUG
-		if(i >= nrows || j >= nrows)
-		{
-			cout << "\n Index exceeds the size of the matrix" << "\n";
-			abort();
-		}
-#endif
-		if(i == j)
-			return data[i];           // temporary
-		else
-			return dummy_zero;
-	}
-
-	inline double& operator() (const size_t i) const
-	{
-#ifdef gDEBUG
-		if(i >= size)
-		{
-			cout << "\n Index exceeds the size of the matrix" << "\n";
-			abort();
-		}
-#endif
-
-		return data[i];
-	}
+	double& operator() (const size_t i, const size_t j) const;
+	double& operator() (const size_t i) const;
 };
-
-#ifdef _MSC_VER
-#pragma warning( default: 4522 )
-#endif
 
 typedef Matrix Vec;
 
@@ -426,7 +268,7 @@ template<class T> class vec
 {
 public:
 	vec(int argSize);
-	vec() : _size(0), _entry(NULL) {}
+	vec() : _size(0) {}
 	explicit vec(const vec<T>& v);
 
 	virtual ~vec();
@@ -452,7 +294,7 @@ template<> class vec<void*>
 {
 public:
 	vec(int argSize);
-	vec() : _entry(NULL), _size (0) {}
+	vec() : _size (0) {}
 	explicit vec(const vec<void*>& v);
 
 	virtual ~vec();
@@ -534,7 +376,10 @@ public:
 	// Preconditioner
 	void Precond_Jacobi(double* vec_s, double* vec_r);
 	//TEMP
-	void Precond_ILU(double* /*vec_s*/, double* /*vec_r*/) {}
+	void Precond_ILU(double* vec_s, double* vec_r)
+	{
+		vec_s = vec_r = NULL;
+	}
 	// Operator
 	void operator = (const double a);
 	void operator *= (const double a);

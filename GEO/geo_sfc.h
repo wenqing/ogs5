@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 #ifndef rf_sfc_INC
 
 #define rf_sfc_INC
@@ -98,7 +89,6 @@ public:
 	bool PointInSurface(CGLPoint*); //OK
 	//material
 	long profile_code; //YD
-
 private:
   //
 	friend class CGLLine; //WW

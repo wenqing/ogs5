@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************
    FEMLib - Object: NUM
    Task:
@@ -14,8 +5,6 @@
    11/2004 OK Implementation
    last modified:
 **************************************************************************/
-#include "rf_num_new.h"
-
 // There is a name conflict between stdio.h and the MPI C++ binding
 // with respect to the names SEEK_SET, SEEK_CUR, and SEEK_END.  MPI
 // wants these in the MPI namespace, but stdio.h will #define these
@@ -32,6 +21,7 @@
 //#undef SEEK_CUR
 #endif
 
+#include "makros.h"
 // C++ STL
 #include <cfloat>
 #include <cmath>
@@ -39,16 +29,14 @@
 #include <iostream>
 #include <list>
 #include <string>
-
-#include "makros.h"
-#include "memory.h"
-#include "display.h"
-
+using namespace std;
 // FEM-Makros
 #include "files0.h"
 #include "makros.h"
+extern ios::pos_type GetNextSubKeyword(ifstream* file,string* line, bool* keyword);
 // GeoSys-GeoLib
 // GeoSys-FEMLib
+#include "rf_num_new.h"
 #ifndef NEW_EQS                                   //WW. 06.11.2008
 #include "matrix_routines.h"
 #endif
@@ -58,9 +46,6 @@
 #include "tools.h"
 // GeoSys-MSHLib
 
-using namespace std;
-
-extern std::ios::pos_type GetNextSubKeyword(ifstream* file,string* line, bool* keyword);
 extern size_t max_dim;                            //OK411 todo
 
 //==========================================================================
@@ -110,7 +95,7 @@ CNumerics::CNumerics(string name)
     //Local picard1                                //NW
     local_picard1_tolerance = 1.0e-3;
     local_picard1_max_iterations = 1;
-    update_velocity_within_nonlinear = 0;
+    update_velocity_within_nonlinear = 0; 
 
 	for(size_t i=0; i<DOF_NUMBER_MAX; i++)	//JT2012
 		cpl_error_tolerance[i] = -1.0;			//JT2012: should not default this. Should always be entered by user!
@@ -126,6 +111,7 @@ CNumerics::CNumerics(string name)
 	fct_method = -1;                      //NW
 	fct_prelimiter_type = 0;              //NW
 	fct_const_alpha = -1.0;               //NW
+	degradable_medium = -1;		//WX 2015.05
 	//----------------------------------------------------------------------
 	// Deformation
 	GravityProfile = 0;
@@ -151,11 +137,7 @@ CNumerics::CNumerics(string name)
 		ls_storage_method = 4;
 		nls_max_iterations = 25;
 	}
-
-#ifdef USE_PETSC
-	lsover_name = "bcgs";
-	pres_name = "bjacobi";
-#endif
+	//
 }
 
 /**************************************************************************
@@ -456,32 +438,30 @@ ios::pos_type CNumerics::Read(ifstream* num_file)
 		// subkeyword found
 		if(line_string.find("$LINEAR_SOLVER") != string::npos)
 		{
-			std::string str_buf = GetLineFromFile1(num_file); //WW
-			line.str(str_buf);
-#ifdef USE_PETSC
-			if(str_buf.find("petsc") != string::npos) //03.2012. WW
-			{
-				line >> str_buf
-				>> lsover_name
-				>> pres_name
-				>> ls_error_tolerance
-				>> ls_max_iterations
-				>> ls_theta;
-			}
-			else
-#endif
-			{
-				line >> ls_method;
-				line >> ls_error_method;
-				line >> ls_error_tolerance;
-				line >> ls_max_iterations;
-				line >> ls_theta;
-				line >> ls_precond;
-				line >> ls_storage_method;
-				/// For GMRES. 06.2010. WW
-				if(ls_method == 13)
-					line >> m_cols;
-			}
+		  std::string str_buf = GetLineFromFile1(num_file); //WW
+		  line.str(str_buf);
+                  if(str_buf.find("petsc") != string::npos) //03.2012. WW
+		    {
+		      line >> str_buf 
+			   >> lsover_name
+			   >> pres_name
+			   >> ls_error_tolerance
+			   >> ls_max_iterations
+			   >> ls_theta;
+		    }
+		  else
+		    {
+			line >> ls_method;
+			line >> ls_error_method;
+			line >> ls_error_tolerance;
+			line >> ls_max_iterations;
+			line >> ls_theta;
+			line >> ls_precond;
+			line >> ls_storage_method;
+			/// For GMRES. 06.2010. WW
+			if(ls_method == 13)
+				line >> m_cols;
+		    }
 			line.clear();
 			continue;
 		}
@@ -590,7 +570,6 @@ ios::pos_type CNumerics::Read(ifstream* num_file)
 			line.str(GetLineFromFile1(num_file));
 			line >> ele_mass_lumping;
 			line.clear();
-			cout << "-> Mass lumping selected for " << pcs_type_name << "\n";// JOD 2014-11-10
 			continue;
 		}
 		// subkeyword found
@@ -659,6 +638,13 @@ ios::pos_type CNumerics::Read(ifstream* num_file)
 			line >> fct_const_alpha; //-1: off, [0.0,1.0] 0: Upwind, 1: Galerkin
 			line.clear();
 			cout << "->FEM_FCT method is selected." << "\n";
+			continue;
+		}
+		if(line_string.find("$DEGRADABLE_MEDIUM") != string::npos)
+		{
+			line.str(GetLineFromFile1(num_file));
+			line >> degradable_medium; 
+			line.clear();			
 			continue;
 		}
 

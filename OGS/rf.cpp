@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************/
 /* ROCKFLOW - Modul: rf.c
  */
@@ -29,7 +20,7 @@
 #include "Configure.h"
 
 #if defined(USE_MPI) || defined(USE_MPI_PARPROC) || defined(USE_MPI_REGSOIL) || \
-        defined(USE_MPI_GEMS) || defined(USE_MPI_KRC)
+        defined(USE_MPI_GEMS) || defined(USE_MPI_KRC) 
 #include "par_ddc.h"
 #include <mpi.h>
 #endif
@@ -38,13 +29,12 @@
 #include <omp.h>
 #endif
 
+
+
 #include "BuildInfo.h"
 
 /* Preprozessor-Definitionen */
 #include "makros.h"
-#include "display.h"
-#include "memory.h"
-#include "ogs_display.h"
 #define TEST
 /* Benutzte Module */
 #include "break.h"
@@ -67,10 +57,8 @@ void ShowSwitches ( void );
 // LB,string FilePath; //23.02.2009. WW
 // ------  12.09.2007 WW:
 #if defined(USE_MPI) || defined(USE_MPI_PARPROC) || defined(USE_MPI_REGSOIL) || \
-        defined(USE_MPI_GEMS) || defined(USE_MPI_KRC)
+        defined(USE_MPI_GEMS) || defined(USE_MPI_KRC) 
 double elapsed_time_mpi;
-MPI_Comm comm_DDC;
-#include "SplitMPI_Communicator.h"
 // ------
 #endif
 
@@ -82,10 +70,6 @@ MPI_Comm comm_DDC;
 #include "petsctime.h"
 #endif
 #endif
-
-// declaration of defaultOutputPath
-#include "rf_out_new.h"
-
 
 /* Definitionen */
 
@@ -112,11 +96,6 @@ int main ( int argc, char* argv[] )
 	/* parse command line arguments */
 	std::string anArg;
 	std::string modelRoot;
-	#if defined(USE_MPI) || defined(USE_MPI_PARPROC) || defined(USE_MPI_REGSOIL) || \
-		defined(USE_MPI_GEMS) || defined(USE_MPI_KRC)
-		int nb_ddc=0; //number of cores for DDC related processes
-	#endif
-
 	for( int i = 1; i < argc; i++ )
 	{
 		anArg = std::string( argv[i] );
@@ -124,10 +103,9 @@ int main ( int argc, char* argv[] )
 		{
 			std::cout << "Usage: ogs [MODEL_ROOT] [OPTIONS]\n"
 			          << "Where OPTIONS are:\n"
-			          << "  -h [--help]               print this message and exit\n"
-			          << "  -b [--build-info]         print build info and exit\n"
-			          << "  --output-directory DIR    put output files into DIR\n"
-			          << "  --version                 print ogs version and exit" << "\n";
+			          << "  -h [--help]       print this message and exit\n"
+			          << "  -b [--build-info] print build info and exit\n"
+			          << "  --version         print ogs version and exit" << "\n";
 			continue;
 		}
 		if( anArg == "--build-info" || anArg == "-b" )
@@ -155,34 +133,9 @@ int main ( int argc, char* argv[] )
 		}
 		if( anArg == "--model-root" || anArg == "-m" )
 		{
-			if (i+1 >= argc) {
-				std::cerr << "Error: Parameter " << anArg << " needs an additional argument" << std::endl;
-				std::exit(EXIT_FAILURE);
-			}
 			modelRoot = std::string( argv[++i] );
 			continue;
 		}
-		if (anArg == "--output-directory")
-		{
-			if (i+1 >= argc) {
-				std::cerr << "Error: Parameter " << anArg << " needs an additional argument" << std::endl;
-				std::exit(EXIT_FAILURE);
-			}
-			std::string path = argv[++i];
-
-			if (! path.empty()) defaultOutputPath = path;
-			continue;
-		}
-#if defined(USE_MPI) || defined(USE_MPI_PARPROC) || defined(USE_MPI_REGSOIL) || \
-	defined(USE_MPI_GEMS) || defined(USE_MPI_KRC)
-		std::string decompositions;
-		if( anArg == "--domain-decomposition" || anArg == "-ddc" )
-		{
-			decompositions = std::string( argv[++i] );
-			nb_ddc = atoi(decompositions.c_str());
-			continue;
-		}
-#endif
 		// anything left over must be the model root, unless already found
 		if ( modelRoot == "" )
 			modelRoot = std::string( argv[i] );
@@ -190,15 +143,6 @@ int main ( int argc, char* argv[] )
 
 	if( argc > 1 && modelRoot == "" ) // non-interactive mode and no model given
 		exit(0);             // e.g. just wanted the build info
-
-	std::string solver_pkg_name = SOLVER_PACKAGE_NAME;
-	// No default linear solver package is in use.
-	if(solver_pkg_name.find("Default") == std::string::npos)
-	{
-		std::cout << "\nWarning: " << solver_pkg_name
-		<< " other than the OGS default one is in use." <<std::endl;
-		std::cout << "         The solver setting may need to be adjusted for the solution accuracy!" << std::endl;
-	}
 
 	char* dateiname(NULL);
 #ifdef SUPERCOMPUTER
@@ -220,7 +164,7 @@ int main ( int argc, char* argv[] )
 #endif
 /*---------- MPI Initialization ----------------------------------*/
 #if defined(USE_MPI) || defined(USE_MPI_PARPROC) || defined(USE_MPI_REGSOIL) || \
-	defined(USE_MPI_GEMS) || defined(USE_MPI_KRC)
+	defined(USE_MPI_GEMS) || defined(USE_MPI_KRC) 
 	printf("Before MPI_Init\n");
 #if defined(USE_MPI_GEMS)
 	int prov;
@@ -230,10 +174,9 @@ int main ( int argc, char* argv[] )
 #endif
 	MPI_Barrier (MPI_COMM_WORLD); // 12.09.2007 WW
 	elapsed_time_mpi = -MPI_Wtime(); // 12.09.2007 WW
-	bool splitcomm_flag;
-	int np;
-	MPI_Comm_size(MPI_COMM_WORLD, &np);	
-	splitcomm_flag = SplitMPI_Communicator::CreateCommunicator(MPI_COMM_WORLD, np, nb_ddc);
+	MPI_Comm_size(MPI_COMM_WORLD,&mysize);
+	MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+	std::cout << "After MPI_Init myrank = " << myrank << '\n';
 	time_ele_paral = 0.0;
 #endif
 /*---------- MPI Initialization ----------------------------------*/
@@ -255,7 +198,11 @@ int main ( int argc, char* argv[] )
 	MPI_Comm_size(PETSC_COMM_WORLD, &r_size);
 	PetscSynchronizedPrintf(PETSC_COMM_WORLD, "===\nUse PETSc solver");
 	PetscSynchronizedPrintf(PETSC_COMM_WORLD, "Number of CPUs: %d, rank: %d\n", r_size, rank);
+	PetscSynchronizedFlush(PETSC_COMM_WORLD);
 #endif
+
+
+
 
 /*---------- LIS solver -----------------------------------------*/
 #ifdef LIS
@@ -264,6 +211,8 @@ int main ( int argc, char* argv[] )
 #endif
 /*========================================================================*/
 /* Kommunikation mit Betriebssystem */
+	/* Ctrl-C ausschalten */
+	NoBreak();
 	/* Timer fuer Gesamtzeit starten */
 #ifdef TESTTIME
 	TStartTimer(0);
@@ -315,9 +264,6 @@ int main ( int argc, char* argv[] )
 		return 1;
 	}
 
-	// If no option is given, output files are placed in the same directory as the input files
-	if (defaultOutputPath.empty()) defaultOutputPath = pathDirname(std::string(dateiname));
-
 	FileName = dateiname;
 	size_t indexChWin, indexChLinux;
 	indexChWin = indexChLinux = 0;
@@ -335,28 +281,11 @@ int main ( int argc, char* argv[] )
 #endif
 #if defined(USE_MPI) || defined(USE_MPI_PARPROC) || defined(USE_MPI_REGSOIL) || defined(USE_MPI_GEMS)  || defined(USE_MPI_KRC)
 	aproblem->setRankandSize(myrank, mysize);
-
-	if (myrank != MPI_UNDEFINED)
-	{
 #endif
+
 	aproblem->Euler_TimeDiscretize();
 	delete aproblem;
 	aproblem = NULL;
-#if defined(USE_MPI) || defined(USE_MPI_PARPROC) || defined(USE_MPI_REGSOIL) || defined(USE_MPI_GEMS)  || defined(USE_MPI_KRC)
-	  }
-
-	//sending killing signals to ranks of group_IPQC, only when the group exists
-	if (splitcomm_flag == true){
-		int signal = -1, rank_IPQC, mysize_IPQC = np - nb_ddc;
-		for (int i=0; i< mysize_IPQC; i++){
-			rank_IPQC = mysize + i;
-			MPI_Send(&signal, 1, MPI_INT, rank_IPQC, 0, MPI_COMM_WORLD);
-		}
- 	  }
-
-#endif
-
-
 	if(ClockTimeVec.size()>0)
 		ClockTimeVec[0]->PrintTimes();  //CB time
 	DestroyClockTime();
@@ -364,12 +293,14 @@ int main ( int argc, char* argv[] )
 #if defined(USE_MPI)
      if(myrank == 0)
 #endif
-#if defined(USE_PETSC)
+#if defined(USE_PETSC) 
      if(rank == 0)
 #endif
 	std::cout << "Simulation time: " << TGetTimer(0) << "s" << "\n";
 #endif
 	/* Abspann ausgeben */
+	/* Ctrl-C wieder normal */
+	StandardBreak();
 /*--------- MPI Finalize ------------------*/
 #if defined(USE_MPI) || defined(USE_MPI_PARPROC) || defined(USE_MPI_REGSOIL) || defined(USE_MPI_KRC)
 	elapsed_time_mpi += MPI_Wtime(); // 12.09.2007 WW

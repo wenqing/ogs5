@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /*
    The members of class Element definitions.
    Designed and programmed by WW, 06/2004
@@ -17,7 +8,7 @@
 #include "fem_ele_std.h"
 #include <cfloat>
 /* Objekte */
-#include "rf_pcs.h"
+#include "rf_pcs.h" 
 
 #include "femlib.h"
 #include "mathlib.h"
@@ -108,11 +99,11 @@ CElement::CElement(int CoordFlag, const int order)
 	MCF_Flag = MULTI_COMPONENTIAL_FLOW_Process;
 
 #if defined(USE_PETSC) // || defined(other parallel libs)//03~04.3012. WW
-	idxm = NULL;  //> global indices of local matrix rows
-	idxn = NULL;  //> global indices of local matrix columns
+	idxm = NULL;  //> global indices of local matrix rows 
+	idxn = NULL;  //> global indices of local matrix columns 
 	local_idx = NULL; //> local index for local assemble
-	//local_matrix = NULL; //>  local matrix
-	//local_vec = NULL; //>  local vector
+	//local_matrix = NULL; //>  local matrix 
+	//local_vec = NULL; //>  local vector  
 #endif
 
 
@@ -135,9 +126,9 @@ CElement::~CElement()
 
 #if defined(USE_PETSC) // || defined(other parallel libs)//03~04.3012. WW
 	if(idxm)
-	  delete [] idxm;
+	  delete [] idxm;  
 	if(idxn)
-	  delete [] idxn;
+	  delete [] idxn;  
 	if (local_idx)
 	  delete [] local_idx;
 	//if (local_idx)
@@ -156,22 +147,22 @@ CElement::~CElement()
    05/2007 WW 1D in 2D
    Last modified:
 **************************************************************************/
-void CElement::ConfigElement(CElem* MElement, const int nquadrature_points,
-		                     bool FaceIntegration)
+void CElement::ConfigElement(CElem* MElement, bool FaceIntegration)
 {
+	int i;
 	CNode* a_node = NULL;                 //07.04.2009. WW
 	MeshElement = MElement;
 	Index = MeshElement->GetIndex();
 	nnodes = MeshElement->nnodes;
 	nnodesHQ = MeshElement->nnodesHQ;
 	bool done = false;
-	ConfigNumerics(MeshElement->GetElementType(), nquadrature_points);
+	ConfigNumerics(MeshElement->GetElementType());
 	if (MeshElement->quadratic)
 		nNodes = nnodesHQ;
 	else
 		nNodes = nnodes;
 	// Node indices
-	for(int i = 0; i < nNodes; i++)
+	for(i = 0; i < nNodes; i++)
 		nodes[i] = MeshElement->nodes_index[i];
 	// Put coordinates of nodes to buffer to enhance the computation
 	if(!FaceIntegration)
@@ -180,7 +171,7 @@ void CElement::ConfigElement(CElem* MElement, const int nquadrature_points,
 		{
 //            a_node0 = MeshElement->nodes[0];      //07.04.2007. WW
 			double const* const coords_node_0 (MeshElement->nodes[0]->getData());
-			for(int i = 0; i < nNodes; i++)
+			for(i = 0; i < nNodes; i++)
 			{
 				double const* const coords_node_i (MeshElement->nodes[i]->getData());
 //               a_node = MeshElement->nodes[i];    //07.04.2007. WW
@@ -210,7 +201,7 @@ void CElement::ConfigElement(CElem* MElement, const int nquadrature_points,
 			case 1:
 				if(coordinate_system % 10 == 1)
 				{
-					for(int i = 0; i < nNodes; i++)
+					for(i = 0; i < nNodes; i++)
 					{
 						//07.04.2007. WW
 //                        a_node = MeshElement->nodes[i];
@@ -227,7 +218,7 @@ void CElement::ConfigElement(CElem* MElement, const int nquadrature_points,
 				}
 				else if(coordinate_system % 10 == 2)
 				{
-					for(int i = 0; i < nNodes; i++)
+					for(i = 0; i < nNodes; i++)
 					{
 						//07.04.2007. WW
 //                        a_node = MeshElement->nodes[i];
@@ -246,7 +237,7 @@ void CElement::ConfigElement(CElem* MElement, const int nquadrature_points,
 			case 2:
 				if(coordinate_system % 10 == 2)
 				{
-					for(int i = 0; i < nNodes; i++)
+					for(i = 0; i < nNodes; i++)
 					{
 						//07.04.2007. WW
 //                        a_node = MeshElement->nodes[i];
@@ -267,8 +258,7 @@ void CElement::ConfigElement(CElem* MElement, const int nquadrature_points,
 	}
 	//
 	if(!done)
-	{
-		for(int i = 0; i < nNodes; i++)
+		for(i = 0; i < nNodes; i++)
 		{
 			a_node = MeshElement->nodes[i]; //07.04.2007. WW
 			double const* const coords (a_node->getData());
@@ -276,30 +266,41 @@ void CElement::ConfigElement(CElem* MElement, const int nquadrature_points,
 			Y[i] = coords[1];
 			Z[i] = coords[2];
 		}
-	}
+
 
 #if defined(USE_PETSC) // || defined(other parallel libs)//03~04.3012. WW
    if(!FaceIntegration)
    {
-        if(MeshElement->g_index) // ghost nodes pcs->pcs_number_of_primary_nvals
-        {
-            act_nodes = MeshElement->g_index[0];
-            act_nodes_h = MeshElement->g_index[1];
+	//int dof_p_node = pcs->pcs_number_of_primary_nvals;
+        //if(pcs->GetContinnumType() == 1)
+	// dof_p_node = 1;
 
-            for(int i = 0; i < act_nodes_h; i++)
-            {
-                local_idx[i] = MeshElement->g_index[i+2];
-            }
-        }
-        else
-        {
-            act_nodes = nnodes;
-            act_nodes_h = nnodesHQ;
-            for(int i = 0; i < act_nodes_h; i++)
-            {
-                local_idx[i] = i;
-            }
-        }
+	//int i_buff = 0;
+        if(MeshElement->g_index) // ghost nodes pcs->pcs_number_of_primary_nvals
+	  {
+	    act_nodes = MeshElement->g_index[0];
+	    act_nodes_h = MeshElement->g_index[1];
+
+	    for(i = 0; i < act_nodes_h; i++)
+	      {
+		local_idx[i] = MeshElement->g_index[i+2];
+	      }
+	  }
+	else
+	  {
+	    act_nodes = nnodes;
+	    act_nodes_h = nnodesHQ;
+	    for(i = 0; i < act_nodes_h; i++)
+	      {
+		local_idx[i] = i;
+	      }
+	  }
+
+
+	//i_buff = nn*nn;
+	//for(i = 0; i < i_buff; i++)
+	//  local_matrix[i] = 0.;
+	// If deformation related
    }
 #endif
 
@@ -345,9 +346,8 @@ void CElement::setOrder(const int order)
    01/2010 NW Higher order line elements
    Last modified:
 **************************************************************************/
-void CElement::ConfigNumerics(MshElemType::type ele_type, const int nquadrature_points)
+void CElement::ConfigNumerics(MshElemType::type ele_type)
 {
-	assert(nquadrature_points>0);
 	// nGauss = GetNumericsGaussPoints(ElementType);
 	switch(ele_type)
 	{
@@ -363,7 +363,6 @@ void CElement::ConfigNumerics(MshElemType::type ele_type, const int nquadrature_
 		return;
 	case MshElemType::QUAD:
 		ele_dim = 2;
-		nGauss = nquadrature_points;
 		nGaussPoints = nGauss * nGauss;
 		ShapeFunction = ShapeFunctionQuad;
 		ShapeFunctionHQ = ShapeFunctionQuadHQ;
@@ -372,8 +371,7 @@ void CElement::ConfigNumerics(MshElemType::type ele_type, const int nquadrature_
 		extrapo_method = ExtrapolationMethod::EXTRAPO_LINEAR;
 		return;
 	case MshElemType::HEXAHEDRON:
-		ele_dim = 3;
-		nGauss = nquadrature_points;
+		ele_dim = 3;        
 		nGaussPoints = nGauss * nGauss * nGauss;
 		ShapeFunction = ShapeFunctionHex;
 		ShapeFunctionHQ = ShapeFunctionHexHQ;
@@ -402,7 +400,7 @@ void CElement::ConfigNumerics(MshElemType::type ele_type, const int nquadrature_
 		return;
 	case MshElemType::PRISM:
 		ele_dim = 3;
-		nGaussPoints = 6;         // Fixed to 6
+		nGaussPoints = 6;         // Fixed to 9
 		nGauss = 3;               // Fixed to 3
 		ShapeFunction = ShapeFunctionPri;
 		ShapeFunctionHQ = ShapeFunctionPriHQ;
@@ -437,7 +435,7 @@ void CElement::ConfigNumerics(MshElemType::type ele_type, const int nquadrature_
    06/2004 WW Implementation
    Last modified:
 **************************************************************************/
-double CElement::interpolate(double const * const nodalVal, const int order) const
+double CElement::interpolate(double* nodalVal, const int order) const
 {
 	int nn = nnodes;
 	double* inTerpo = shapefct;
@@ -476,7 +474,7 @@ double CElement::interpolate(const int idx, CRFProcess* m_pcs, const int order)
 	for(int i = 0; i < nn; i++)
 		val += node_val[i] * inTerpo[i];
 	return val;
-}
+} 
 /**************************************************************************
    FEMLib-Method:
    Task:
@@ -497,6 +495,8 @@ double CElement::elemnt_average (const int idx, CRFProcess* m_pcs, const int ord
 	//
 	for(i = 0; i < nn; i++)
 		node_val[i] = m_pcs->GetNodeValue(nodes[i], idx);
+	for(i = 0; i < nn; i++)//WX:added 2014.07
+		val += node_val[i];
 	return val / (double)nn;
 }
 
@@ -750,11 +750,11 @@ void CElement::SetGaussPoint(const int gp, int& gp_r, int& gp_s, int& gp_t)
 		return;
 	case MshElemType::PRISM:              // Prism
 		gp_r = gp % nGauss;
-		SamplePointTriHQ(gp_r, unit);
-        //
-		gp_s = nGaussPoints/nGauss;
-		gp_t = (int)(gp / nGauss);
-		unit[2] = MXPGaussPkt(gp_s,  gp_t);
+		gp_s = (int)(gp / nGauss);
+		gp_t = (int)(nGaussPoints / nGauss);
+		unit[0] = MXPGaussPktTri(nGauss,gp_r,0);
+		unit[1] = MXPGaussPktTri(nGauss,gp_r,1);
+		unit[2] = MXPGaussPkt(gp_t,gp_s);
 		return;
 	case MshElemType::PYRAMID: // Pyramid
 		if (Order == 1)
@@ -812,7 +812,7 @@ double CElement::GetGaussData(int gp, int& gp_r, int& gp_s, int& gp_t)
 	case MshElemType::PRISM:              // Prism
 		fkt = computeJacobian(Order);
 		// Weights
-		fkt *= MXPGaussFktTri(nGauss, gp_r) * MXPGaussFkt(gp_s, gp_t);
+		fkt *= MXPGaussFktTri(nGauss,gp_r) * MXPGaussFkt(gp_t, gp_s);
 		break;
 	case MshElemType::PYRAMID: // Pyramid
 		fkt = computeJacobian(Order);
@@ -1376,111 +1376,4 @@ ElementMatrix::~ElementMatrix()
 	CouplingA = NULL;
 	CouplingB = NULL;
 }
-
-/**************************************************************************
-CElement::FaceNormalFluxIntegration
-
-Used for TOTAL_FLUX calculation
-
-Programming:
-11/2014   JOD
-
-**************************************************************************/
-
-void CElement::FaceNormalFluxIntegration(long /*element_index*/, double *NodeVal, double *NodeVal_adv,
-                                         int* /*nodesFace*/, CElem* /*face*/, CRFProcess* m_pcs, double* normal_vector)
-{
-
-	int gp, gp_r, gp_s;
-	double fkt = 0.0, det;
-	double *sf = shapefct;
-	double normal_diff_flux_interpol, normal_adv_flux_interpol;
-	double dbuff_adv[10], flux[3];
-	// ElementValue* gp_ele = ele_gp_value[element_index];
-
-	setOrder(Order);
-	if (Order == 2)
-	{
-		sf = shapefctHQ;
-		if (MeshElement->GetElementType() == MshElemType::QUAD)
-			ShapeFunctionHQ = ShapeFunctionQuadHQ8;
-	}
-
-	for (int i = 0; i < nNodes; i++) {
-		dbuff[i] = 0.0;
-		dbuff_adv[i] = 0.0;
-	}
-
-	det = MeshElement->GetVolume();
-	// Loop over Gauss points
-	for (gp = 0; gp < nGaussPoints; gp++)
-	{
-		//---------------------------------------------------------
-		//  Get local coordinates and weights
-		//  Compute Jacobian matrix and its determinate
-		//---------------------------------------------------------
-		switch (MeshElement->GetElementType())
-		{
-		case MshElemType::LINE:   // Line
-			gp_r = gp;
-			unit[0] = MXPGaussPkt(nGauss, gp_r);
-			fkt = 0.5* det* MXPGaussFkt(nGauss, gp_r);
-			break;
-		case MshElemType::TRIANGLE: // Triangle
-			SamplePointTriHQ(gp, unit);
-			fkt = 2.0 * det * unit[2]; // Weights
-			break;
-		case MshElemType::QUAD:   // Quadrilateral
-			gp_r = (int)(gp / nGauss);
-			gp_s = gp % nGauss;
-			unit[0] = MXPGaussPkt(nGauss, gp_r);
-			unit[1] = MXPGaussPkt(nGauss, gp_s);
-			fkt = 0.25* det* MXPGaussFkt(nGauss, gp_r) * MXPGaussFkt(nGauss, gp_s);
-			break;
-		default:
-			std::cerr << "Error in mass balance calculation: CElement::FaceIntegration element type not supported" << "\n";
-		}
-		//---------------------------------------------------------
-		ComputeShapefct(Order);
-
-		normal_diff_flux_interpol = 0.0;
-
-		if ((m_pcs->getProcessType() == FiniteElement::GROUNDWATER_FLOW) || (m_pcs->getProcessType() == FiniteElement::LIQUID_FLOW)) {
-
-			for (int i = 0; i < nNodes; i++) 	// Darcy flux
-				normal_diff_flux_interpol += NodeVal[i] * sf[i];
-
-			for (int i = 0; i < nNodes; i++)  // Integration
-				dbuff[i] += normal_diff_flux_interpol * sf[i] * fkt;
-		}
-		else if ((m_pcs->getProcessType() == FiniteElement::HEAT_TRANSPORT) || (m_pcs->getProcessType() == FiniteElement::MASS_TRANSPORT)) {
-
-			normal_adv_flux_interpol = 0.0;
-
-			for (int i = 0; i < nNodes; i++)
-				normal_adv_flux_interpol += NodeVal_adv[i] * sf[i];
-
-			for (int i = 0; i < nNodes; i++) { // Integration
-#ifdef USE_TRANSPORT_FLUX
-				// Fick or Fourier diffusion
-				for (int l = 0; l < 3; l++)
-					flux[l] = gp_ele->TransportFlux(l, gp);
-#endif
-				normal_diff_flux_interpol = PointProduction(flux, normal_vector);   //    fabs(PointProduction(flux, normal_vector));
-				dbuff[i] += normal_diff_flux_interpol * sf[i] * fkt;
-				// advection
-				dbuff_adv[i] += normal_adv_flux_interpol * sf[i] * fkt;
-			}
-		} // end transport
-	} // end gauss points
-
-	for (int i = 0; i < nNodes; i++) {
-		NodeVal[i] = dbuff[i];
-		NodeVal_adv[i] = dbuff_adv[i];
-	}
-}
-
-
-
-
 }                                                 // end namespace FiniteElement

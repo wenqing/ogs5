@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************
    FEMLib - Object: Boundary Conditions
    Task: class implementation
@@ -33,8 +24,6 @@ class BoundaryConditionIO;
 #include "GeoInfo.h"                              // TF
 #include "LinearFunctionData.h" // TF
 #include "ProcessInfo.h"                          // KR
-#include "Constrained.h"
-#include "SwitchBC.h"
 
 // GEOLib
 //#include "geo_ply.h"
@@ -145,19 +134,9 @@ public:
 	int getExcavMatGr() {return MatGr; }     //WX:12.2010 get excav material group
 	int getTimeContrCurve() {return time_contr_curve; } //WX:12.2010 get bc ativity controlled curve
 	int getNoDispIncre() {return NoDispIncre;};	//WX:12.2012
-
-	// give head bc for PRESSURE1 primary variable	//MW
-	int getPressureAsHeadModel() const {return _pressure_as_head_model;}
-	// return given density
-	double getPressureAsHeadDensity() const { return _pressure_as_head_density; };
-	// constrain a BC by other process
-	bool isConstrainedBC() const {return _isConstrainedBC;}
-	Constrained const & getConstrainedBC(std::size_t i) const { return _constrainedBC[i]; }
-	std::size_t getNumberOfConstrainedBCs() const { return _constrainedBC.size(); }
-	bool isSeepageBC() const { return _isSeepageBC; }
-	bool isSwitchBC() const {return _isSwitchBC;}
-	SwitchBC const & getSwitchBC() const { return _switchBC; }
-
+	// critical gas pressure bc WX: 05.2015
+	int critical_gas_pressure_mode;
+	double critical_gas_pressure_value;
 
 private:
 	std::vector<std::string> _PointsFCTNames;
@@ -221,19 +200,7 @@ private:
 	// aktive state is controlled by time curve WX:01.2011
 	int time_contr_curve;
 	// no displacement increment 12.2012
-	int NoDispIncre;
-	// give head bc for PRESSURE1 primary variable	//MW
-	int _pressure_as_head_model;
-	// given density for pressure_as_head BC
-	double _pressure_as_head_density;
-	// constrain a BC by other process
-	bool _isConstrainedBC;
-	std::vector<Constrained> _constrainedBC;
-	bool _isSeepageBC;
-
-	bool _isSwitchBC;
-	SwitchBC _switchBC;
-
+	int NoDispIncre;	
 };
 
 class CBoundaryConditionNode                      //OK raus
@@ -244,7 +211,6 @@ public:
 	long msh_node_number_subst;           //WW
 
 	double node_value;
-	double node_value_pre_calc;
 	int CurveIndex;                       // Time dependent function index
 	std::string pcs_pv_name;              //YD/WW
 	//
@@ -255,15 +221,9 @@ public:
 	std::string bc_node_copy_geom_name;
 	CBoundaryConditionNode();
 
-	void SetNormalVector(double const*const normal_vector);
-	double const* GetNormalVector() const;
-
 	// 25.08.2011. WW
 	void Read(std::istream& is);
 	void Write(std::ostream& os) const;
-
-private:
-	double _normal_vector[3];
 };
 
 class CBoundaryConditionsGroup

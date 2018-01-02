@@ -1,13 +1,4 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
-#include <iostream>
+#include <iostream> 
 #include <iomanip>
 #include <math.h>
 #include <cmath>
@@ -56,7 +47,7 @@ public:
 
 	//set chemical system for eqbrm input value
 	int NN, MM;
-	double **VV;        //mass action submatrix
+	double **VV;        //mass action submatrix 
 	double **GG;        //mass balance submatrix --> chemical element
 	double  *ZZ;        //charge vector
 	std::vector<std::string> chemical_species, chemical_element; //name and index of species and element
@@ -93,7 +84,7 @@ public:
 
 	void reset_estimated_value(void);
 
-	void calc_activity(double *A, double *GAMMA, double &AW);
+	void calc_activity(double *A, double *GAMMA, double &AW);	
 
 
 	void batch_calc(void);

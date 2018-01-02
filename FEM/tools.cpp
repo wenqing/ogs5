@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************/
 /* ROCKFLOW - Modul: tools.c
  */
@@ -32,8 +23,6 @@
 #include <cfloat>
 #define noTESTTOOLS
 /* Header / Andere intern benutzte Module */
-#include "display.h"
-#include "memory.h"
 #include "femlib.h"
 
 #include "mathlib.h"
@@ -134,7 +123,7 @@ double GetCurveValue(int kurve, int methode, double punkt, int* gueltig)
 	anz = kurven[kurve].anz_stuetzstellen;
 	s = kurven[kurve].stuetzstellen;
 	*gueltig = 1;
-
+	
 	i = 1l;
 	while (punkt > s[i].punkt)
 		i++;
@@ -157,7 +146,7 @@ double GetCurveValue(int kurve, int methode, double punkt, int* gueltig)
 			return 0.0;
 		//
 		case 0:   // Linear Interpolation
-			return s[i - 1].wert + (s[i].wert - s[i - 1l].wert) /
+			return s[i - 1].wert + (s[i].wert - s[i - 1l].wert) / 
 				  (s[i].punkt - s[i - 1l].punkt) * (punkt - s[i - 1l].punkt);
 		//
 		case 1:   // Piece wise constant
@@ -255,7 +244,7 @@ double GetCurveValueInverse(int kurve, int methode, double wert, int* gueltig)
 			return 0.0;
 		//
 		case 0: // Lineare Interpolation
-			return s[i - 1].punkt + (s[i].punkt - s[i - 1l].punkt) /
+			return s[i - 1].punkt + (s[i].punkt - s[i - 1l].punkt) / 
 				  (s[i].wert - s[i - 1l].wert) * (wert - s[i - 1l].wert);
 		//
 		case 1: // Piece wise constant
@@ -1277,8 +1266,8 @@ double GetMatrixValue(double var1, double var2, std::string caption, int *guelti
 	int j1 = 0;
 	int j2 = 0;
 
-	//JM avoid crash, if nan occurs
-	if (!(var2==var2)) var2=0.0;
+	//JM avoid crash, if nan occurs  
+	if (!(var2==var2)) var2=0.0; 
 	if (!(var1==var1)) var1=288.15;
 	matrix = FCTGet(caption);
 	dim_x = matrix->matrix_dimension[0]; //NB 4.8.01

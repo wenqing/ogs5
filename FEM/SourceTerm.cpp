@@ -2,11 +2,6 @@
  * \file SourceTerm.cpp
  * 2011/08/30 KR inital implementation
  *
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
  */
 
 #include "SourceTerm.h"
@@ -28,8 +23,7 @@ SourceTerm::SourceTerm(const CSourceTerm &st, const std::string &geometry_name)
 		for (size_t i=0; i<dis_nodes.size(); i++) dis_nodes[i] = static_cast<size_t>(st_nodes[i]);
 		this->setDisValues(dis_nodes, st.getDistribedST());
 	}
-	else if (this->getProcessDistributionType() == FiniteElement::DIRECT
-			|| this->getProcessDistributionType() == FiniteElement::RECHARGE_DIRECT)
+	else if (this->getProcessDistributionType() == FiniteElement::DIRECT)
 	{
 		//this->_direct_file_name = st.fname;
 	}

@@ -1,11 +1,6 @@
 /**
  * \file ProjectData.cpp
  * 25/08/2010 KR Initial implementation
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
  */
 
 #include "ProjectData.h"
@@ -68,7 +63,7 @@ const ProcessInfo* ProjectData::getProcess(FiniteElement::ProcessType type) cons
 		if ((*it)->getProcessType() == type)
 			return *it;
 
-	std::cout << "Error in ProjectData::getProcess() - No "
+	std::cout << "Error in ProjectData::getProcess() - No " 
 			  << FiniteElement::convertProcessTypeToString(type) << " process found..." << "\n";
 	return NULL;
 }
@@ -119,7 +114,7 @@ const std::vector<FEMCondition*> ProjectData::getConditions(FiniteElement::Proce
 															std::string geo_name,
                                                             FEMCondition::CondType cond_type) const
 {
-	// if all
+	// if all 
 	if (pcs_type == FiniteElement::INVALID_PROCESS && geo_name.empty() && cond_type == FEMCondition::UNSPECIFIED)
 		return _cond_vec;
 

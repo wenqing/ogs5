@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 #ifndef EOS_H_
 #define EOS_H_
 
@@ -67,7 +58,7 @@ double mixing_ternary (double* x,
                        double* rMM);
 
 double dpressure(double TT, double PP,std::string cs, double ds);
-double zero( double T, double P, int fluid, double t);
+double zbrent(double TT, double PP, int fluid, const double tol);
 
 double vapour_saturation_density_ch4(double T);
 double liquid_saturation_density_ch4(double T);

@@ -1,11 +1,6 @@
 /**
  * \file MshEditor.h
  * 2011/06/15 KR Initial implementation
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
  */
 
 #ifndef MSHEDITOR_H
@@ -43,9 +38,6 @@ public:
 
 	/// Returns the surface nodes of a layered mesh.
 	static std::vector<GEOLIB::PointWithID*> getSurfaceNodes(const MeshLib::CFEMesh &mesh);
-
-	/// MW: populate sort nodes vector
-	static void sortNodesLexicographically(MeshLib::CFEMesh *mesh);
 
 	/// Returns the 2d-element mesh representing the surface of the given layered mesh.
 	static MeshLib::CFEMesh* getMeshSurface(const MeshLib::CFEMesh &mesh);

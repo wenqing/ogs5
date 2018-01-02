@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /*
    Class element declaration
    class for finite element.
@@ -27,7 +18,7 @@
 #else
 // MSH
 #include "par_ddc.h"                              //OK //Moved from fem_ele_std.h. WW
-#endif
+#endif 
 
 
 
@@ -73,8 +64,7 @@ public:
 	CElement (int CoordFlag, const int order = 1);
 	virtual ~CElement ();
 	//
-	void ConfigElement(CElem* MElement, const int nquadrature_points, bool FaceIntegration = false);
-	void ConfigFaceElement(CElem* MElement, bool FaceIntegration = false); // JOD 2014-11-10
+	void ConfigElement(CElem* MElement, bool FaceIntegration = false);
 	void setOrder(const int order);
 	// Set Gauss point
 	void SetGaussPoint(const int gp, int& gp_r, int& gp_s, int& gp_t);
@@ -101,7 +91,12 @@ public:
 	// Finite element matrices and vectors
 	// Compute the local finite element matrices
 	void LocalAssembly(const long, const int) {}
-
+	// Set the number of Gauss points
+	//26.03.2007 WW
+	void SetGaussPointNumber(const int nGuassP)
+	{
+		nGauss = nGuassP;
+	}
 	// Get values;
 	int GetNumGaussPoints() const {return nGaussPoints; }
 	int GetNumGaussSamples() const {return nGauss; }
@@ -111,8 +106,6 @@ public:
 	// Integrate Neumman type BC
 	void FaceIntegration(double* NodeVal);
 
-	void FaceNormalFluxIntegration(long index, double *NodeVal_adv, double *NodeVal, int* nodesFace, CElem* face, CRFProcess* m_pcs, double* normal_vector); // JOD 2014-11-10
-
 	// Coupling
 	//
 	bool isTemperatureCoupling() const {return T_Flag; }
@@ -121,7 +114,7 @@ public:
 	int isConcentrationCoupling() const {return C_Flag; }
 
 	// Interpolate Gauss values
-	double interpolate (double const * const nodalVal, const int order = 1) const;
+	double interpolate (double* nodalVal, const int order = 1) const;
 	double interpolate (const int idx,  CRFProcess* m_pcs, const int order = 1);
 	//double elemnt_average (const int idx, const int order =1);
 	double elemnt_average (const int idx,  CRFProcess* m_pcs, const int order = 1);
@@ -229,18 +222,18 @@ protected:
 	double dbuff[20];
 
 #if defined(USE_PETSC) // || defined(other parallel libs)//03~04.3012. WW
-  int act_nodes; //> activated nodes
+  int act_nodes; //> activated nodes 
   int act_nodes_h; //> activated nodes for high order elements
-  int *idxm;  //> global indices of local matrix rows
-  int *idxn;  //> global indices of local matrix columns
+  int *idxm;  //> global indices of local matrix rows  
+  int *idxn;  //> global indices of local matrix columns 
   int *local_idx; //> local index for local assemble
-  //double *local_matrix; //>  local matrix
-  //double *local_vec; //>  local vector
+  //double *local_matrix; //>  local matrix 
+  //double *local_vec; //>  local vector  
 #endif
 	ExtrapolationMethod::type extrapo_method;
 	ExtrapolationMethod::type GetExtrapoMethod() {return extrapo_method; }
 private:
-	void ConfigNumerics(MshElemType::type elem_type, const int nquadrature_points);
+	void ConfigNumerics(MshElemType::type elem_type);
 };
 
 /*------------------------------------------------------------------

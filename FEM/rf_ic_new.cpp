@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************
    FEMLib - Object: Initial Conditions IC
    Task:
@@ -16,6 +7,7 @@
    last modified
 **************************************************************************/
 
+#include "gs_project.h"
 #include "makros.h"
 // C++ STL
 #include <iostream>
@@ -23,8 +15,6 @@
 using namespace std;
 // FEM-Makros
 //#include "files0.h"
-#include "makros.h"
-#include "display.h"
 #include "files0.h"
 #include "mathlib.h"
 // Base
@@ -59,7 +49,6 @@ CInitialCondition::CInitialCondition() : dis_linear_f(NULL)
 	// m_node = new CNodeValue();
 	// m_node->node_value = 0.0;
 	SubNumber = 0;
-	storeValues = false; // JOD 2014-11-10
 	this->setProcess(NULL);               //OK
 
 	m_msh = NULL;                         //OK
@@ -310,14 +299,6 @@ ios::pos_type CInitialCondition::Read(std::ifstream* ic_file,
 		}
 		//....................................................................
 		// subkeyword found
-		if (line_string.find("$STORE_VALUES") != string::npos)
-		{
-			storeValues = true;
-			in.clear();
-			continue;
-		}
-		//....................................................................
-		//subkeyword found
 		if (line_string.find("$DIS_TYPE") != string::npos)
 		{
 			in.str(GetLineFromFile1(ic_file));
@@ -363,7 +344,9 @@ ios::pos_type CInitialCondition::Read(std::ifstream* ic_file,
 					std::cerr <<
 					"error in CInitialCondition::Read: point name \"" <<
 					geo_name << "\" not found!" << "\n";
+#ifndef OGS_USE_QT	//KR
 					exit (1);
+#endif
 				}
 				setGeoType (GEOLIB::POINT);
 				setGeoObj (pnt);
@@ -382,7 +365,9 @@ ios::pos_type CInitialCondition::Read(std::ifstream* ic_file,
 					std::cerr <<
 					"error in CInitialCondition::Read: polyline name \"" <<
 					geo_name << "\" not found!" << "\n";
+#ifndef OGS_USE_QT	//KR
 					exit (1);
+#endif
 				}
 				setGeoType (GEOLIB::POLYLINE);
 				setGeoObj (ply);
@@ -390,18 +375,15 @@ ios::pos_type CInitialCondition::Read(std::ifstream* ic_file,
 			if (geo_type_name.find("SURFACE") != string::npos)
 			{
 				setGeoType (GEOLIB::SURFACE);
+				//				// TF 07/2010 - get the surface vector and get the surface ID
+				//				if (!((geo_obj.getSurfaceVecObj(unique_name))->getElementIDByName(
+				//						geo_name, _geo_obj_idx))) {
+				//					std::cerr
+				//							<< "ERROR: CInitialCondition::Read: surface name not found!"
+				//							<< "\n";
+				//					exit(1);
+				//				}
 				in >> geo_name;
-				GEOLIB::Surface const* sfc(
-					geo_obj.getSurfaceVecObj(unique_geo_name)->getElementByName(geo_name)
-				);
-				setGeoObj(sfc);
-				if (sfc == NULL) {
-					std::cerr
-							<< "ERROR: CInitialCondition::Read: surface \"" <<
-							geo_name << "\" not found!"
-							<< "\n";
-					exit(1);
-				}
 			}
 			if (geo_type_name.find("VOLUME") != string::npos)
 				setGeoType (GEOLIB::VOLUME);
@@ -525,8 +507,6 @@ void CInitialCondition::Set(int nidx)
 			break;
 		case GEOLIB::GEODOMAIN:
 			SetDomain(nidx);
-			if (storeValues)
-			  StoreInitialValues();// JOD 2014-11-10
 			break;
 		case GEOLIB::INVALID:
 			std::cout << "WARNING: CInitialCondition::Set - invalid geo type" << "\n";
@@ -589,7 +569,7 @@ void CInitialCondition::SetPoint(int nidx)
 		                                                                                getGeoObj(
 		                                                                                        ))),
 		                                 nidx,
-		                                 geo_node_value);
+		                                 geo_node_value);	
 	else
 		std::cerr << "Error in CInitialCondition::SetPoint - point: "
 		          << *(static_cast<const GEOLIB::Point*>(getGeoObj()))
@@ -639,45 +619,30 @@ void CInitialCondition::SetPolyline(int nidx)
 {
  	if (this->getProcessDistributionType() == FiniteElement::CONSTANT)
 	{
-		CGLPolyline* m_polyline = GEOGetPLYByName(geo_name);
-		if (!m_polyline) {
-			std::cout << "Error in CInitialCondition::SetPolyline - CGLPolyline: "
-				<< geo_name << " not found" << "\n";
+		//		CGLPolyline* m_polyline = polyline_vector[getGeoObjIdx()];
+		//		if (m_polyline) {
+		//			std::vector<long> nodes_vector;
+		//			m_msh->GetNODOnPLY(m_polyline, nodes_vector);
+		//			for (size_t i = 0; i < nodes_vector.size(); i++) {
+		//				m_pcs->SetNodeValue(nodes_vector[i], nidx, node_value_vector[0]->node_value);
+		//			}
+		//		} else {
+		//			std::cout << "Error in CInitialCondition::SetPolyline - polyline: "
+		//					<< geo_name << " not found" << "\n";
+		//		}
+		if (getGeoObj())
+		{
+			std::vector<long> nodes_vector;
+			m_msh->GetNODOnPLY(static_cast<const GEOLIB::Polyline*>(getGeoObj()), nodes_vector);
+			for (size_t i = 0; i < nodes_vector.size(); i++)
+				this->getProcess()->SetNodeValue(nodes_vector[i],
+				                                 nidx,
+				                                 geo_node_value);
 		}
-		if (!getGeoObj()) {
-			std::cout << "Error in CInitialCondition::SetPolyline - Polyline: "
+		else
+			std::cout << "Error in CInitialCondition::SetPolyline - polyline: "
 			          << geo_name << " not found" << "\n";
-			return;
-		}
-
-		bool automatic(! m_polyline->isSetEps());
-		std::vector<std::size_t> nodes_vector;
-		m_msh->GetNODOnPLY(
-			static_cast<const GEOLIB::Polyline*>(getGeoObj()),
-			nodes_vector, automatic, m_polyline->epsilon
-		);
-		for (size_t i = 0; i < nodes_vector.size(); i++)
-			this->getProcess()->SetNodeValue(nodes_vector[i],
-			                                 nidx,
-			                                 geo_node_value);
-#ifndef NDEBUG
-#ifdef DEBUGMESHNODESEARCH
-	{
-		std::string const debug_fname(geo_name+"-FoundNodes.gli");
-		std::ofstream debug_out(debug_fname.c_str());
-		debug_out << "#POINTS\n";
-		for (size_t k(0); k<nodes_vector.size(); k++) {
-			debug_out << k << " " <<
-				GEOLIB::Point((m_msh->getNodeVector())[nodes_vector[k]]->getData()) <<
-				" $NAME " << nodes_vector[k] << "\n";
-		}
-		debug_out << "#STOP" << "\n";
-		debug_out.close();
 	}
-#endif
-#endif
-	}
-
 	//	if (dis_type_name.find("LINEAR") != string::npos) {
 	//	}
 }
@@ -696,36 +661,8 @@ void CInitialCondition::SetSurface(int nidx)
 
 	if(m_sfc && m_msh)
 	{
-		 // m_msh->GetNODOnSFC(m_sfc, sfc_nod_vector); // TF: use the following
-		 // lines to get mesh nodes on surfaces
-		GEOLIB::Surface const* sfc(
-			static_cast<const GEOLIB::Surface*> (getGeoObj()));
-		if (sfc == NULL) {
-			std::cerr << "CInitialCondition::SetSurface(): Did not find surface.\n";
-			return;
-		}
-		std::vector<std::size_t> msh_nod_vec;
-		m_msh->GetNODOnSFC(sfc, msh_nod_vec);
-		// copy node ids
-		for (size_t k(0); k < msh_nod_vec.size(); k++) {
-			sfc_nod_vector.push_back (msh_nod_vec[k]);
-		}
-#ifndef NDEBUG
-#ifdef DEBUGMESHNODESEARCH
-		{
-			std::string const debug_fname("IC-Surface-"+geo_name+"-FoundNodes.gli");
-			std::ofstream debug_out(debug_fname.c_str());
-			debug_out << "#POINTS\n";
-			for (size_t k(0); k<msh_nod_vec.size(); k++) {
-				debug_out << k << " " <<
-					GEOLIB::Point((m_msh->getNodeVector())[msh_nod_vec[k]]->getData()) <<
-					" $NAME " << msh_nod_vec[k] << "\n";
-			}
-			debug_out << "#STOP" << "\n";
-			debug_out.close();
-		}
-#endif
-#endif
+
+		 m_msh->GetNODOnSFC(m_sfc, sfc_nod_vector);
 
 		if(this->getProcessDistributionType() == FiniteElement::CONSTANT)
 			for(size_t i = 0; i < sfc_nod_vector.size(); i++)
@@ -878,27 +815,34 @@ void CInitialCondition::SetDomain(int nidx)
 				return;
 			}
 			std::ifstream rfr_file;
+			CGSProject* m_gsp = GSPGetMember("msh");
 			std::string restart_file_name;
 			restart_file_name = rfr_file_name;
-			basic_string<char>::size_type indexChWin, indexChLinux;
-			indexChWin = indexChLinux = 0;
-			indexChWin = FileName.find_last_of('\\');
-			indexChLinux = FileName.find_last_of('/');
-			//
-			string funfname;
-			if (indexChWin == string::npos && indexChLinux == string::npos)
-				funfname = rfr_file_name;
-			else if (indexChWin != string::npos)
+			if (m_gsp)
+				restart_file_name = m_gsp->path + rfr_file_name;
+			//---------------------------------------------------------------------
+			else          //Get absolut path of the file. 07.01.2009. WW
 			{
-				funfname = FileName.substr(0, indexChWin);
-				funfname = funfname + "\\" + rfr_file_name;
+				basic_string<char>::size_type indexChWin, indexChLinux;
+				indexChWin = indexChLinux = 0;
+				indexChWin = FileName.find_last_of('\\');
+				indexChLinux = FileName.find_last_of('/');
+				//
+				string funfname;
+				if (indexChWin == string::npos && indexChLinux == string::npos)
+					funfname = rfr_file_name;
+				else if (indexChWin != string::npos)
+				{
+					funfname = FileName.substr(0, indexChWin);
+					funfname = funfname + "\\" + rfr_file_name;
+				}
+				else if (indexChLinux != string::npos)
+				{
+					funfname = FileName.substr(0, indexChLinux);
+					funfname = funfname + "/" + rfr_file_name;
+				}
+				restart_file_name = funfname;
 			}
-			else if (indexChLinux != string::npos)
-			{
-				funfname = FileName.substr(0, indexChLinux);
-				funfname = funfname + "/" + rfr_file_name;
-			}
-			restart_file_name = funfname;
 			//-------------------------------------------------------------------
 			rfr_file.open(restart_file_name.c_str(), ios::in);
 			if (!rfr_file.good())
@@ -1141,25 +1085,3 @@ CInitialCondition* ICGet(string ic_name)
 	return NULL;
 }
 
-/**************************************************************************
-FEMLib-Method:
-
-For output of changes in primary variables
-Used for LIQUID_FLOW with varying fluid density
-
-11/2014 JOD Implementation
-**************************************************************************/
-void CInitialCondition::StoreInitialValues() {
-
-	string variable_name = "DELTA_" + convertPrimaryVariableToString(this->
-		getProcessPrimaryVariable());
-
-	for (int i = 0; i < (long)m_msh->nod_vector.size(); i++)
-	{
-
-		this->getProcess()->SetNodeValue(i, this->getProcess()->GetNodeValueIndex(variable_name),
-			this->getProcess()->GetNodeValue(i, 0));
-
-	}
-
-}

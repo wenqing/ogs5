@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /*
    The members of class Element definitions.
    Designed and programmed by WW, 06/2004
@@ -368,9 +359,12 @@ CFiniteElementVec::CFiniteElementVec(process::CRFProcessDeformation* dm_pcs,
 	time_unit_factor = pcs->time_unit_factor;
 
 #if defined(USE_PETSC) // || defined(other parallel libs)//05~07.3013. WW
-	idxm = new int[60];  //> global indices of local matrix rows
-	idxn = new int[60];  //> global indices of local matrix columns
+	idxm = new int[60];  //> global indices of local matrix rows  
+	idxn = new int[60];  //> global indices of local matrix columns 
 	local_idx = new int[60]; //> local index for local assemble
+
+        local_matrix = new double[3600];
+        local_vec = new double[60];
 #endif
 
 }
@@ -499,6 +493,14 @@ CFiniteElementVec::~CFiniteElementVec()
 		vec_B_matrix[i] = NULL;
 		vec_B_matrix_T[i] = NULL;
 	}
+
+#if defined(USE_PETSC) // || defined(other parallel libs)//05~07.3013. WW
+        delete [] local_matrix;
+        delete [] local_vec;
+#endif
+
+
+
 }
 
 /***************************************************************************
@@ -751,7 +753,73 @@ void CFiniteElementVec::ComputeStrain()
 		break;
 	}
 }
+/***************************************************************************
+   GeoSys - Funktion:
+           CFiniteElementVec::ComputeStrain_1()
 
+   Aufgabe:
+          Input Displacement Compute strains
+
+   Programming:
+   05.2014     WX
+ **************************************************************************/
+void CFiniteElementVec::ComputeStrain_1(double* tmp_disp, double* tmp_dstrain)
+{
+	int i, j = 0, k = 0;
+	if(excavation)//WX:03.2012 if element is excavated, strain = 0
+	{
+		for(i=0; i<ns; i++)
+			tmp_dstrain[i]=0.;
+		return;
+	}
+	switch(dim)
+	{
+	case 2:
+		for(i = 0; i < ns; i++)
+			tmp_dstrain[i] = 0.0;
+		if(axisymmetry)
+		{
+			for(i = 0; i < nnodesHQ; i++)
+			{
+				j = i + nnodesHQ;
+				tmp_dstrain[0] += tmp_disp[i] * dshapefctHQ[i];
+				tmp_dstrain[1] += tmp_disp[i] * shapefctHQ[i];
+				tmp_dstrain[2] += tmp_disp[j] * dshapefctHQ[j];
+				tmp_dstrain[3] += tmp_disp[i] * dshapefctHQ[j]
+				              + tmp_disp[j] * dshapefctHQ[i];
+			}
+			tmp_dstrain[1] /= Radius;
+		}
+		else
+			for(i = 0; i < nnodesHQ; i++)
+			{
+				j = i + nnodesHQ;
+				tmp_dstrain[0] += tmp_disp[i] * dshapefctHQ[i];
+				tmp_dstrain[1] += tmp_disp[j] * dshapefctHQ[j];
+				tmp_dstrain[3] += tmp_disp[i] * dshapefctHQ[j]
+				              + tmp_disp[j] * dshapefctHQ[i];
+			}
+		break;
+	case 3:
+		for(i = 0; i < ns; i++)
+			tmp_dstrain[i] = 0.0;
+		for(i = 0; i < nnodesHQ; i++)
+		{
+			j = i + nnodesHQ;
+			k = i + 2 * nnodesHQ;
+			tmp_dstrain[0] += tmp_disp[i] * dshapefctHQ[i];
+			tmp_dstrain[1] += tmp_disp[j] * dshapefctHQ[j];
+			tmp_dstrain[2] += tmp_disp[k] * dshapefctHQ[k];
+			tmp_dstrain[3] += tmp_disp[i] * dshapefctHQ[j]
+			              + tmp_disp[j] * dshapefctHQ[i];
+			tmp_dstrain[4] += tmp_disp[i] * dshapefctHQ[k]
+			              + tmp_disp[k] * dshapefctHQ[i];
+			tmp_dstrain[5] += tmp_disp[j] * dshapefctHQ[k]
+			              + tmp_disp[k] * dshapefctHQ[j];
+		}
+		break;
+	}
+}
 /***************************************************************************
    GeoSys - Funktion:
            CFiniteElementVec:: CalDensity()
@@ -790,7 +858,7 @@ double CFiniteElementVec::CalDensity()
 			Sw = 1.0;     // JT, should be 1.0, unless multiphase (calculate below) (if unsaturated, fluid density would be negligible... so still works)
 			if(Flow_Type > 0 && Flow_Type != 10)
 			{
-                Sw = 0.; //WW
+                Sw = 0.; //WW 
 				for(i = 0; i < nnodes; i++)
 					Sw += shapefct[i] * AuxNodal_S[i];
 			}
@@ -860,19 +928,20 @@ void CFiniteElementVec::ComputeMatrix_RHS(const double fkt,
 	Matrix* tmp_AuxMatrix2 = AuxMatrix2;
 	Matrix* tmp_Stiffness = Stiffness;
 
-	int act_r = 0;
+        int act_r = 0;
 #if defined(USE_PETSC) // || defined(other parallel libs)//05.3013. WW
-	act_r = act_nodes_h;
+        act_r = act_nodes_h;
 #else
 	act_r = nnodesHQ;
 #endif
 
-	for (i = 0; i < act_r; i++)
+
+        for (i = 0; i < act_r; i++)
 	{
 #if defined(USE_PETSC) // || defined(other parallel libs)//05.3013. WW
-		const int ia = local_idx[i];
+           const int ia = local_idx[i];           
 #else
-		const int ia = i;
+           const int ia = i;
 #endif
 		//NW      setTransB_Matrix(i);
 		tmp_B_matrix_T = this->vec_B_matrix_T[ia];
@@ -905,11 +974,11 @@ void CFiniteElementVec::ComputeMatrix_RHS(const double fkt,
 
 			// Local assembly of stiffness matrix
 			for (k = 0; k < ele_dim; k++)
-			{
-				const int kia = ia + k * nnodesHQ;
+            {
+                const int kia =    ia + k * nnodesHQ;
 				for (l = 0; l < ele_dim; l++)
 					(*tmp_Stiffness)(kia, j + l * nnodesHQ) += (*tmp_AuxMatrix)(k,l) * fkt;
-			}
+           }
 		}                         // loop j
 	}                                     // loop i
 
@@ -935,57 +1004,58 @@ void CFiniteElementVec::ComputeMatrix_RHS(const double fkt,
 			// Saturation of phase 1
 			fac1 = m_mmp->SaturationCapillaryPressureFunction(fac2);
 			if(PressureC_S_dp)
-				fac2 = fac1 - fac2* m_mmp->PressureSaturationDependency(fac1,true);
+				fac2 = fac1 - fac2* m_mmp->PressureSaturationDependency2(fac1,fac2,true);//WX:04.2015
+				//fac2 = fac1 - fac2* m_mmp->PressureSaturationDependency(fac1,true);
 				//JT: dSdP now returns actual sign (<0)
 		}
 
 		if(axisymmetry)
-		{
-			for (k = 0; k < act_r; k++)
-			{
+            {
+               for (k = 0; k < act_r; k++)
+               {
 #if defined(USE_PETSC) // || defined(other parallel libs)//05.3013. WW
-				const int ka = local_idx[k];
+                  const int ka = local_idx[k];           
 #else
-				const int ka = k;
+                  const int ka = k;
 #endif
 				for (l = 0; l < nnodes; l++)
 					for(j = 0; j < ele_dim; j++)
 					{
-						dN_dx = dshapefctHQ[nnodesHQ * j + ka];
+                         dN_dx = dshapefctHQ[nnodesHQ * j + ka];
 						if(j == 0)
-							dN_dx += shapefctHQ[ka] / Radius;
+                             dN_dx += shapefctHQ[ka] / Radius;
 
 						f_buff = fac * dN_dx * shapefct[l];
-						(*PressureC)(nnodesHQ * j + ka, l) += f_buff;
+                         (*PressureC)(nnodesHQ * j + ka, l) += f_buff;
 						if(PressureC_S)
-							(*PressureC_S)(nnodesHQ * j + ka, l) += f_buff * fac1;
-						if(PressureC_S_dp)
-							(*PressureC_S_dp)(nnodesHQ * j + ka, l) += f_buff * fac2;
-					}
+                             (*PressureC_S)(nnodesHQ * j + ka, l) += f_buff * fac1;
+                          if(PressureC_S_dp)
+                             (*PressureC_S_dp)(nnodesHQ * j + ka, l) += f_buff * fac2;
+                    }
+                }
 			}
-		}
 		else
-		{
-			for (k = 0; k < act_r; k++)
-			{
+            {
+               for (k = 0; k < act_r; k++)
+               {
 
 #if defined(USE_PETSC) // || defined(other parallel libs)//05.3013. WW
-				const int ka = local_idx[k];
+                  const int ka = local_idx[k];           
 #else
-				const int ka = k;
+                  const int ka = k;
 #endif
 				for (l = 0; l < nnodes; l++)
 					for(j = 0; j < ele_dim; j++)
 					{
-						f_buff = fac *  dshapefctHQ[nnodesHQ * j +  ka] * shapefct[l];
-						(*PressureC)(nnodesHQ * j + ka,l) += f_buff;
-						if(PressureC_S)
-							(*PressureC_S)(nnodesHQ * j + ka, l) += f_buff * fac1;
-						if(PressureC_S_dp)
-							(*PressureC_S_dp)(nnodesHQ * j + ka, l) += f_buff * fac2;
-					}
-			}
-		}
+                       f_buff = fac *  dshapefctHQ[nnodesHQ * j +  ka] * shapefct[l];
+                       (*PressureC)(nnodesHQ * j + ka,l) += f_buff;
+                       if(PressureC_S)
+                         (*PressureC_S)(nnodesHQ * j + ka, l) += f_buff * fac1;
+                       if(PressureC_S_dp)
+                         (*PressureC_S_dp)(nnodesHQ * j + ka, l) += f_buff * fac2;
+                    }
+               }
+	    }
 	}
 	//---------------------------------------------------------
 	// Assemble gravity force vector
@@ -997,12 +1067,12 @@ void CFiniteElementVec::ComputeMatrix_RHS(const double fkt,
 		i = (ele_dim - 1) * nnodesHQ;
 		const double coeff = LoadFactor * rho * smat->grav_const * fkt;
 		for (k = 0; k < act_r; k++)
-		{
+        {
 
 #if defined(USE_PETSC) // || defined(other parallel libs)//05.3013. WW
-			const int ka = local_idx[k];
+                    const int ka = local_idx[k];           
 #else
-			const int ka = k;
+                    const int ka = k;
 #endif
 			(*RHS)[i + ka] += coeff * shapefctHQ[ka];
 		//        (*RHS)(i+ka) += LoadFactor * rho * smat->grav_const * shapefctHQ[ka] * fkt;
@@ -1053,7 +1123,7 @@ void CFiniteElementVec::LocalAssembly(const int update)
 #elif defined(NEW_EQS)
 		b_rhs = pcs->eqs_new->b;
 #else
-		b_rhs = pcs->eqs->b;
+		b_rhs = pcs->eqs->b;	  
 #endif
 	  }
 	(*RHS) = 0.0;
@@ -1112,7 +1182,8 @@ void CFiniteElementVec::LocalAssembly(const int update)
 		for(size_t i = 0; i < dim; i++)
 			for(j = 0; j < nnodesHQ; j++)
 				//WX:03.2013 use total disp. if damage or E=f(t) is on, dstress in LocalAssembly_continumm() is also changed
-				if(smat->Time_Dependent_E_nv_mode > MKleinsteZahl && pcs->ExcavMaterialGroup<0)
+				if((smat->Time_Dependent_E_nv_mode > MKleinsteZahl || smat->COMP_Dependent_E_nv_mode > 0  /*|| smat->E_Function_Model == 3*/)
+					&& pcs->ExcavMaterialGroup<0)
 					Disp[j+i*nnodesHQ] = pcs->GetNodeValue(nodes[j],Idx_dm0[i]) + pcs->GetNodeValue(nodes[j],Idx_dm0[i]+1);
 				else
 				Disp[j + i * nnodesHQ] = pcs->GetNodeValue(nodes[j],Idx_dm0[i]);
@@ -1337,51 +1408,176 @@ bool CFiniteElementVec::GlobalAssembly()
 #if defined(USE_PETSC) // || defined(other parallel libs)//06.2013. WW
 void CFiniteElementVec::GlobalAssembly_Stiffness()
 {
-	const int dof = ele_dim;
-	const int m_dim = nnodesHQ * dof;
-	const int n_dim = m_dim;
+   int i,j;
+   double f1,f2;
+   f1 = 1.0;
+   f2 = -1.0;
 
-	int non_ghost_flag = 1;
-	if (act_nodes_h != nnodesHQ)
-	    non_ghost_flag = -1;
+   double biot = 1.0;
+   biot = smat->biot_const;
 
-	for (int i = 0; i < nnodesHQ; i++)
+   int m_dim, n_dim;
+   int dof = ele_dim;
+
+   double *local_matrix_asy = NULL;
+   double *local_vec_asy = NULL;
+   petsc_group::PETScLinearSolver *eqs = pcs->eqs_new;
+
+#define n_assmb_petsc_test
+#ifdef assmb_petsc_test
+  char rank_char[10];
+  sprintf(rank_char, "%d", eqs->getMPI_Rank());
+  string fname = FileName + rank_char + "_e_matrix.txt";
+  ofstream os_t(fname.c_str(), ios::app);
+  os_t<<"\n=================================================="<<"\n";
+#endif
+
+  if(act_nodes_h != nnodesHQ)
+    {
+      m_dim = act_nodes_h * dof;
+      n_dim = nnodesHQ * dof;
+
+      const int dim_full = nnodesHQ * dof;
+      //     int i_dom, j_dom, in, jn; 
+      int i_dom,  in; 
+      // put the subdomain portion of local stiffness matrix to Mass 
+      double *loc_m = Stiffness->getEntryArray();
+      double *loc_v = RHS->getEntryArray();
+      double *loc_dymass;
+      local_matrix_asy = local_matrix;
+      local_vec_asy =  local_vec;
+
+      if(dynamic)
+      {
+         f1 = 0.5 * beta2 * dt * dt;
+         f2 = -0.5 * bbeta1 * dt;
+         loc_dymass = Mass->getEntryArray();
+      }
+
+      for(i = 0; i < nnodesHQ; i++)
 	{
-		const int i_buff = MeshElement->nodes[i]->GetEquationIndex() *  dof;
-		for(int k=0; k<dof; k++)
-		{
-			const int ki = k*nnodesHQ + i;
-			idxm[ki] = non_ghost_flag *( i_buff + k);
-			idxn[ki] = non_ghost_flag * idxm[ki]; // always positive
-		}
-	}
+	  const int i_buff = MeshElement->nodes[i]->GetEquationIndex() *  dof;		
+	  for(int k=0; k<dof; k++)
+	    {
+	      idxn[k*nnodesHQ + i] = i_buff + k;	
+	    }	    
+	  // local_vec[i] = 0.;
+	}     
 
-	if (non_ghost_flag == -1)
+      for( i=0; i<m_dim; i++)
 	{
-		for (int i = 0; i < act_nodes_h; i++)
-		{
-			for(int k=0; k<dof; k++)
-			{
-				const int ki = k*nnodesHQ + local_idx[i];
-				idxm[ki] *= -1;
-				if (idxm[ki] == 0)
-					idxm[ki] = -9999;
-				// If local size is used to build up matrix, idxn should
-                // be processed in the same way. 
-			}
-		}
+	  i_dom = i/act_nodes_h;
+	  in = i % act_nodes_h;
+	  int i_full = local_idx[in] + i_dom * nnodesHQ;
+	  local_vec_asy[i] = loc_v[i_full];
+	  i_full *= dim_full; 
+
+	  idxm[i] = MeshElement->nodes[local_idx[in]]->GetEquationIndex() *  dof + i_dom;
+         
+
+	  for(int j=0; j<dim_full; j++)
+	    {
+	      local_matrix_asy[i*dim_full +j] = f1 * loc_m[i_full + j]; 
+              if(dynamic)
+              {
+                 local_matrix_asy[i*dim_full +j] += loc_dymass[i_full + j]; 
+              }
+
+	      //TEST
+#ifdef assmb_petsc_test
+	      os_t<<"("<<local_idx[in]<<") "<<local_matrix_asy[i*dim_full +j]<<" ";
+#endif //#ifdef assmb_petsc_test
+
+	      
+	    }
+	  
+	  //TEST
+#ifdef assmb_petsc_test
+	  os_t<<"\n";
+#endif //#ifdef assmb_petsc_test
+
 	}
+    
+      
+    }
+  else
+    {
+      m_dim = nnodesHQ * dof;
+      n_dim = m_dim;
+      //----------------------------------------------------------------------
+      // For non-overlapping partition DDC
+      local_matrix_asy = Stiffness->getEntryArray();
+      local_vec_asy = RHS->getEntryArray();
 
-	const double* local_matrix = Stiffness->getEntryArray();
-	double* local_vec = RHS->getEntryArray();
-	for(std::size_t i=0; i<RHS->Size(); i++)
-		local_vec[i] *= -1.0;
-	// if (dynamic) // not available.
+      for(i = 0; i < nnodesHQ; i++)
+	{
+	  const int i_buff = MeshElement->nodes[i]->GetEquationIndex() *  dof;		
+	  for(int k=0; k<dof; k++)
+	    {
+	      const int ki = k*nnodesHQ + i;
+	      idxm[ki] = i_buff + k;
+	      idxn[ki] = idxm[ki];
+	    }	    
+	  // local_vec[i] = 0.;
+	}     
+    }
 
-	petsc_group::PETScLinearSolver *eqs = pcs->eqs_new;
 
-	eqs->addMatrixEntries(m_dim, idxm, n_dim, idxn, local_matrix);
-	eqs->setArrayValues(1, m_dim, idxm, local_vec);
+
+    //TEST
+#ifdef assmb_petsc_test
+      	{
+      	  os_t<<"\n------------------"<<act_nodesHQ * dof<<"\n";
+       StiffMatrix->Write(os_t);
+       RHS->Write(os_t);
+       
+       os_t<<"Node ID: ";
+       for( i=0; i<nnodesHQ ; i++)
+	 {
+	   os_t<<MeshElement->nodes[i]->GetEquationIndex()<<" ";
+	 }
+       os_t<<"\n";
+       os_t<<"Act. Local ID: ";
+       for( i=0; i<act_nodes_h ; i++)
+	 {
+	   os_t<<local_idx[i]<<" ";
+	 }
+       os_t<<"\n";
+         os_t<<"Act. Global ID:";
+       for(i=0; i<act_nodes_h * dof; i++)
+	 {
+	   os_t<<idxm[i]<<" ";
+	 }
+       os_t<<"\n";
+       	}
+	os_t.close();
+#endif //ifdef assmb_petsc_test
+
+   eqs->addMatrixEntries(m_dim, idxm, n_dim, idxn, local_matrix_asy);
+   eqs->setArrayValues(1, m_dim, idxm, local_vec_asy);
+  //eqs->AssembleRHS_PETSc();
+  //eqs->AssembleMatrixPETSc(MAT_FINAL_ASSEMBLY );
+
+
+   /*
+   //TEST OUT
+   //Stiffness->Write();
+   if(pcs->type / 40 != 1) // Not monolithic scheme
+     return;
+
+   if(PressureC)
+   {
+      i = 0;                    // phase
+      if(Flow_Type == 2)        // Multi-phase-flow
+	i = 1;
+      GlobalAssembly_PressureCoupling(PressureC, f2 * biot, i);
+   }
+   // H2: p_g- S_w*p_c
+   if(PressureC_S)
+      GlobalAssembly_PressureCoupling(PressureC_S, -f2 * biot, 0);
+   if(PressureC_S_dp)
+      GlobalAssembly_PressureCoupling(PressureC_S_dp, -f2 * biot, 0);
+   */
 }
 #else
 /***************************************************************************
@@ -1451,6 +1647,9 @@ void CFiniteElementVec::GlobalAssembly_Stiffness()
 				// Local assembly of stiffness matrix
 				for (size_t k = 0; k < ele_dim; k++)
 				{
+#if defined(USE_PETSC) // || defined(other parallel libs)//10.3012. WW
+				  //TODO
+#else
 #ifdef NEW_EQS
 					(*A)(eqs_number[i] + NodeShift[k],eqs_number[j] +
 					     NodeShift[k])
@@ -1459,6 +1658,7 @@ void CFiniteElementVec::GlobalAssembly_Stiffness()
 					MXInc(eqs_number[i] + NodeShift[k],
 					      eqs_number[j] + NodeShift[k],
 					      (*Mass)(i, j));
+#endif
 #endif
 				}
 			}             // loop j
@@ -1475,6 +1675,9 @@ void CFiniteElementVec::GlobalAssembly_Stiffness()
 			{
 				for (size_t l = 0; l < ele_dim; l++)
 				  {
+#if defined(USE_PETSC) // || defined(other parallel libs)//10.3012. WW
+				    //TODO
+#else
 #ifdef NEW_EQS
 					(*A)(eqs_number[i] + NodeShift[k],eqs_number[j] +
 					     NodeShift[l])
@@ -1484,6 +1687,7 @@ void CFiniteElementVec::GlobalAssembly_Stiffness()
 					MXInc(eqs_number[i] + NodeShift[k],
 					      eqs_number[j] + NodeShift[l],
 					      f1 * (*Stiffness)(i + k * nnodesHQ, j + l * nnodesHQ));
+#endif
 #endif
 				  }
 			}
@@ -1587,15 +1791,14 @@ void CFiniteElementVec::GlobalAssembly_Stiffness()
 
     07.2011. WW
  */
-#if defined(USE_PETSC) // || defined(other parallel libs)//10.3012. WW
-void CFiniteElementVec::GlobalAssembly_PressureCoupling(Matrix*,
-                                                        double,
-                                                        const int) {}
-#else
 void CFiniteElementVec::GlobalAssembly_PressureCoupling(Matrix* pCMatrix,
                                                         double fct,
                                                         const int phase)
 {
+#if defined(USE_PETSC) // || defined(other parallel libs)//10.3012. WW
+  ///
+
+#else
 #if defined(NEW_EQS)
 	CSparseMatrix* A = NULL;
 	if(m_dom)
@@ -1611,7 +1814,7 @@ void CFiniteElementVec::GlobalAssembly_PressureCoupling(Matrix* pCMatrix,
 		for (int j = 0; j < nnodes; j++)
 		{
 			for(size_t k = 0; k < ele_dim; k++)
-			  {
+			  {  
 #ifdef NEW_EQS
 				(*A)(NodeShift[k] + eqs_number[i], NodeShift[dim_shift] +
 				     eqs_number[j])
@@ -1624,8 +1827,8 @@ void CFiniteElementVec::GlobalAssembly_PressureCoupling(Matrix* pCMatrix,
 			  }
 		}
 	}
-}
 #endif
+}
 
 /***************************************************************************
    GeoSys - Funktion:
@@ -1679,7 +1882,7 @@ void CFiniteElementVec::ComputeMass()
  **************************************************************************/
 void CFiniteElementVec::GlobalAssembly_RHS()
 {
-	int i, j, k;
+	int i, j, k, valid;
 	double fact, val_n = 0.0;
 	double* a_n = NULL;
 	double biot = 1.0;
@@ -1688,9 +1891,12 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 	Residual = false;
 	fact = 1.0;
 	k = 0;
-	int idx_p1_ini = 0, idx_p2_ini = 0;//, idx_sw_ini;//WX:08.2011 neglect ini h affect
+	int idx_p1_ini, idx_p2_ini;//, idx_sw_ini;//WX:08.2011 neglect ini h affect
 
 	biot = smat->biot_const;
+	//Time dependent biot. WX:12.2014
+	if (smat->time_biot_curve > 0)
+		biot = GetCurveValue(smat->time_biot_curve,0,aktuelle_zeit,&valid);
 	if(Flow_Type >= 0)
 	{
 		if(pcs->type / 10 == 4)   // Monolithic scheme
@@ -1796,10 +2002,9 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 				AuxNodal[i] = LoadFactor * h_pcs->GetNodeValue(nodes[i],idx_P1);
 			break;
 		case 1:                   // Richards flow
-		{
 			//WX:08.2011
-			double bishop_coef_ini = 0.0;
-			double S_e, S_e_ini = 0.0, sw_ini;
+			double bishop_coef_ini; 
+			double S_e, S_e_ini, sw_ini;
 
 			if(pcs->Neglect_H_ini==2)
 			{
@@ -1847,12 +2052,12 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 							bishop_coef_ini = pow(S_e_ini,smat->bishop_model_value);
 							AuxNodal[i] = LoadFactor*pow(S_e,smat->bishop_model_value)* val_n;
 							break;
-						case 3:
+						case 3:  
 							h_pcs->GetNodeValue(nodes[i],idx_p1_ini)<smat->bishop_model_value ?  bishop_coef_ini=0.0 : bishop_coef_ini=1.0;
 							if(val_n<smat->bishop_model_value)
-							   AuxNodal[i] = 0.0;
+							   AuxNodal[i] = 0.0;						
 							else
-							   AuxNodal[i] = LoadFactor * val_n;
+							   AuxNodal[i] = LoadFactor * val_n;						
 							break;
 						default :
 							break;
@@ -1864,20 +2069,22 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 
 				if(pcs->Neglect_H_ini==2)//WX:08.2011
 				{
-						if(smat->bishop_model==1||smat->bishop_model==2||smat->bishop_model==3)
+						if(smat->bishop_model==1||smat->bishop_model==2||smat->bishop_model==3)  
 							AuxNodal[i] -= LoadFactor * bishop_coef_ini * h_pcs->GetNodeValue(nodes[i],idx_p1_ini);
 						else
 						{
 
 							double p0 = h_pcs->GetNodeValue(nodes[i],idx_p1_ini);
 							double Sat0=  LoadFactor*m_mmp->SaturationCapillaryPressureFunction(-p0);
-							AuxNodal[i] -= LoadFactor * Sat0 * p0;
+							if(biot < 0.0 && p0 < 0.0)
+								AuxNodal[i] -= 0.;
+							else
+								AuxNodal[i] -= LoadFactor * Sat0 * p0;
 						}
 					}
 #endif
 			}
 			break;
-		}
 		case 2: {                   // Multi-phase-flow: p_g-Sw*p_c
 			// 07.2011. WW
 			const int dim_times_nnodesHQ(dim * nnodesHQ);
@@ -1893,8 +2100,8 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 
 			if(smat->bishop_model > 0)
 			{
-				double bishop_coef = 0.0, bishop_coef_ini = 0.0;
-				double S_e, S_e_ini = 0.0, sw_ini;
+				double bishop_coef, bishop_coef_ini;        //bishop
+				double S_e, S_e_ini, sw_ini;
 
 				for (i = 0; i < nnodes; i++)
 				{
@@ -1916,7 +2123,7 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 						}
 						bishop_coef = pow(S_e, smat->bishop_model_value);
 						break;
-					case 3:
+					case 3:  
 						S_e = (AuxNodal_S[i]-m_mmp->capillary_pressure_values[1])
 							/(m_mmp->capillary_pressure_values[2]-m_mmp->capillary_pressure_values[1]);
 						if(pcs->Neglect_H_ini==2)
@@ -1926,25 +2133,36 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 					default:
 						break;
 					}
-
 					if(smat->bishop_model == 1 || smat->bishop_model == 2 || smat->bishop_model == 3) // pg-bishop*pc 05.2011 WX
 					{
 						val_n = h_pcs->GetNodeValue(nodes[i],idx_P2)
 							-bishop_coef*h_pcs->GetNodeValue(nodes[i],idx_P1);
 						if(onExBoundaryState[i]==1)//WX:02.2013
-							val_n=0.;
+							val_n=0.;						
+						if(h_pcs->GetNodeValue(nodes[i],idx_P1)<MKleinsteZahl)//01.2015 debug
+							val_n = h_pcs->GetNodeValue(nodes[i],idx_P2)-h_pcs->GetNodeValue(nodes[i],idx_P1);
 						if(pcs->Neglect_H_ini==2)
-							val_n -= h_pcs->GetNodeValue(nodes[i], idx_p2_ini)
+							if(h_pcs->GetNodeValue(nodes[i], idx_p1_ini)<MKleinsteZahl)
+								val_n -= h_pcs->GetNodeValue(nodes[i], idx_p2_ini)-h_pcs->GetNodeValue(nodes[i], idx_p1_ini);
+							else
+								val_n -= h_pcs->GetNodeValue(nodes[i], idx_p2_ini)
 							-bishop_coef_ini*h_pcs->GetNodeValue(nodes[i], idx_p1_ini);
 					}
 					else
 					{
 						val_n = h_pcs->GetNodeValue(nodes[i],idx_P2) // pg - Sw*pc
 							-AuxNodal_S[i]*h_pcs->GetNodeValue(nodes[i],idx_P1);
+						if(h_pcs->GetNodeValue(nodes[i],idx_P1)<MKleinsteZahl)
+							val_n = h_pcs->GetNodeValue(nodes[i],idx_P2) // pg - Sw*pc
+							-h_pcs->GetNodeValue(nodes[i],idx_P1);
 						if(onExBoundaryState[i]==1)//WX:02.2013
 							val_n=0.;
 						if(pcs->Neglect_H_ini==2)
-							val_n -= h_pcs->GetNodeValue(nodes[i],idx_p2_ini)
+							if(h_pcs->GetNodeValue(nodes[i],idx_p1_ini)<MKleinsteZahl)
+								val_n -= h_pcs->GetNodeValue(nodes[i],idx_p2_ini)
+								-h_pcs->GetNodeValue(nodes[i],idx_p1_ini);
+							else
+								val_n -= h_pcs->GetNodeValue(nodes[i],idx_p2_ini)
 							-sw_ini*h_pcs->GetNodeValue(nodes[i],idx_p1_ini);
 					}
 
@@ -1959,13 +2177,13 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 			else
 			{
 
-				if(pcs->Neglect_H_ini==2)
+                if(pcs->Neglect_H_ini==2)
 				{
-					for (i=0;i<nnodes;i++)
-					{
-						AuxNodal0[i] -= h_pcs->GetNodeValue(nodes[i],idx_p1_ini);
-						AuxNodal2[i] -= h_pcs->GetNodeValue(nodes[i],idx_p2_ini);
-					}
+				   for (i=0;i<nnodes;i++)
+				   {
+			          AuxNodal0[i] -= h_pcs->GetNodeValue(nodes[i],idx_p1_ini);
+			          AuxNodal2[i] -= h_pcs->GetNodeValue(nodes[i],idx_p2_ini);
+				   }
 				}
 
 				PressureC->multi(AuxNodal2, AuxNodal1, LoadFactor);
@@ -1975,7 +2193,6 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 			break;
 		}
 		case 3:                   // Multi-phase-flow: SwPw+SgPg	// PCH 05.05.2009
-		{
 			for (i = 0; i < nnodes; i++)
 			{
 				double Snw = h_pcs->GetNodeValue(nodes[i],idx_Snw);
@@ -1990,7 +2207,6 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 			}
 			break;
 		}
-		} // end switch
 
 		// If dymanic
 		if(dynamic)
@@ -1998,7 +2214,7 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 			{
 				AuxNodal[i] *= fact;
 				AuxNodal[i] += dt * a_n[nodes[i] + NodeShift[problem_dimension_dm]]
-						+ pcs->GetNodeValue(nodes[i],idx_P);
+				               + pcs->GetNodeValue(nodes[i],idx_P);
 			}
 
 		const int dim_times_nnodesHQ(dim * nnodesHQ);
@@ -2019,8 +2235,8 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 			for (j = 0; j < nnodesHQ; j++)
 				for (k = 0; k < nnodesHQ; k++)
 					(*RHS)[i * nnodesHQ + j] += (*Mass)(j,k) * (
-													(*dAcceleration)(i * nnodesHQ + k)
-													+ a_n[nodes[k] + NodeShift[i]]);
+					        (*dAcceleration)(i * nnodesHQ + k)
+					        + a_n[nodes[k] + NodeShift[i]]);
 
 	//RHS->Write();
 #if !defined(USE_PETSC) // && !defined(other parallel libs)//06.2013. WW
@@ -2030,7 +2246,7 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 #endif
 
 	//WX:07.2011 if not on excav boundary, RHS=0
-	int valid = 0;
+	//int valid = 0;
 	if (excavation)
 	{
 		excavation = true;
@@ -2055,8 +2271,8 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 				if (smat_e->excavation > 0)
 				{
 					if (fabs(GetCurveValue(smat_e->excavation, 0,
-										   aktuelle_zeit,
-										   &valid) - 1.0) < DBL_MIN)
+					                       aktuelle_zeit,
+					                       &valid) - 1.0) < DBL_MIN)
 					{
 						onExBoundary = true;
 						break;
@@ -2066,7 +2282,7 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 				{
 					double const* ele_center(elem->GetGravityCenter());
 					if((GetCurveValue(pcs->ExcavCurve,0,aktuelle_zeit,
-									  &valid) + pcs->ExcavBeginCoordinate) <
+					                  &valid) + pcs->ExcavBeginCoordinate) <
 					   (ele_center[pcs->ExcavDirection]))
 					{
 						onExBoundary = true;
@@ -2086,12 +2302,12 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 			}
 
 			if (!onExBoundary)
-			{
+            {
 #if !defined(USE_PETSC) // && !defined(other parallel libs)//06.2013. WW
 				for (size_t j = 0; j < dim; j++)
 					b_rhs[eqs_number[i] + NodeShift[j]] = 0.0;
 #endif
-			}
+            }
 		}
 	}
 }
@@ -2192,11 +2408,28 @@ void CFiniteElementVec::LocalAssembly_continuum(const int update)
 			*De = *(smat->getD_tran());  // UJG/WW
 	}
 	//WX: 06.2012 E depends on stress, strain ...
+
+	double tmp_disp[60] = {0.};
 	if(smat->E_Function_Model>0)
 	{
-		double tmp_value=1;
+		double tmp_value=1, tmp_stress[6];
 		tmp_value=smat->E_Function(ele_dim, eleV_DM, nGaussPoints);
 		*De *= tmp_value;
+
+		/*if (pcs->ite_steps > 1)
+		{
+			for(size_t i = 0; i < dim; i++)
+				for(int j = 0; j < nnodesHQ; j++)
+					tmp_disp[j+i*nnodesHQ] = pcs->GetNodeValue(nodes[j],Idx_dm0[i])
+					+ pcs->GetNodeValue(nodes[j],Idx_dm0[i]+1);
+		}*/
+	}
+	if(pcs->ite_steps > 1&&(smat->E_Function_Model>0||smat->COMP_Dependent_E_nv_mode>0))
+	{
+		for(size_t i = 0; i < dim; i++)
+			for(int j = 0; j < nnodesHQ; j++)
+				tmp_disp[j+i*nnodesHQ] = pcs->GetNodeValue(nodes[j],Idx_dm0[i])
+				+ pcs->GetNodeValue(nodes[j],Idx_dm0[i]+1);
 	}
 
 	if(PModel == 5)
@@ -2240,7 +2473,7 @@ void CFiniteElementVec::LocalAssembly_continuum(const int update)
 	   }
 	 */
 	//
-	if(PoroModel == 4 || T_Flag || smat->Creep_mode > 0)
+	if(PoroModel == 4 || T_Flag || smat->Creep_mode > 0 || smat->E_Function_Model==3 || smat->COMP_Dependent_E_nv_mode==2 )//WX:2015
 		Strain_TCS = true;
 	//
 	if(smat->CreepModel() == 1000)        //HL_ODS
@@ -2265,9 +2498,33 @@ void CFiniteElementVec::LocalAssembly_continuum(const int update)
 			smat->ElasticConsitutive(ele_dim, De);
 		}
 
-		ComputeStrain();
+		ComputeStrain();		
 		if(update)
-			RecordGuassStrain(gp, gp_r, gp_s, gp_t);
+		{
+			//compute strain0
+			if((smat->Time_Dependent_E_nv_mode > MKleinsteZahl || smat->COMP_Dependent_E_nv_mode > 0 /*|| smat->E_Function_Model == 3*/)
+					&& pcs->ExcavMaterialGroup < 0)//WX:2014.04
+			{
+				double TmpDisp[60], Tmpdstrain[9];
+				for(i=0;i<dim;i++)
+					for(int j=0;j<nnodesHQ;j++)
+					{
+						TmpDisp[j + i * nnodesHQ]=Disp[j + i * nnodesHQ];
+						Disp[j + i * nnodesHQ]=pcs->GetNodeValue(nodes[j],Idx_dm0[i]);
+					}
+				for(i=0;i<ns;i++)
+					Tmpdstrain[i]=dstrain[i];
+				ComputeStrain();
+				RecordGuassStrain(gp, gp_r, gp_s, gp_t);
+				for(i=0;i<dim;i++)
+					for(int j=0;j<nnodesHQ;j++)
+						Disp[j + i * nnodesHQ]=TmpDisp[j + i * nnodesHQ];	
+				for(i=0;i<ns;i++)
+					dstrain[i]=Tmpdstrain[i];				
+			}
+			else
+				RecordGuassStrain(gp, gp_r, gp_s, gp_t);
+		}
 		if( F_Flag || T_Flag)
 			ComputeShapefct(1);  // Linear order interpolation function
 		//---------------------------------------------------------
@@ -2278,14 +2535,35 @@ void CFiniteElementVec::LocalAssembly_continuum(const int update)
 		{
 			for (i = 0; i < ns; i++)
 				dstress[i] = 0.0;
-			if(!excavation)//WX:07.2011 nonlinear excavation
+			if(!excavation)//WX:07.2011 nonlinear excavation					
 			{
 				//De->Write();
-			De->multi(dstrain, dstress);
-				if(smat->Time_Dependent_E_nv_mode > MKleinsteZahl && pcs->ExcavMaterialGroup < 0)
+				De->multi(dstrain, dstress);
+				if((smat->Time_Dependent_E_nv_mode > MKleinsteZahl || smat->COMP_Dependent_E_nv_mode > 0 /*|| smat->E_Function_Model == 3*/)
+					&& pcs->ExcavMaterialGroup < 0)//WX:2014.04
+				{
+					/*double tmp_stress[6]={0.}, tmp_stress_0[6]={0.};
+					for (i=0;i<ns;i++)
+					{
+						tmp_stress_0[i]=(*eleV_DM->Stress)(i, gp);
+						tmp_stress[i]=(*eleV_DM->Stress)(i, gp)+dstress[i];
+					}
+					if(smat->E_Function_Model>0)
+					{
+						double tmp_value=1;
+						tmp_value=smat->E_Function(ele_dim, tmp_stress, tmp_stress_0, nGaussPoints);
+						smat->ElasticConsitutive(ele_dim, De);
+						*De *= tmp_value;
+					}
+					for(i=0; i<ns; i++)
+					{
+						dstress[i] = 0.0;
+					}
+					De->multi(dstrain, dstress);*/
 					for(i=0; i<ns; i++)
 						dstress[i] -= (*eleV_DM->Stress)(i, gp)-(*eleV_DM->Stress0)(i, gp);
-		}
+				}
+			}
 		}
 
 		//---------------------------------------------------------
@@ -2474,6 +2752,81 @@ void CFiniteElementVec::LocalAssembly_continuum(const int update)
 				for (i = 0; i < ns; i++)
 					stress_ne[i] = (*eleV_DM->Stress)(i, gp);
 				smat->AddStain_by_HL_ODS(eleV_DM, stress_ne, strain_ne, t1);
+			}
+			//WX:2014.05, Strain increment by degradation
+			if(smat->E_Function_Model==3)
+			{
+				for (i = 0; i < ns; i++)
+					stress_ne[i] = (*eleV_DM->Stress)(i, gp);
+				smat->AddStrain_by_Deg(eleV_DM, stress_ne, strain_ne, t1);
+				if(pcs->ite_steps > 1)
+				{
+					double tmp_dstrain[6]={0.};
+					ComputeStrain_1(tmp_disp,tmp_dstrain);
+					smat->CorrectStrain_by_Deg(eleV_DM,dstress,tmp_dstrain,t1);
+					for(i = 0; i < ns; i++)
+					{
+						if(update)
+							strain_ne[i] -= tmp_dstrain[i];
+						else
+							strain_ne[i] -= tmp_dstrain[i]*2;
+					}
+				}
+			}
+			//WX 01.2015, COMP_DEPENDENT_E_NV==2
+			if(smat->COMP_Dependent_E_nv_mode==2)
+			{
+				double dMsd, Msd_ini, Msd, Es_end, C_end, C0, str_0, var_A, str;
+				dMsd = 0.;
+				Msd_ini = 0.;
+				Msd = 0.;
+				Es_end = smat->COMP_Dependent_E_nv_value[5];
+				C_end = smat->COMP_Dependent_E_nv_value[1];
+				C0 = smat->COMP_Dependent_E_nv_value[0];
+				str_0 = smat->COMP_Dependent_E_nv_value[3];
+				var_A = smat->COMP_Dependent_E_nv_value[4];
+				str = fabs((*eleV_DM->Stress)(1, gp));
+				if(fabs(str)<str_0)
+					str = str_0;
+				CRFProcess* temp_pcs = NULL;				
+				temp_pcs = PCSGet("dMsd",true);
+				int temp_index = temp_pcs->GetNodeValueIndex("dMsd");
+				for(i=0;i<nnodes;i++)
+					dMsd += shapefct[i] * temp_pcs->GetNodeValue(nodes[i],temp_index+1);
+				temp_pcs = PCSGet("Msd",true);
+				temp_index = temp_pcs->GetNodeValueIndex("Msd");
+				for(i=0;i<nnodes;i++)
+					Msd += shapefct[i] * temp_pcs->GetNodeValue(nodes[i],temp_index+1);				
+				temp_pcs = PCSGet("Msd_ini",true);
+				temp_index = temp_pcs->GetNodeValueIndex("Msd_ini");
+				Msd_ini = temp_pcs->GetNodeValue(nodes[0],temp_index);
+
+				//WX not needed
+				//strain_ne[1] += (Es_end+(C_end-C0)*log10(str/str_0))*var_A/Msd_ini*pow((Msd/Msd_ini),(var_A-1))*dMsd;
+
+				if(pcs->ite_steps > 1)
+				{
+					double tmp_dstrain[6]={0.};
+					double So_strain[6]={0.};
+					ComputeStrain_1(tmp_disp,tmp_dstrain);
+					if(pcs->ite_steps==2 && update<1)
+						for (i = 0; i < ns; i++)
+							(*eleV_DM->Stress_tmp)(i, gp) = dstress[i] ;
+					if(pcs->ite_steps>1 && update>0)
+						for (i = 0; i < ns; i++)
+							dstress[i] =  (*eleV_DM->Stress_tmp)(i, gp);
+					So_strain[1] = -1*(C0*log10(fabs(dstress[1]/str_0))+
+						(Es_end+(C_end-C0)*log10(fabs(dstress[1]/str_0)))*(1-pow(Msd/Msd_ini,var_A)));
+					tmp_dstrain[1] = So_strain[1] - tmp_dstrain[1];
+					for(i = 0; i < ns; i++)
+					{/*
+						if(update)
+							strain_ne[i] -= tmp_dstrain[i];
+						else
+							strain_ne[i] -= tmp_dstrain[i]*2;*/
+						strain_ne[i] += -1 * tmp_dstrain[i];
+					}
+				}
 			}
 			// Stress deduced by thermal or swelling strain incremental:
 			De->multi(strain_ne, dstress);
@@ -2728,7 +3081,7 @@ void CFiniteElementVec::ExtropolateGuassStrain()
 		ESyy /= dbuff[i];
 		ESxy /= dbuff[i];
 		ESzz /= dbuff[i];
-
+		
 		ESxx += pcs->GetNodeValue(nodes[i],Idx_Strain[0]);
 		ESyy += pcs->GetNodeValue(nodes[i],Idx_Strain[1]);
 		ESzz += pcs->GetNodeValue(nodes[i],Idx_Strain[2]);
@@ -3791,6 +4144,7 @@ ElementValue_DM::ElementValue_DM(CElem* ele,  const int NGP, bool HM_Staggered)
 	Stress0 = new Matrix(LengthBS, NGPoints);
 	Stress_i = new Matrix(LengthBS, NGPoints);
 	Stress = Stress_i;
+	Stress_tmp = new Matrix(LengthBS, NGPoints);//WX: 2015.05
 	if(HM_Staggered)
 		Stress_j = new Matrix(LengthBS, NGPoints);
 	else
@@ -3840,12 +4194,9 @@ ElementValue_DM::ElementValue_DM(CElem* ele,  const int NGP, bool HM_Staggered)
 	}
 }
 // 01/2006 WW
-void ElementValue_DM::Write_BIN(std::fstream& os, const bool last_step)
+void ElementValue_DM::Write_BIN(std::fstream& os)
 {
-	if (last_step)
-		Stress_i->Write_BIN(os);
-	else
-		Stress0->Write_BIN(os);
+	Stress0->Write_BIN(os);
 	Stress_i->Write_BIN(os);
 	if(pStrain)
 		pStrain->Write_BIN(os);
@@ -3954,9 +4305,9 @@ ElementValue_DM::~ElementValue_DM()
 	if(orientation)
 		delete orientation;
 
-	if(scalar_aniso_comp)
+	if(scalar_aniso_comp) 
 		delete scalar_aniso_comp;//WX:09.2011
-	if(scalar_aniso_tens)
+	if(scalar_aniso_tens) 
 		delete scalar_aniso_tens;
 
 	NodesOnPath = NULL;
@@ -3966,6 +4317,7 @@ ElementValue_DM::~ElementValue_DM()
 	Stress = NULL;
 	Stress_i = NULL;                      // for HM coupling iteration
 	Stress_j = NULL;                      // for HM coupling iteration
+	Stress_tmp = NULL;//WX: 2015.05
 	pStrain = NULL;
 	prep0 = NULL;
 	e_i = NULL;
@@ -3988,15 +4340,16 @@ ElementValue_DM::~ElementValue_DM()
  **************************************************************************/
 double CFiniteElementVec:: CalcStrain_v()
 {
-	for (int j(0); j<ns; j++) {
-		dstrain[j] = 0.0;
-		for(int i = 0; i < nnodesHQ; i++)
-			dstrain[j] += pcs->GetNodeValue(nodes[i],Idx_Strain[j]) * shapefctHQ[i];
-	}
+	int i;
+	for (i = 0; i < ns; i++)
+		dstrain[i] = 0.0;
+	//
+	for(i = 0; i < nnodesHQ; i++)
+		dstrain[i] += pcs->GetNodeValue(nodes[i],Idx_Strain[0]) * shapefctHQ[i];
 	double val = 0;
-	for (int i = 0; i < 3; i++)
+	for (i = 0; i < 3; i++)
 		val += dstrain[i] * dstrain[i];
-	for (int i = 3; i < ns; i++)
+	for (i = 3; i < ns; i++)
 		val += 0.5 * dstrain[i] * dstrain[i];
 
 	return sqrt(2.0 * val / 3.);

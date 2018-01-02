@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************
    FEMLib - Class: BC BoundaryConditions
    Task:
@@ -15,16 +6,11 @@
    last modified
 **************************************************************************/
 #include "makros.h"
-
 // C++ STL
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
-#include <ctime>
 #include <iostream>
-
-#include "display.h"
-#include "memory.h"
 
 // FileIO
 #include "BoundaryConditionIO.h"
@@ -44,6 +30,7 @@
 // FEMLib
 extern void remove_white_space(std::string*);
 //#include "problem.h"
+#include "gs_project.h"
 #include "tools.h"
 //#include "rf_node.h"
 #include "rf_bc_new.h"
@@ -85,20 +72,6 @@ double cputime(double x)
 CBoundaryConditionNode::CBoundaryConditionNode()
 {
 	conditional = false;
-	for (std::size_t i = 0; i < 3; i++)
-		_normal_vector[i] = 0;
-}
-
-void CBoundaryConditionNode::SetNormalVector(double const*const normal_vector)
-{
-	_normal_vector[0] = normal_vector[0];
-	_normal_vector[1] = normal_vector[1];
-	_normal_vector[2] = normal_vector[2];
-}
-
-double const* CBoundaryConditionNode::GetNormalVector() const
-{
-	return this->_normal_vector;
 }
 
 /**************************************************************************
@@ -155,14 +128,10 @@ CBoundaryCondition::CBoundaryCondition() :
 	bcExcav = -1;                         //WX
 	MatGr = -1;                           //WX
 	NoDispIncre = -1;								//WX:12.2012
-	gradient_ref_depth = 0;             //CB
-	gradient_ref_depth_value = 0;       //CB
-	gradient_ref_depth_gradient = 0;    //CB
-	_pressure_as_head_model = -1;
-	_pressure_as_head_density = 0;
-	_isConstrainedBC = false;
-	_isSeepageBC = false;
-	_isSwitchBC = false;
+    gradient_ref_depth = 0;             //CB
+    gradient_ref_depth_value = 0;       //CB
+    gradient_ref_depth_gradient = 0;    //CB
+	critical_gas_pressure_mode = -1;  //WX
 }
 
 // KR: Conversion from GUI-BC-object to CBoundaryCondition
@@ -338,44 +307,6 @@ std::ios::pos_type CBoundaryCondition::Read(std::ifstream* bc_file,
 				in >> geo_node_value; //sub_line
 				in.clear();
 			}
-
-			if (line_string.find("SWITCH") != std::string::npos)
-			{
-				this->setProcessDistributionType(FiniteElement::SWITCH);
-				this->_isSwitchBC = true;
-				std::string tempst;
-				// read process
-				in >> tempst;
-				_switchBC.switchProcessType = FiniteElement::convertProcessType(tempst);
-				if(_switchBC.switchProcessType == FiniteElement::INVALID_PROCESS)
-				{
-					std::cerr << "Invalid Process type in SWITCH BC! Exiting now." << std::endl;
-					std::exit(0);
-				}
-				// ... and associated primary variable
-				in >> tempst;
-				_switchBC.switchPrimVar = FiniteElement::convertPrimaryVariable(tempst);
-
-				// ... which will give the simulated switch value
-				if (!(in >> _switchBC.switchValue))
-				{
-					std::cerr << "No switch value given in SWITCH BC! Exiting now." << std::endl;
-					std::exit(0);
-				}
-				// ... to switch from the on state (ie simulated switch value is higher than this one:)
-				if (!(in >> _switchBC.switchOnValue))
-				{
-					std::cerr << "No switch on value given in SWITCH BC! Exiting now." << std::endl;
-					std::exit(0);
-				}
-				// ... or to switch to the off state (ie simulated switch value is lower than this one:)
-				if (!(in >> _switchBC.switchOffValue))
-				{
-					std::cerr << "No switch off value given in SWITCH BC! Exiting now." << std::endl;
-					std::exit(0);
-				}
-				in.clear();
-			}
 			// If a linear function is given. 25.08.2011. WW
 			if (line_string.find("FUNCTION") != std::string::npos)
 			{
@@ -522,88 +453,15 @@ std::ios::pos_type CBoundaryCondition::Read(std::ifstream* bc_file,
 			in.clear();
 		}
 		//....................................................................
-		if (line_string.find("$PRESSURE_AS_HEAD") != std::string::npos)
-		{
-			in.str(readNonBlankLineFromInputStream(*bc_file));
-			in >> _pressure_as_head_model; // 0 -> calc pressure from density; 1 -> calc pressure from *given* density
-			if (_pressure_as_head_model == 1)
-				in >> _pressure_as_head_density;
-			else if (_pressure_as_head_model < 0 || _pressure_as_head_model > 1)
-			{
-				std::cout << "Unsupported PRESSURE_AS_HEAD model " << _pressure_as_head_model << std::endl;
-				_pressure_as_head_model = -1;
-			}
+		//bc for critical gas pressure, the BC avtivated if P2>critical value. WX: 05.2015
+		/*if (line_string.find("$CRITICAL_GAS_PRESSURE") != std::string::npos)
+		{			
+			in.str(readNonBlankLineFromInputStream(*bc_file));			
+			in >> critical_gas_pressure_mode >> critical_gas_pressure_value;
+			if (critical_gas_pressure_mode)
+				in >> critical_gas_pressure_value_low;
 			in.clear();
-		}
-		//....................................................................
-		if (line_string.find("$CONSTRAINED") != std::string::npos)
-		{
-			Constrained temp;
-
-			_isConstrainedBC = true;
-			in.str(readNonBlankLineFromInputStream(*bc_file));
-			std::string tempst, tempst2;
-
-			in >> tempst >> tempst2;	//VELOCITY and DIRECTION (positive/negative scalar product between velocity vector and surface normal); or PROCESS_TYPE and associated PRIMARY_VARIABLE
-			if (tempst == "VELOCITY")
-			{
-				temp.constrainedVariable = convertConstrainedVariable(tempst);
-				temp.constrainedDirection = convertConstrainedType(tempst2);
-				temp.constrainedValue = std::numeric_limits<size_t>::max();
-				temp.constrainedPrimVar = FiniteElement::INVALID_PV;
-				temp.constrainedProcessType = FiniteElement::INVALID_PROCESS;
-				if ( !(temp.constrainedDirection == ConstrainedType::POSITIVE || temp.constrainedDirection == ConstrainedType::NEGATIVE))
-				{
-					std::cout << "No valid constrainedDirection for " << convertConstrainedVariableToString(temp.constrainedVariable)
-						<< "(" << tempst2 << ")" << std::endl;
-					_isConstrainedBC = false;
-				}
-
-				in >> tempst;
-				if (tempst == "STABLE")
-					temp._isConstrainedVelStable = true;
-
-				if (getGeoType() != GEOLIB::SURFACE)
-					std::cout << "\n Warning! Make sure, that a velocity constrained BC is a SURFACE!" << std::endl;
-			}
-			else
-			{
-				temp.constrainedProcessType = FiniteElement::convertProcessType(tempst);
-				if ( !(temp.constrainedProcessType == FiniteElement::MASS_TRANSPORT ||
-					temp.constrainedProcessType == FiniteElement::HEAT_TRANSPORT ||
-					temp.constrainedProcessType == FiniteElement::LIQUID_FLOW ||
-					temp.constrainedProcessType == FiniteElement::RICHARDS_FLOW) ) {
-					_isConstrainedBC = false;
-					break;
-				}
-
-				temp.constrainedPrimVar = FiniteElement::convertPrimaryVariable(tempst2);
-
-				in >> temp.constrainedValue >> tempst;	//Constrained Value; and constrain direction (greater/smaller than value)
-				temp.constrainedDirection = convertConstrainedType(tempst);
-				temp.constrainedVariable = ConstrainedVariable::INVALID_CONSTRAINED_VARIABLE;
-				if ( !(temp.constrainedDirection == ConstrainedType::SMALLER || temp.constrainedDirection == ConstrainedType::GREATER))
-				{
-					std::cout << "No valid constrainedDirection for " << FiniteElement::convertProcessTypeToString(temp.constrainedProcessType)
-						<< " (" << tempst << ")" << std::endl;
-					_isConstrainedBC = false;
-				}
-
-				in >> tempst;	//Seepage face option (set BC to constrained value, if calculated value > constrained value)
-				if (tempst == "SEEPAGE")
-				{
-					if (temp.constrainedDirection == ConstrainedType::SMALLER)
-						temp._isSeepageBC = true;
-					else
-						std::cout << "Seepage not used as constrained direction is not set to SMALLER.\n Please check .bc file." << std::endl;
-				}
-			}
-			if (_isConstrainedBC)
-				this->_constrainedBC.push_back(temp);
-			in.clear();
-		}
-		//....................................................................
-
+		}*/
 	}
 	return position;
 }
@@ -1109,8 +967,7 @@ void CBoundaryConditionsGroup::Set(CRFProcess* pcs, int ShiftInNodeVector,
 				{
 					elem = m_msh->ele_vector[ii];
 					nn = elem->GetNodesNumber(quadratic);
-					if(elem->GetPatchIndex()==static_cast<size_t>(bc->getExcavMatGr())
-							|| static_cast<int>(elem->GetPatchIndex())==Domain_MG)
+					if(elem->GetPatchIndex()==static_cast<size_t>(bc->getExcavMatGr())||elem->GetPatchIndex()==Domain_MG)
 					{
 						Size = (int)nodes_vector.size();
 						for(i = 0; i < nn; i++)
@@ -1161,7 +1018,7 @@ void CBoundaryConditionsGroup::Set(CRFProcess* pcs, int ShiftInNodeVector,
 			if (bc->getGeoType() == GEOLIB::POINT)
 			{
 			  //05.2012. WW
-			  long node_idx =  m_msh->GetNODOnPNT(static_cast<const GEOLIB::Point*>
+			  long node_idx =  m_msh->GetNODOnPNT(static_cast<const GEOLIB::Point*> 
 								(bc->getGeoObj()));
 			  if(node_idx<0)
 			    {
@@ -1171,8 +1028,7 @@ void CBoundaryConditionsGroup::Set(CRFProcess* pcs, int ShiftInNodeVector,
 			  //-------
 				m_node_value = new CBoundaryConditionNode;
 				// Get MSH node number
-			  if (bc->getProcessDistributionType()  == FiniteElement::CONSTANT
-					  || bc->getProcessDistributionType()  == FiniteElement::SWITCH)
+			  if (bc->getProcessDistributionType()  == FiniteElement::CONSTANT)
 			    m_node_value->geo_node_number = node_idx;
 
 				m_node_value->conditional = cont;
@@ -1212,8 +1068,7 @@ void CBoundaryConditionsGroup::Set(CRFProcess* pcs, int ShiftInNodeVector,
 
 				if (m_polyline)
 				{
-					if (bc->getProcessDistributionType() == FiniteElement::CONSTANT
-							|| bc->getProcessDistributionType() == FiniteElement::SWITCH)
+					if (bc->getProcessDistributionType() == FiniteElement::CONSTANT)
 					{
 						// 08/2010 TF
 						double msh_min_edge_length =
@@ -1238,10 +1093,8 @@ void CBoundaryConditionsGroup::Set(CRFProcess* pcs, int ShiftInNodeVector,
 							m_node_value->geo_node_number =
 							        nodes_vector[i];
 							//dis_prop[0];
-							if (bc->getProcessDistributionType() == FiniteElement::SWITCH)
-								m_node_value->node_value = bc->getSwitchBC().switchOnValue;
-							else
-								m_node_value->node_value = bc->geo_node_value;
+							m_node_value->node_value =
+							        bc->geo_node_value;
 							m_node_value->CurveIndex =
 							        bc->getCurveIndex();
 							//YD/WW
@@ -1431,41 +1284,24 @@ void CBoundaryConditionsGroup::Set(CRFProcess* pcs, int ShiftInNodeVector,
 //#endif
 					std::vector<size_t> msh_nod_vec;
 					m_msh->GetNODOnSFC(sfc, msh_nod_vec);
-#ifndef NDEBUG
-#ifdef DEBUGMESHNODESEARCH
-					{
-						std::string const debug_fname(bc->geo_name+"-FoundNodes.gli");
-						std::ofstream debug_out(debug_fname.c_str());
-						debug_out << "#POINTS\n";
-						for (size_t k(0); k<msh_nod_vec.size(); k++) {
-							debug_out << k << " " <<
-								GEOLIB::Point((m_msh->getNodeVector())[msh_nod_vec[k]]->getData()) <<
-								" $NAME " << msh_nod_vec[k] << "\n";
-						}
-						debug_out << "#STOP" << "\n";
-						debug_out.close();
-					}
-#endif
-#endif
+//#ifndef NDEBUG
+//					debug_fname = "MeshNodesNew-BC-" + sfc_name + ".gli";
+//					debug_out.open (debug_fname.c_str());
+//					debug_out << "#POINTS" << "\n";
+//					for (size_t k(0); k<msh_nod_vec.size(); k++) {
+//						debug_out << k << " " <<
+//							GEOLIB::Point((m_msh->getNodeVector())[msh_nod_vec[k]]->getData()) <<
+//							" $NAME " << msh_nod_vec[k] << "\n";
+//					}
+//					debug_out << "#STOP" << "\n";
+//					debug_out.close();
+//#endif
 //					nodes_vector.clear();
 					for (size_t k(0); k < msh_nod_vec.size(); k++) {
 //						std::cout << "\t" << k << "\t" << nodes_vector_old[k] << "\t" << msh_nod_vec[k] << "\n";
 						nodes_vector.push_back (msh_nod_vec[k]);
 					}
 					size_t nodes_vector_length (nodes_vector.size());
-
-					if (bc->isConstrainedBC() && nodes_vector_length > 0)
-					{
-						for (std::size_t i=0; i < bc->getNumberOfConstrainedBCs(); i++)
-						{
-							const Constrained &temp(bc->getConstrainedBC(i));
-							if (temp.constrainedVariable == ConstrainedVariable::VELOCITY)
-							{
-								//calculate normals of triangles
-								sfc->calculateTriangleNormals();
-							}
-						}
-					}
 
 					if (bc->getProcessDistributionType() == FiniteElement::LINEAR) {
 						std::vector<CGLPolyline*>::iterator p =
@@ -1521,12 +1357,7 @@ void CBoundaryConditionsGroup::Set(CRFProcess* pcs, int ShiftInNodeVector,
 									m_node_value->node_value = bc->dis_linear_f->getValue(coords[0],
 													coords[1], coords[2]);
 								} else {
-									if (bc->getProcessDistributionType() == FiniteElement::SWITCH)
-									{
-										m_node_value->node_value = bc->getSwitchBC().switchOnValue;
-									}
-									else
-										m_node_value->node_value = bc->geo_node_value;
+									m_node_value->node_value = bc->geo_node_value;
 								}
 							}
 						}
@@ -1538,26 +1369,6 @@ void CBoundaryConditionsGroup::Set(CRFProcess* pcs, int ShiftInNodeVector,
 						pcs->bc_node_value.push_back(m_node_value);
 						//WW group_vector.push_back(m_node_value);
 						//WW bc_group_vector.push_back(bc); //OK
-
-						if (bc->isConstrainedBC() == true && nodes_vector_length > 0)
-						{
-							for (std::size_t k=0; k < bc->getNumberOfConstrainedBCs(); k++)
-							{
-								const Constrained &temp(bc->getConstrainedBC(k));	//delete object, else previous elements will reside here.
-								if (temp.constrainedVariable == ConstrainedVariable::VELOCITY)
-								{
-									double const * const coords(m_msh->nod_vector[m_node_value->geo_node_number]->getData());
-									// works only for planar surfaces since
-									// the normal is constant for all triangles
-									int triangle_id(sfc->getTriangleIDOfPoint(coords));
-									if (triangle_id != -1)
-										m_node_value->SetNormalVector(sfc->getTriangleNormal(triangle_id));
-									else
-										std::cout << "Could not find current BC node " << m_node_value->geo_node_number
-											<< " on given SURFACE " << m_surface->name << std::endl;
-								}
-							}
-						}
 					}
 					node_value.clear();
 				}
@@ -1873,8 +1684,6 @@ void CBoundaryCondition::SurfaceInterpolation(CRFProcess* m_pcs,
 				gC[i] = 0.0;
 			vn[2] = 0.0;
 			nPointsPly = (int) m_polyline->point_vector.size();
-			if (m_polyline->point_vector.front() == m_polyline->point_vector.back())
-				nPointsPly -= 1;
 			for (i = 0; i < nPointsPly; i++)
 			{
 				gC[0] += m_polyline->point_vector[i]->x;

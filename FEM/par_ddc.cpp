@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************
    PARLib - Object:
    Task:
@@ -32,7 +23,9 @@
 //#undef SEEK_END  //WW
 //#undef SEEK_CUR  //WW
 #include <mpi.h>
-#include "SplitMPI_Communicator.h"
+int size;
+int myrank;
+int mysize;
 char t_fname[3];
 double time_ele_paral;
 #endif
@@ -49,6 +42,7 @@ using namespace std;
 #include "matrix_routines.h"
 #endif
 #include "files0.h"
+#include "gs_project.h"
 #include "rf_num_new.h"
 #ifdef NEW_EQS
 // Solver WW
@@ -904,6 +898,171 @@ void DOMCreate()
    FEMLib-Method:
    Task:
    Programing:
+   01/2005 OK Implementation
+   09/2005 OK MSH
+   last modification:
+**************************************************************************/
+	void CPARDomain::WriteTecplot(string msh_name)
+	{
+		long i;
+		string element_type;
+		//----------------------------------------------------------------------
+		// GSP
+		CGSProject* m_gsp = NULL;
+		m_gsp = GSPGetMember("msh");
+		if(!m_gsp)
+			return;
+		//--------------------------------------------------------------------
+		// file handling
+		char name[10];
+		sprintf(name,"%i",ID);
+		string dom_name = "DOMAIN";
+		dom_name += name;
+		string dom_file_name = m_gsp->path + dom_name + TEC_FILE_EXTENSION;
+		fstream dom_file (dom_file_name.data(),ios::trunc | ios::out);
+		dom_file.setf(ios::scientific,ios::floatfield);
+		dom_file.precision(12);
+		//--------------------------------------------------------------------
+		// MSH
+		CFEMesh* m_msh = NULL;
+		MeshLib::CElem* m_ele = NULL;
+		m_msh = FEMGet(msh_name);
+		if(!m_msh)
+			return;
+		//--------------------------------------------------------------------
+		if (!dom_file.good())
+			return;
+		dom_file.seekg(0L,ios::beg);
+		//--------------------------------------------------------------------
+		for(i = 0; i < (long)elements.size(); i++)
+		{
+			m_ele = m_msh->ele_vector[elements[i]];
+			if(!m_ele)
+				continue;
+			switch(m_ele->GetElementType())
+			{
+			case MshElemType::LINE:
+				element_type = "ET = QUADRILATERAL";
+				break;
+			case MshElemType::QUAD:
+				element_type = "ET = QUADRILATERAL";
+				break;
+			case MshElemType::HEXAHEDRON:
+				element_type = "ET = BRICK";
+				break;
+			case MshElemType::TRIANGLE:
+				element_type = "ET = TRIANGLE";
+				break;
+			case MshElemType::TETRAHEDRON:
+				element_type = "ET = TETRAHEDRON";
+				break;
+			case MshElemType::PRISM:
+				element_type = "ET = BRICK";
+				break;
+			default:
+				std::cerr << "CPARDomain::WriteTecplot MshElemType not handled" <<
+				"\n";
+			}
+		}
+		//--------------------------------------------------------------------
+		dom_file << "VARIABLES = X,Y,Z,DOM" << "\n";
+		long no_nodes = (long)m_msh->nod_vector.size();
+		dom_file << "ZONE T = " << dom_name << ", " \
+		         << "N = " << no_nodes << ", " \
+		         << "E = " << (long)elements.size() << ", " \
+		         << "F = FEPOINT" << ", " << element_type << "\n";
+		//......................................................................
+		for(i = 0; i < no_nodes; i++)
+		{
+			double const* const coords (m_msh->nod_vector[i]->getData());
+			dom_file << coords[0] << " " << coords[1] << " " << coords[2] << " " <<
+			ID << "\n";
+//      m_nod = m_msh->nod_vector[i];
+//      dom_file << m_nod->X() << " " << m_nod->Y() << " " << m_nod->Z() << " " << ID << "\n";
+		}
+		//......................................................................
+		for(i = 0; i < (long)elements.size(); i++)
+		{
+			m_ele = m_msh->ele_vector[elements[i]];
+			if(!m_ele)
+				continue;
+			switch(m_ele->GetElementType())
+			{
+			case MshElemType::LINE:
+				dom_file \
+				<< m_ele->getNodeIndices()[0] + 1 << " " << m_ele->getNodeIndices()[1] + 1 <<
+				" " << m_ele->getNodeIndices()[1] + 1 << " " << m_ele->getNodeIndices()[0] +
+				1 << "\n";
+				element_type = "ET = QUADRILATERAL";
+				break;
+			case MshElemType::QUAD:
+				dom_file \
+				<< m_ele->getNodeIndices()[0] + 1 << " " << m_ele->getNodeIndices()[1] + 1 <<
+				" " << m_ele->getNodeIndices()[2] + 1 << " " << m_ele->getNodeIndices()[3] +
+				1 << "\n";
+				element_type = "ET = QUADRILATERAL";
+				break;
+			case MshElemType::HEXAHEDRON:
+				dom_file \
+				<< m_ele->getNodeIndices()[0] + 1 << " " << m_ele->getNodeIndices()[1] + 1 <<
+				" " << m_ele->getNodeIndices()[2] + 1 << " " << m_ele->getNodeIndices()[3] +
+				1 << " " \
+				<< m_ele->getNodeIndices()[4] + 1 << " " << m_ele->getNodeIndices()[5] + 1 <<
+				" " << m_ele->getNodeIndices()[6] + 1 << " " << m_ele->getNodeIndices()[7] +
+				1 << "\n";
+				element_type = "ET = BRICK";
+				break;
+			case MshElemType::TRIANGLE:
+				dom_file \
+				<< m_ele->getNodeIndices()[0] + 1 << " " << m_ele->getNodeIndices()[1] + 1 <<
+				" " << m_ele->getNodeIndices()[2] + 1 << "\n";
+				element_type = "ET = TRIANGLE";
+				break;
+			case MshElemType::TETRAHEDRON:
+				dom_file \
+				<< m_ele->getNodeIndices()[0] + 1 << " " << m_ele->getNodeIndices()[1] + 1 <<
+				" " << m_ele->getNodeIndices()[2] + 1 << " " << m_ele->getNodeIndices()[3] +
+				1 << "\n";
+				element_type = "ET = TETRAHEDRON";
+				break;
+			case MshElemType::PRISM:
+				dom_file \
+				<< m_ele->getNodeIndices()[0] + 1 << " " << m_ele->getNodeIndices()[0] + 1 <<
+				" " << m_ele->getNodeIndices()[1] + 1 << " " << m_ele->getNodeIndices()[2] +
+				1 << " " \
+				<< m_ele->getNodeIndices()[3] + 1 << " " << m_ele->getNodeIndices()[3] + 1 <<
+				" " << m_ele->getNodeIndices()[4] + 1 << " " << m_ele->getNodeIndices()[5] +
+				1 << "\n";
+				element_type = "ET = BRICK";
+				break;
+			default:
+				std::cerr << "CPARDomain::WriteTecplot MshElemType not handled" <<
+				"\n";
+			}
+		}
+	}
+
+/**************************************************************************
+   FEMLib-Method:
+   Task:
+   Programing:
+   10/2005 OK Implementation
+   last modification:
+**************************************************************************/
+	void DOMWriteTecplot(string msh_name)
+	{
+		CPARDomain* m_dom = NULL;
+		for(int i = 0; i < (int)dom_vector.size(); i++)
+		{
+			m_dom = dom_vector[i];
+			m_dom->WriteTecplot(msh_name);
+		}
+	}
+
+/**************************************************************************
+   FEMLib-Method:
+   Task:
+   Programing:
    07/2006 WW Implementation
    last modification:
 **************************************************************************/
@@ -1100,7 +1259,52 @@ void DOMCreate()
 #ifndef USE_MPI
 	}
 #endif
-}
+	}
+
+/**************************************************************************
+   DDCLib-Function
+   07/2007 OK Encapsulation
+   10/2010 TF changed access to process type
+ ***************************************************************************/
+	void DDCCreate()
+	{
+		//----------------------------------------------------------------------
+		// DDC
+		if(dom_vector.size() > 0)
+		{
+			//WW ----- Domain decomposition ------------------
+			int i;
+			int no_processes = (int)pcs_vector.size();
+			CRFProcess* m_pcs = NULL;
+			bool DOF_gt_one = false;
+			//----------------------------------------------------------------------
+			for(i = 0; i < no_processes; i++)
+			{
+				m_pcs = pcs_vector[i];
+				//if(m_pcs->pcs_type_name.find("DEFORMATION")!=string::npos) { // TF 10/2010
+				if(m_pcs->getProcessType () == FiniteElement::DEFORMATION ||
+				   m_pcs->getProcessType() == FiniteElement::DEFORMATION_FLOW)
+				{
+					DOF_gt_one = true;
+					break;
+				}
+			}
+			if(!DOF_gt_one)
+				m_pcs = pcs_vector[0];
+			// -----------------------
+			DOMCreate();
+			//
+			for(i = 0; i < no_processes; i++)
+			{
+				m_pcs = pcs_vector[i];
+				// Config boundary conditions for domain decomposition
+				m_pcs->SetBoundaryConditionSubDomain(); //WW
+			}
+			//
+			node_connected_doms.clear();
+		}
+		// PA PCSProcessDependencies();
+	}
 
 #if defined(USE_MPI)                              //WW
 //------------------------For parallel solvers------------------------------
@@ -1159,6 +1363,8 @@ void DOMCreate()
  **************************************************************************/
 	void CPARDomain::ConfigEQS(CNumerics* m_num, const long n, bool quad)
 	{
+		int i;
+		long dim = 0;
 		i_start[0] = 0;
 		i_end[0] = num_inner_nodes; //Number of interior nodes
 		b_start[0] = 0;
@@ -1168,9 +1374,7 @@ void DOMCreate()
 		long border_size = num_boundary_nodes;
 		quadratic = quad;
 		//
-#if defined(NEW_BREDUCE)
 		double cpu_time_local = -MPI_Wtime();
-#endif
 
 		/*
 
@@ -1218,7 +1422,7 @@ void DOMCreate()
 		//  Concatenate index
 		inner_size *= dof;
 		border_size *= dof;
-		for(int i = 0; i < mysize; i++)
+		for(i = 0; i < mysize; i++)
 		{
 			receive_cnt[i] = 1;
 			receive_disp[i] = i;
@@ -1226,9 +1430,9 @@ void DOMCreate()
 		//
 		// receive_cnt_i[]: number of subdomain inner nodes in the concatenated array
 		MPI_Allgatherv ( &inner_size, 1, MPI_INT, receive_cnt_i, receive_cnt, receive_disp,
-		                 MPI_INT, comm_DDC );
+		                 MPI_INT, MPI_COMM_WORLD );
 		inner_size = 0;
-		for(int i = 0; i < mysize; i++)
+		for(i = 0; i < mysize; i++)
 		{
 			receive_disp_i[i] = inner_size;
 			inner_size += receive_cnt_i[i];
@@ -1236,7 +1440,7 @@ void DOMCreate()
 #if defined(NEW_BREDUCE)
 		// receive_cnt_b[]: number of subdomain border nodes in the concatenated array
 		MPI_Allgatherv ( &border_size, 1, MPI_INT, receive_cnt_b, receive_cnt, receive_disp,
-		                 MPI_INT, comm_DDC );
+		                 MPI_INT, MPI_COMM_WORLD );
 		border_size = 0;
 		for(i = 0; i < mysize; i++)
 		{
@@ -1257,7 +1461,7 @@ void DOMCreate()
 		}
 #endif
 		//
-		// long dim = n_loc*dof;
+		// dim = n_loc*dof;
 		// MPI_Allreduce(&dim,  &max_dimen, 1, MPI_INT,  MPI_MAX, MPI_COMM_WORLD);
 	}
 
@@ -1270,15 +1474,19 @@ void DOMCreate()
  **************************************************************************/
 	double CPARDomain::Dot_Border_Vec(const double* vec_x, const double* vec_y)
 	{
+		long i, l_buff;
+		int ii, k;
+		long b_shift[2];
+		double val, fac;
+		val = 0.;
 		//
-		double val = 0.;
-		for(int k = 0; k < nq; k++)
-			for(long i = b_start[k]; i < b_end[k]; i++)
+		for(k = 0; k < nq; k++)
+			for(i = b_start[k]; i < b_end[k]; i++)
 			{
-				const double fac =  1.0 / (double)bnode_connected_dom[i];
-				for(int ii = 0; ii < dof; ii++)
+				fac =  1.0 / (double)bnode_connected_dom[i];
+				for(ii = 0; ii < dof; ii++)
 				{
-					const long l_buff = i + n_loc * ii + n_shift[k];
+					l_buff = i + n_loc * ii + n_shift[k];
 					val += fac * vec_x[l_buff] * vec_y[l_buff];
 				}
 			}
@@ -1447,16 +1655,18 @@ void DOMCreate()
  **************************************************************************/
 	void CPARDomain::Global2Border(const double* x, double* local_x, const long n )
 	{
+		long i, ig;
+		int ii, k;
 		//
 		long nnodes_g = (long)n / dof;
 		// BC
-		for(long i = 0; i < dof * n_bc; i++)
+		for(i = 0; i < dof * n_bc; i++)
 			local_x[i] = 0.0;
 		//
-		for(long i = 0; i < n_bc; i++)
+		for(i = 0; i < n_bc; i++)
 		{
-			int k = t_border_nodes[i];
-			for(int ii = 0; ii < dof; ii++)
+			k = t_border_nodes[i];
+			for(ii = 0; ii < dof; ii++)
 				local_x[i + n_bc * ii] = x[k + nnodes_g * ii];
 		}
 	}
@@ -1471,13 +1681,15 @@ void DOMCreate()
  **************************************************************************/
 	void CPARDomain::Border2Global(const double* local_x, double* x, const long n)
 	{
+		long i, ig;
+		int ii, k;
 		//
 		long nnodes_g = (long)n / dof;
 		//
-		for(long i = 0; i < n_bc; i++)
+		for(i = 0; i < n_bc; i++)
 		{
-			const int k = t_border_nodes[i];
-			for(int ii = 0; ii < dof; ii++)
+			k = t_border_nodes[i];
+			for(ii = 0; ii < dof; ii++)
 				x[k + nnodes_g * ii] = local_x[i + n_bc * ii];
 		}
 	}
@@ -1544,14 +1756,20 @@ void DOMCreate()
 //#define NEW_BREDUCE2
 	void CPARDomain::CatInnerX(double* global_x, const double* local_x, const long n)
 	{
+		long i, j, ig;
+		int ii, k;
+		long counter = 0;
+		double* x_i, * x_g;
 		Linear_EQS* eq = NULL;
 		if(quadratic)
 			eq = eqsH;
 		else
 			eq = eqs;
 		//
-		double* x_g = eq->f_buffer[(long)eq->f_buffer.size() - 1];
+		x_i = eq->f_buffer[0];
+		x_g = eq->f_buffer[(long)eq->f_buffer.size() - 1];
 		//
+		long n_global = (long)n / dof;
 		//
 #if defined(NEW_BREDUCE2)
 		// Not finished
@@ -1560,13 +1778,10 @@ void DOMCreate()
 		// for(i=0; i<eq->A->Dim();i++)
 		//   x_i[i] = 0.;
 		//
-		double* x_i = eq->f_buffer[0];
-		const long n_global = (long)n / dof;
-		long counter = 0;
-		for(int k = 0; k < nq; k++)
+		for(k = 0; k < nq; k++)
 		{
-			for(long i = i_start[k]; i < i_end[k]; i++)
-				for(int ii = 0; ii < dof; ii++)
+			for(i = i_start[k]; i < i_end[k]; i++)
+				for(ii = 0; ii < dof; ii++)
 				{
 					x_i[counter] = local_x[i + n_loc * ii];
 					counter++; //
@@ -1574,18 +1789,19 @@ void DOMCreate()
 		}
 		// Concatentate
 		MPI_Allgatherv (x_i, counter, MPI_DOUBLE, x_g, receive_cnt_i, receive_disp_i,
-		                MPI_DOUBLE, comm_DDC );
+		                MPI_DOUBLE, MPI_COMM_WORLD );
 		//
 		// Mapping to the golbal x
 		CPARDomain* a_dom;
-		for(long j = 0; j < mysize; j++)
+		for(j = 0; j < mysize; j++)
 		{
 			counter = receive_disp_i[j];
 			// Problem from here
 			if(j == myrank)
 				a_dom = this;
 			else
-				a_dom = dom_vector[j];
+				;
+			a_dom = dom_vector[j];
 			a_dom->nq = 1;
 			a_dom->i_start[0] = 0;
 			a_dom->i_end[0] =  a_dom->num_inner_nodes; //Number of interior nodes
@@ -1596,12 +1812,12 @@ void DOMCreate()
 				a_dom->i_end[1] = a_dom->i_start[1] + a_dom->num_inner_nodesHQ;
 			}
 
-			for(int k = 0; k < a_dom->nq; k++) // This should come from different processors
+			for(k = 0; k < a_dom->nq; k++) // This should come from different processors
 
-				for(long i = a_dom->i_start[k]; i < a_dom->i_end[k]; i++)
+				for(i = a_dom->i_start[k]; i < a_dom->i_end[k]; i++)
 				{
-					const long ig = a_dom->nodes[i];
-					for(int ii = 0; ii < dof; ii++)
+					ig = a_dom->nodes[i];
+					for(ii = 0; ii < dof; ii++)
 					{
 						global_x[ig + n_global * ii] = x_g[counter];
 						counter++;
@@ -1611,7 +1827,7 @@ void DOMCreate()
 
 #else // if defined(NEW_BREDUCE2)
 		Local2Global(local_x, x_g, n);
-		MPI_Allreduce( x_g, global_x, n, MPI_DOUBLE,MPI_SUM,comm_DDC);
+		MPI_Allreduce( x_g, global_x, n, MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
 #endif
 	}
 
@@ -1650,7 +1866,7 @@ void DOMCreate()
 		}
 		// Concatentate
 		MPI_Allgatherv (x_g, counter, MPI_DOUBLE, x_cat, receive_cnt_b, receive_disp_b,
-		                MPI_DOUBLE, comm_DDC );
+		                MPI_DOUBLE, MPI_COMM_WORLD );
 		for(i = 0; i < dof * n_bc; i++)
 			x_b[i] = 0.0;
 		//

@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************
    ROCKFLOW - Object: Process PCS_Deformation
    Task:
@@ -44,7 +35,7 @@ namespace process
 {
 
 enum InitDataReadWriteType {none, read_write, read_all_binary, write_all_binary,
-                                  read_all_asci, write_all_asci,
+                                  read_all_asci, write_all_asci,      
                                   read_stress_binary, write_stress_binary,
                                   read_displacement, write_displacement,
                                   read_pressure, write_pressure};
@@ -103,7 +94,7 @@ public:
 	double CaclMaxiumLoadRatio();
 
 	// Write stresses
-	void WriteGaussPointStress(const bool last_step = false);
+	void WriteGaussPointStress();
 	void ReadGaussPointStress();
 	void ReadElementStress();
 
@@ -120,6 +111,7 @@ private:
 	CFiniteElementVec* fem_dm;
 	void InitialMBuffer();
 	double* ARRAY;
+	double* ARRAY2;//WX 07.2014
 
 	int counter;
 	double InitialNorm;
@@ -127,8 +119,6 @@ private:
 	double InitialNormU0;
 
 	InitDataReadWriteType idata_type;
-
-	bool _has_initial_stress_data;
 
 	//
 	double error_k0;

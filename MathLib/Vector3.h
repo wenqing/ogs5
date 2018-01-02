@@ -3,11 +3,6 @@
  * 27/10/2009 LB Initial implementation
  * From: http://www.strout.net/info/coding/classlib/intro.html
  * with modifications to derive from TemplatePoint
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
  */
 
 #ifndef VECTOR3_H
@@ -47,12 +42,12 @@ public:
 
 	TemplateVector operator+(const TemplateVector & pV) const
 	{
-		return TemplateVector(this->_x[0] + pV[0], this->_x[1] + pV[1], this->_x[2] + pV[2] );
+		return TemplateVector(this->x[0] + pV[0], this->x[1] + pV[1], this->x[2] + pV[2] );
 	}
 
 	TemplateVector operator-(const TemplateVector & pV) const
 	{
-		TemplateVector out( this->_x[0] - pV[0], this->_x[1] - pV[1], this->_x[2] - pV[2] );
+		TemplateVector out( this->x[0] - pV[0], this->x[1] - pV[1], this->x[2] - pV[2] );
 		return out;
 	}
 
@@ -61,7 +56,7 @@ public:
 
 	TemplateVector& operator+=(const TemplateVector & pV)
 	{
-		for (size_t i(0); i < 3; i++) this->_x[i] += pV[i];
+		for (size_t i(0); i < 3; i++) this->x[i] += pV[i];
 		return *this;
 	}
 

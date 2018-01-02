@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************
    FEMLib - Object: OUT
    Task:
@@ -28,8 +19,7 @@ using namespace std;
 
 // Base
 #include "StringTools.h"
-// Math
-#include "matrix_class.h" //JOD 2014-11-10
+
 // FEM-Makros
 #include "files0.h"
 #include "makros.h"
@@ -59,7 +49,6 @@ using namespace std;
 
 // Base
 #include "StringTools.h"
-#include "FileTools.h"
 
 extern size_t max_dim;                            //OK411 todo
 
@@ -70,7 +59,6 @@ extern size_t max_dim;                            //OK411 todo
 // MPI Parallel
 #if defined(USE_MPI) || defined(USE_MPI_PARPROC) || defined(USE_MPI_REGSOIL)
 #include "par_ddc.h"
-#include "SplitMPI_Communicator.h"
 #endif
 
 #if defined(USE_PETSC) ||  defined(USE_MPI) || defined(USE_MPI_PARPROC) || defined(USE_MPI_REGSOIL)//|| defined(other parallel libs)//03.3012. WW
@@ -88,10 +76,6 @@ extern size_t max_dim;                            //OK411 todo
 using MeshLib::CFEMesh;
 //==========================================================================
 vector<COutput*>out_vector;
-
-
-std::string defaultOutputPath = ""; // CL
-
 
 /**************************************************************************
    FEMLib-Method:
@@ -113,20 +97,14 @@ bool OUTRead(const std::string& file_base_name,
 	ios::pos_type position;
 	bool output_version = false; // 02.2011. WW
 
-#if defined(USE_PETSC)
-	MPI_Comm communicator = PETSC_COMM_WORLD;
-#elif defined(USE_MPI)
-	MPI_Comm communicator = comm_DDC;
-#endif 
-
 #if defined(USE_PETSC) || defined(USE_MPI) //|| defined(other parallel libs)//03.3012. WW
 	int rank , msize;
 	string rank_str;
-	MPI_Comm_rank(communicator, &rank);
-	MPI_Comm_size(communicator, &msize);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &msize);
 	std::ifstream is;
 	stringstream ss (stringstream::in | stringstream::out);
-	ss.clear();
+	ss.clear(); 
 	ss.str("");
 	ss << rank;
 	rank_str = ss.str();
@@ -153,7 +131,7 @@ bool OUTRead(const std::string& file_base_name,
 #if defined(USE_PETSC) || defined(USE_MPI) //|| defined(other parallel libs)//03.3012. WW
 		out->setMPI_Info(rank, msize, rank_str);
 #endif
-		out->setFileBaseName(file_base_name);
+		out->getFileBaseName() = file_base_name;
 		// Give version in file name
 		//15.01.2008. WW
 		if (line_string.find("#VERSION") != string::npos)
@@ -174,7 +152,9 @@ bool OUTRead(const std::string& file_base_name,
 					VersionStr.replace(pos, 1, "_");
 					curPos = pos + 1;
 				}
-				out->setFileBaseName(out->getFileBaseName() + "(V" + VersionStr + ")");
+				out->getFileBaseName().append("(V");
+				out->getFileBaseName().append(VersionStr);
+				out->getFileBaseName().append(")");
 			}
 
 			out_vector.push_back(out);
@@ -496,11 +476,12 @@ void OUTData(double time_current, int time_step_number, bool force_output)
 					                             m_out->mmp_value_vector,
 					                             m_out->msh_type_name,
 					                             m_out);
-#if defined(USE_PETSC)
+#if defined(USE_PETSC)						
 							vtkOutput.WriteDataVTKPETSC(
 							        time_step_number,
-                                    m_out->_time,
-                                    m_out->file_base_name);
+							        m_out->_time,
+							        m_out->
+							        file_base_name);
 #else
 					vtkOutput.WriteDataVTK(time_step_number,
 					                       m_out->_time,
@@ -513,23 +494,27 @@ void OUTData(double time_current, int time_step_number, bool force_output)
 				else
 				{
 					for (size_t j = 0; j < no_times; j++)
-					{
 						if (time_current >= m_out->time_vector[j])
 						{
 							//OK
 							//m_out->WriteDataVTK(time_step_number);
-							LegacyVtkInterface vtkOutput(
-							            m_msh,
-							            m_out->_nod_value_vector,
-							            m_out->_ele_value_vector,
-							            m_out->mmp_value_vector,
-							            m_out->msh_type_name,
-							            m_out);
-#if defined(USE_PETSC)
+                                                        LegacyVtkInterface vtkOutput(
+							        m_msh,
+							        m_out->
+							        _nod_value_vector,
+							        m_out->
+							        _ele_value_vector,
+							        m_out->
+							        mmp_value_vector,
+							        m_out->
+							        msh_type_name,
+							        m_out);
+#if defined(USE_PETSC)						
 							vtkOutput.WriteDataVTKPETSC(
 							        time_step_number,
 							        m_out->_time,
-                                    m_out->file_base_name);
+							        m_out->
+							        file_base_name);
 							m_out->time_vector.erase(
 							        m_out->time_vector.begin()
 							        + j);
@@ -537,17 +522,20 @@ void OUTData(double time_current, int time_step_number, bool force_output)
 							vtkOutput.WriteDataVTK(
 							        time_step_number,
 							        m_out->_time,
-							        m_out->file_base_name);
+							        m_out->
+							        file_base_name);
 							m_out->time_vector.erase(
 							        m_out->time_vector.begin()
 							        + j);
+							
 #endif
 							if (!m_out->_new_file_opened)
 								//WW
 								m_out->_new_file_opened = true;
 							break;
+
+						  
 						}
-					}
 				}
 				break;
 			default:
@@ -564,10 +552,12 @@ void OUTData(double time_current, int time_step_number, bool force_output)
 			if (m_out->dat_type_name.find("PVD_A") != string::npos)
 				vtk_appended = true;
 
+			stringstream stm;
+			string pvd_vtk_file_name, pvd_vtk_file_path;
+
 			switch (m_out->getGeoType())
 			{
 			case GEOLIB::GEODOMAIN: // domain data
-			{
 				if (time_step_number == 0)
 				{
 					std::string pcs_type ("");
@@ -578,14 +568,11 @@ void OUTData(double time_current, int time_step_number, bool force_output)
 					                   pcs_type,
 					                   vtk_appended);
 				}
-
 				// Set VTU file name and path
-				std::string pvd_vtk_file_name = vtk->pvd_vtk_file_name_base;
-				std::stringstream stm;
+				pvd_vtk_file_name = vtk->pvd_vtk_file_name_base;
 				stm << time_step_number;
 				pvd_vtk_file_name += stm.str() + ".vtu";
-				std::string pvd_vtk_file_path = pathJoin(vtk->pvd_vtk_file_path_base, pvd_vtk_file_name);
-
+                pvd_vtk_file_path = vtk->pvd_vtk_file_path_base + pvd_vtk_file_name;
 				// Output
 				if (OutputBySteps)
 				{
@@ -618,18 +605,15 @@ void OUTData(double time_current, int time_step_number, bool force_output)
 							break;
 						}
 				}
-			}
 				break;
 
 			default:
 				break;
 			}
 		}
-		else if (m_out->dat_type_name.compare("TOTAL_FLUX") == 0)
-			m_out->NODWriteTotalFlux(time_current, time_step_number); // 6/2012 JOD, MW
+		else if (m_out->dat_type_name.compare("WATER_BALANCE") == 0)
+			m_out->NODWriteWaterBalance(time_current); // 6/2012 JOD, MW
 		else if (m_out->dat_type_name.compare("COMBINE_POINTS") == 0) m_out->NODWritePointsCombined(time_current);	// 6/2012 for calibration JOD
-		else if (m_out->dat_type_name.compare("PRIMARY_VARIABLES") == 0)
-			m_out->NODWritePrimaryVariableList(time_current); //JOD 2014-11-10
 
 		// ELE values, only called if ele values are defined for output, 05/2012 BG
 		if (m_out->getElementValueVector().size() > 0)

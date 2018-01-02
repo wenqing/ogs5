@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************
    GeoLib - Object: Polyline
    Task:
@@ -46,9 +37,6 @@ private:
 	bool computeline;
 //	std::string ply_file_name;
 	std::vector<int> OrderedPoint;
-
-	/// is the epsilon value set external or is it on default value
-	bool _set_eps;
 protected:
 	std::vector<CGLLine*> line_vector;
 
@@ -59,9 +47,6 @@ public:
 	// destructor
 	~CGLPolyline(void);
 
-	/// is the epsilon value set external or is it on default value
-	/// used in mesh node search algorithms
-	bool isSetEps() const { return _set_eps; }
 	const std::string& getName () const;
 	void setName (const std::string& nname);
 	size_t getID () const;

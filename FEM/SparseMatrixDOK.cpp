@@ -3,11 +3,6 @@
  *
  *  Created on: Oct 6, 2011
  *      Author: NW
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
  */
 
 #include <iostream>
@@ -546,7 +541,7 @@ void SparseMatrixDOK::ConstructCRSstructure()
 	this->entry_index = new int[total_matrix_entry_size];
 
 	long counter_ptr = 0, counter_col_idx = 0;
-	long J,K;
+	long I,J,K;
 
 	row_iter ii;
 	col_iter jj;
@@ -564,6 +559,7 @@ void SparseMatrixDOK::ConstructCRSstructure()
 			for (jj=(*ii).begin(); jj!=(*ii).end(); jj++)
 			{
 #endif
+				I = cnt_row; // row in global matrix
 				J = (*jj).first; // column in global matrix
 				K = counter_ptr; // index in entry
 

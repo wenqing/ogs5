@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************
    FEMLib - Object: TIM
    Task: class implementation
@@ -21,7 +12,7 @@
 //#include <fstream>
 #include <iostream>
 //#include <string>
-#include <vector>
+//#include <vector>
 #include "makros.h" // JT2012
 #include "FEMEnums.h"
 // kg44 this is to synchronize time step size  for PETSC
@@ -32,7 +23,6 @@
 typedef Mat PETSc_Mat;
 typedef Vec PETSc_Vec;
 #endif
-using namespace std;
 //----------------------------------------------------------------
 class CRFProcess;                                 //21.08.2008. WW
 class CTimeDiscretization
@@ -99,17 +89,6 @@ public:
 	double multiply_coef;                 //YD
 	double max_time_step;                 //YD
 	double min_time_step;
-	double initial_step_size;
-	IterationType::type adapt_itr_type;
-	size_t last_rejected_timestep;
-	size_t stay_steps_after_rejection;
-	double desired_error;
-	double max_increase;
-	double min_increase;
-	double last_time_step_length;
-	double dampening;
-	double SEA_a, SEA_b, SEA_c;
-
 	//
 	//WW double minish; // JOD
 	//WW int sub_steps; // JOD 4.7.10
@@ -134,7 +113,7 @@ public:
 	//Begin of function section for PI Time control ------------------------
 	int GetPITimeStepCrtlType() const {return PI_tsize_ctrl_type; }
 	double GetTimeStep() const {return this_stepsize; }
-	double GetEndTime() const { return time_end; }
+	double GetEndTime() const { return time_end; }	
 	void SetTimeStep( double hnew)  {this_stepsize = hnew; }
 	double GetRTol() const { return relative_error; }
 	double GetATol() const { return absolute_error; }
@@ -151,12 +130,6 @@ public:
 	double ErrorControlAdaptiveTimeControl();
 	double NeumannTimeControl();
 	double SelfAdaptiveTimeControl();
-	double StableErrorAdaptive( void );
-	bool SEA_parameters_are_bad( void );
-	void SEA_calc_parameters( void );
-	double SEA_zbrent(const double tol);
-	double SEA_func(double const c);
-	inline double SEA_SIGN(const double a, const float b);
 	double DynamicVariableTimeControl(); //JT2012
 	double DynamicTimeSmoothing(double suggested_time_step_change);		//JT2012
 	//

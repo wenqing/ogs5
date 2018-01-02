@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /*========================================================================
    GeoSys - class Matrix (Definition)
           class vec
@@ -34,142 +25,26 @@
 
 namespace Math_Group
 {
-
-MatrixBase::MatrixBase(size_t rows, size_t cols, size_t size) :
+// Constructors
+Matrix::Matrix(size_t rows, size_t cols) :
 	nrows (rows), nrows0 (rows), ncols (cols), ncols0 (cols),
-	size(size), data(size>0?new double[size]:NULL)
+	size (nrows * ncols), data (new double[size])
 {
 	for(size_t i = 0; i < size; i++)
 		data[i] = 0.0;
 }
 
-MatrixBase::MatrixBase(const MatrixBase &m) :
-	nrows (m.nrows), nrows0 (m.nrows0), ncols (m.ncols), ncols0 (m.ncols0),
-	size(m.size), data(size>0?new double[size]:NULL)
-{
-	for(size_t i = 0; i < size; i++)
-		data[i] = m.data[i];
-}
-
-MatrixBase::~MatrixBase()
-{
-	delete [] data;
-	data = NULL;
-}
-
-// 06.2010. WW
-void MatrixBase::ReleaseMemory()
-{
-	delete [] data;
-	data = NULL;
-}
-
-// m_results = this*m. m_results must be initialized
-void MatrixBase::multi(const MatrixBase& m, MatrixBase& m_result, double fac)
-{
-#ifdef gDEBUG
-	if(ncols != m.Rows() && nrows != m_result.Rows() && m.Cols() != m_result.Cols())
-	{
-		std::cout << "\n The sizes of the two matrices are not matched" << "\n";
-		abort();
-	}
-#endif
-	for(size_t i = 0; i < m_result.Rows(); i++)
-		for(size_t j = 0; j < m_result.Cols(); j++)
-		{
-			// m_result(i,j) = 0.0;
-			for(size_t k = 0; k < ncols; k++)
-				//            m_result(i,j) += fac*data[i*ncols+k]*m(k,j);
-				m_result(i,j) += fac * (*this)(i,k) * m(k,j);
-		}
-}
-
-//
-// m_results = this*m1*m2. m_results must be  initialized
-void MatrixBase::multi(const MatrixBase& m1, const MatrixBase& m2, MatrixBase& m_result)
-{
-#ifdef gDEBUG
-	if(ncols != m1.Rows() && m1.Cols() != m2.Rows()
-	   && m2.Cols() != m_result.Cols() && nrows != m_result.Rows())
-	{
-		std::cout << "\n The sizes of the two matrices are not matched" << "\n";
-		abort();
-	}
-#endif
-	for(size_t i = 0; i < m_result.Rows(); i++)
-		for(size_t j = 0; j < m_result.Cols(); j++)
-		{
-			//m_result(i,j) = 0.0;
-			for(size_t k = 0; k < ncols; k++)
-				for(size_t l = 0; l < m2.Rows(); l++)
-					//                m_result(i,j) += data[i*ncols+k]*m1(k,l)*m2(l,j);
-					m_result(i,j) += (*this)(i,k) * m1(k,l) * m2(l,j);
-		}
-}
-// vec_result = This*vec. vec_result must be  initialized
-void MatrixBase::multi(const double* vec, double* vec_result, double fac)
-{
-	for(int i = 0; (size_t)i < nrows; i++)
-		for(int j = 0; (size_t)j < ncols; j++)
-			vec_result[i] += fac * (*this)(i,j) * vec[j];
-}
-
-/**************************************************************************
-   MathLib-Method:
-   Task:
-   Programing:
-   08/2004 WW Implementation
-   02/2005 WW Change name
-**************************************************************************/
-void MatrixBase::Write(std::ostream& os)
-{
-	os.setf(std::ios::scientific, std::ios::floatfield);
-	os.precision(12);
-
-	for (size_t i = 0; i < nrows; i++)
-	{
-		os << "| ";
-		for (size_t j = 0; j < ncols; j++)
-			os << (*this)(i, j) << " ";
-		os << "| " << "\n";
-	}
-	os << "\n";
-}
-
-/**************************************************************************
-   MathLib-Method:
-   Task:
-   Programing:
-   01/2006 WW Implementation
-   03/2010 TF write whole matrix in one chunk
-**************************************************************************/
-void MatrixBase::Write_BIN(std::fstream& os)
-{
-	os.write((char*)data, size * sizeof(double));
-}
-/**************************************************************************
-   MathLib-Method:
-   Task:
-   Programing:
-   01/2006 WW Implementation
-**************************************************************************/
-void MatrixBase::Read_BIN(std::fstream& is)
-{
-	is.read((char*)data, size * sizeof(double));
-}
-
-// Constructors
-Matrix::Matrix(size_t rows, size_t cols) :
-	MatrixBase (rows, cols, rows * cols)
-{}
-
 Matrix::Matrix() :
-	MatrixBase (0, 0, 0)
+	nrows (0), nrows0 (0), ncols (0), ncols0 (0),
+	size (nrows * ncols), data (NULL)
 {}
 
 Matrix::Matrix(const Matrix& m) :
-	MatrixBase (m)
+	nrows (m.nrows), nrows0 (m.nrows), ncols (m.ncols), ncols0 (m.ncols),
+	size (nrows * ncols), data (new double[size])
 {
+	for(size_t i = 0; i < size; i++)
+		data[i] = m.data[i];
 }
 
 void Matrix::resize(size_t rows, size_t cols)
@@ -192,7 +67,38 @@ void Matrix::resize(size_t rows, size_t cols)
 
 Matrix::~Matrix()
 {
+	delete [] data;
+	data = NULL;
 }
+
+// 06.2010. WW
+void Matrix::ReleaseMemory()
+{
+	delete [] data;
+	data = NULL;
+}
+
+/*
+void Matrix::operator= (const SymMatrix& m)
+{
+    const double *m_data = m.getEntryArray_const();
+
+    for(size_t i = 0; i < nrows; i++)
+    {
+        double *row_data = &data[i * ncols] ;
+        const double *row_data_m = &data[(i * (i + 1) / 2)] ;
+           
+        // diagonal 
+        row_data[i] = row_data_m[i];
+
+        for(size_t j = 0; j<ncols; j++)
+        {
+           row_data[j] = row_data_m[j];
+           data[j*ncols + i] = row_data_m[j];
+        }
+    }
+}
+*/
 
 //
 void Matrix::GetTranspose(Matrix& m)
@@ -228,7 +134,8 @@ void Matrix::multi(const Matrix& m, Matrix& m_result, double fac)
 		abort();
 	}
 #endif
-    const double *m_data = m.getEntryArray();
+   const double *m_data = m.getEntryArray_const();
+    const size_t mrows = m.Rows();
     const size_t mcols = m.Cols();
     double *r_data = m_result.getEntryArray();
     const size_t r_rows = m_result.Rows();
@@ -278,7 +185,7 @@ void Matrix::multi(const double* vec, double* vec_result, double fac)
 {
     for(size_t  i = 0; i < nrows; i++)
     {
-        double val = 0.;
+        double val = 0.; 
         const double *row_data = &data[i * ncols] ;
         for(size_t j = 0; j < ncols; j++)
         {
@@ -313,18 +220,74 @@ void Matrix::LimitSize(size_t nRows, size_t nCols)
 	size = nrows * ncols;
 }
 
+/**************************************************************************
+   MathLib-Method:
+   Task:
+   Programing:
+   08/2004 WW Implementation
+   02/2005 WW Change name
+**************************************************************************/
+void Matrix::Write(std::ostream& os)
+{
+	os.setf(std::ios::scientific, std::ios::floatfield);
+	os.precision(12);
+
+	for (size_t i = 0; i < nrows; i++)
+	{
+		os << "| ";
+		for (size_t j = 0; j < ncols; j++)
+			os << (*this)(i, j) << " ";
+		os << "| " << "\n";
+	}
+	os << "\n";
+}
+
+/**************************************************************************
+   MathLib-Method:
+   Task:
+   Programing:
+   01/2006 WW Implementation
+   03/2010 TF write whole matrix in one chunk
+**************************************************************************/
+void Matrix::Write_BIN(std::fstream& os)
+{
+	os.write((char*)data, size * sizeof(double));
+}
+/**************************************************************************
+   MathLib-Method:
+   Task:
+   Programing:
+   01/2006 WW Implementation
+**************************************************************************/
+void Matrix::Read_BIN(std::fstream& is)
+{
+	for(size_t i = 0; i < size; i++)
+		is.read((char*)(&data[i]), sizeof(data[i]));
+}
+
 //-----------------------------------------------------
 // Symmetrical matrix
 SymMatrix::SymMatrix(size_t dim) :
-	MatrixBase(dim, dim, (size_t)dim * (dim + 1) / 2)
+	Matrix()
 {
+	nrows = ncols = dim;
+	size = (int)nrows * (nrows + 1) / 2;
+	data = new double[size];
+	nrows0 = ncols0 = dim;
+	for(size_t i = 0; i < size; i++)
+		data[i] = 0.0;
 }
 
-SymMatrix::SymMatrix() : MatrixBase(0,0,0)
+SymMatrix::SymMatrix(const SymMatrix& m) : Matrix()
 {
-}
-SymMatrix::SymMatrix(const SymMatrix& m) : MatrixBase(m)
-{
+	nrows = m.nrows;
+	ncols = m.ncols;
+	nrows0 = m.nrows0;
+	ncols0 = m.ncols0;
+	size = m.size;
+	data = new double[size];
+	for(size_t i = 0; i < size; i++)
+		data[i] = m.data[i];
 }
 
 void SymMatrix::resize(size_t dim)
@@ -358,7 +321,7 @@ void SymMatrix::LimitSize(size_t dim)
 }
 
 // m_results = this*m. m_results must be initialized
-void SymMatrix::multi(const SymMatrix& m, Matrix& m_result, double fac)
+void SymMatrix::multi(const Matrix& m, Matrix& m_result, double fac)
 {
 #ifdef gDEBUG
 	if(ncols != m.Rows() && nrows != m_result.Rows() && m.Cols() != m_result.Cols())
@@ -367,6 +330,8 @@ void SymMatrix::multi(const SymMatrix& m, Matrix& m_result, double fac)
 		abort();
 	}
 #endif
+    const size_t mrows = m.Rows();
+    const size_t mcols = m.Cols();
     double *r_data = m_result.getEntryArray();
     const size_t r_rows = m_result.Rows();
     const size_t r_cols = m_result.Cols();
@@ -395,7 +360,7 @@ void SymMatrix::multi(const SymMatrix& m, Matrix& m_result, double fac)
 
 //
 // m_results = this*m1*m2. m_results must be  initialized
-void SymMatrix::multi(const SymMatrix& m1, const Matrix& m2, Matrix& m_result)
+void SymMatrix::multi(const Matrix& m1, const Matrix& m2, Matrix& m_result)
 {
 #ifdef gDEBUG
 	if(ncols != m1.Rows() && m1.Cols() != m2.Rows()
@@ -418,7 +383,7 @@ void SymMatrix::multi(const SymMatrix& m1, const Matrix& m2, Matrix& m_result)
             double val = 0.;
 			for(size_t k = 0; k < ncols; k++)
 			{
-                const double entry_of_this = data[getArrayIndex(i,k)];
+                const double entry_of_this = data[getArrayIndex(i,k)]; 
 				for(size_t l = 0; l < m2.Rows(); l++)
 					val += entry_of_this * m1(k,l) * m2(l,j);
 			}
@@ -431,7 +396,7 @@ void SymMatrix::multi(const double* vec, double* vec_result, double fac)
 {
     for(size_t  i = 0; i < nrows; i++)
     {
-        double val = 0.;
+        double val = 0.; 
 
         const double *row_data = &data[static_cast<size_t>(i * (i + 1) / 2)] ;
         for(size_t j = 0; j <= i; j++)
@@ -450,17 +415,37 @@ void SymMatrix::multi(const double* vec, double* vec_result, double fac)
 
 //-----------------------------------------------------
 // Diagonal matrix
-DiagonalMatrix::DiagonalMatrix(size_t dim) : MatrixBase(dim,dim,dim)
+DiagonalMatrix::DiagonalMatrix(size_t dim) : Matrix()
 {
+	nrows = ncols = dim;
+	size = dim;
+	data = new double[dim];
+	nrows0 = ncols0 = dim;
+	for(size_t i = 0; i < size; i++)
+		data[i] = 0.0;
 	dummy_zero = 0.0;
 }
 
-DiagonalMatrix::DiagonalMatrix() : MatrixBase(0,0,0)
+DiagonalMatrix::DiagonalMatrix() : Matrix()
 {
+	nrows = 0;
+	ncols = 0;
+	nrows0 = 0;
+	ncols0 = 0;
+	size = 0;
+	data = 0;
 	dummy_zero = 0.0;
 }
-DiagonalMatrix::DiagonalMatrix(const DiagonalMatrix& m) : MatrixBase(m)
+DiagonalMatrix::DiagonalMatrix(const DiagonalMatrix& m) : Matrix()
 {
+	nrows = m.nrows;
+	ncols = m.ncols;
+	nrows0 = m.nrows0;
+	ncols0 = m.ncols0;
+	size = m.size;
+	data = new double[size];
+	for(size_t i = 0; i < size; i++)
+		data[i] = 0.0;
 	dummy_zero = 0.0;
 }
 
@@ -478,6 +463,36 @@ void DiagonalMatrix::resize(size_t dim)
 	nrows0 = ncols0 = dim;
 	for(size_t i = 0; i < size; i++)
 		data[i] = 0.0;
+}
+
+//
+double& DiagonalMatrix::operator() (size_t i, size_t j) const
+{
+#ifdef gDEBUG
+	if(i >= nrows || j >= nrows)
+	{
+		cout << "\n Index exceeds the size of the matrix" << "\n";
+		abort();
+	}
+#endif
+
+	if(i == j)
+		return data[i];           // temporary
+	else
+		return dummy_zero;
+}
+
+double& DiagonalMatrix::operator() (size_t i) const
+{
+#ifdef gDEBUG
+	if(i >= size)
+	{
+		cout << "\n Index exceeds the size of the matrix" << "\n";
+		abort();
+	}
+#endif
+
+	return data[i];
 }
 
 void DiagonalMatrix::LimitSize(size_t dim)
@@ -1077,7 +1092,7 @@ CSparseMatrix::CSparseMatrix(const SparseTable &sparse_table, const int dof)
 	//
 #ifdef LIS                         // PCH
 	int counter, counter_ptr = 0, counter_col_idx = 0;
-	int i,k,ii,jj,J,K;
+	int i,k,ii,jj,I,J,K;
 	int row_in_sparse_table;
 
 	ptr = new int [rows * dof + 1];
@@ -1097,7 +1112,7 @@ CSparseMatrix::CSparseMatrix(const SparseTable &sparse_table, const int dof)
 				{
 					if(row_in_sparse_table < num_column_entries[k])
 					{
-						//I = ii * rows + i; // row in global matrix
+						I = ii * rows + i; // row in global matrix
 						                   // column in global matrix
 						J = jj * rows + entry_column[counter];
 						K = (ii * DOF + jj) * size_entry_column + counter;
@@ -1650,7 +1665,7 @@ void CSparseMatrix::Diagonize(const long idiag, const double b_given, double* b)
 		vdiag = entry[(ii * DOF + ii) * size_entry_column + j];
 		/// Row where the diagonal entry exists
 		for(jj = 0; jj < DOF; jj++)
-		{
+		{ 
 			const long ij = (ii * DOF + jj) * size_entry_column;
 			for(k = num_column_entries[id]; k < row_end; k++)
 			{
@@ -1686,7 +1701,7 @@ void CSparseMatrix::Diagonize(const long idiag, const double b_given, double* b)
 	}
 	else if(storage_type == JDS)
 	{
-        const long kk = ii * DOF;
+        const long kk = ii * DOF; 
 		long row_in_parse_table, counter;
 
 		// Row is zero
@@ -1706,7 +1721,7 @@ void CSparseMatrix::Diagonize(const long idiag, const double b_given, double* b)
 					else
 					{
 						entry[(kk + jj) * size_entry_column + counter] = 0.;
-					}
+					} 
 				}
 				counter += num_column_entries[k];
 			}
@@ -1833,9 +1848,7 @@ int CSparseMatrix::GetCRSValue(double* value)
 	int success = 1;
 	int i;
 
-#ifdef _OPENMP
 #pragma omp parallel for
-#endif
 	for(i = 0; i < size_entry_column * DOF * DOF; ++i)
 		value[i] = entry[entry_index[i]];
 

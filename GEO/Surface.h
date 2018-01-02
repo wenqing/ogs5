@@ -3,11 +3,6 @@
  *
  *  Created on: Jan 22, 2010
  *      Author: TF
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
  */
 
 #ifndef SURFACE_H_
@@ -64,8 +59,7 @@ public:
 	 * @param pnt the point
 	 * @return true if the point is contained in the surface
 	 */
-	bool isPntInSfc (const double* pnt,
-		double eps = std::numeric_limits<double>::epsilon()) const;
+	bool isPntInSfc (const double* pnt, double eps = std::numeric_limits<double>::epsilon()) const;
 
 	const std::vector<Point*>* getPointVec() const { return &_sfc_pnts; }
 
@@ -76,9 +70,6 @@ public:
 	AABB const & getAABB () const { return _bv; }
 
 	void initSurfaceGrid();
-	void calculateTriangleNormals() const;
-	double const* getTriangleNormal(const std::size_t triangle_id) const;
-	int getTriangleIDOfPoint(const double* pnt) const;
 
 protected:
 	/** a vector of pointers to Points */

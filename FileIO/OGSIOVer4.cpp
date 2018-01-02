@@ -3,11 +3,6 @@
  *
  *  Created on: Jan 14, 2010
  *      Author: TF
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
  */
 
 #include <iomanip>
@@ -16,6 +11,7 @@
 #include "Configure.h"
 
 // FileIO
+#include "GMSHInterface.h"
 #include "OGSIOVer4.h"
 
 // Base
@@ -37,6 +33,9 @@
 // MathLib
 #include "AnalyticalGeometry.h"
 #include "EarClippingTriangulation.h"
+
+// Qt/Base
+#include "OGSError.h"
 
 using namespace GEOLIB;
 
@@ -275,87 +274,25 @@ void readTINFile(const std::string &fname, Surface* sfc,
 		return;
 	}
 
-	std::size_t id;
-	double p0[3], p1[3], p2[3];
-	std::string line;
-	while (std::getline(in, line).good())
+	size_t id;
+	double x, y, z;
+	while (in)
 	{
-		// allow empty lines
-		if (line.empty())
-			continue;
-
-		// parse line
-		std::stringstream input(line);
 		// read id
-		if (!(input >> id)) {
-			in.close();
-			delete sfc;
-			sfc = NULL;
-			return;
-		}
+		in >> id;
+		// determine size
+		size_t pnt_pos(pnt_vec.size());
 		// read first point
-		if (!(input >> p0[0] >> p0[1] >> p0[2])) {
-			std::cerr << "Could not read coords of 1st point of triangle \""
-				<< id << "\".\n";
-			errors.push_back (std::string("readTIN error: ") +
-				std::string("Could not read coords of 1st point in triangle ") +
-				number2str(id));
-			in.close();
-			delete sfc;
-			sfc = NULL;
-			return;
-		}
+		in >> x >> y >> z;
+		pnt_vec.push_back(new Point(x, y, z));
 		// read second point
-		if (!(input >> p1[0] >> p1[1] >> p1[2])) {
-			std::cerr << "Could not read coords of 2nd point of triangle \""
-				<< id << "\".\n";
-			errors.push_back (std::string("readTIN error: ") +
-				std::string("Could not read coords of 2nd point in triangle ") +
-				number2str(id));
-			in.close();
-			delete sfc;
-			sfc = NULL;
-			return;
-		}
+		in >> x >> y >> z;
+		pnt_vec.push_back(new Point(x, y, z));
 		// read third point
-		if (!(input >> p2[0] >> p2[1] >> p2[2])) {
-			std::cerr << "Could not read coords of 3rd point of triangle \""
-				<< id << "\".\n";
-			errors.push_back (std::string("readTIN error: ") +
-				std::string("Could not read coords of 3rd point in triangle ") +
-				number2str(id));
-			in.close();
-			delete sfc;
-			sfc = NULL;
-			return;
-		}
-
-		// check area of triangle
-		double const d_eps(std::numeric_limits<double>::epsilon());
-		if (MathLib::calcTriangleArea(p0, p1, p2) < d_eps) {
-			std::cerr << "readTIN: Triangle \"" << id << "\" has zero area.\n";
-			errors.push_back (std::string("readTIN: Triangle ")
-				+ number2str(id) + std::string(" has zero area."));
-			delete sfc;
-			sfc = NULL;
-			return;
-		}
-
-		// determine size pnt_vec to insert the correct ids
-		std::size_t const pnt_pos(pnt_vec.size());
-		pnt_vec.push_back(new GEOLIB::Point(p0));
-		pnt_vec.push_back(new GEOLIB::Point(p1));
-		pnt_vec.push_back(new GEOLIB::Point(p2));
+		in >> x >> y >> z;
+		pnt_vec.push_back(new Point(x, y, z));
 		// create new Triangle
 		sfc->addTriangle(pnt_pos, pnt_pos + 1, pnt_pos + 2);
-	}
-
-	if (sfc->getNTriangles() == 0) {
-		std::cerr << "readTIN(): No triangle found in file \"" << fname <<
-			"\".\n";
-		errors.push_back ("readTIN error because of no triangle found");
-		delete sfc;
-		sfc = NULL;
 	}
 }
 
@@ -469,15 +406,15 @@ std::string readSurface(std::istream &in,
         // surface created by polygon
         if (ply_id != std::numeric_limits<size_t>::max() && ply_id != ply_vec.size())
         {
-            if (!ply_vec[ply_id]->isClosed())
+            if (ply_vec[ply_id]->isClosed())
+            {
+                polygon_vec.push_back (new Polygon (*(ply_vec[ply_id]), true));
+            }
+            else
             {
                 std::cerr << "\n\tcannot create surface " << name << " from polyline: "
                     << " polyline is not closed.\n";
-                std::cerr << "\tmodify the polyline to make it closed.\n";
-                Polyline* ply = const_cast<Polyline*>(ply_vec[ply_id]);
-                ply->addPoint(ply->getPointID(0));
             }
-            polygon_vec.push_back (new Polygon (*(ply_vec[ply_id]), true));
         }
     }
 
@@ -720,40 +657,6 @@ void writeGLIFileV4 (const std::string& fname,
 				os << " $TYPE " << "\n" << "  0" << "\n";
 				os << " $POLYLINES" << "\n" << "  " << k << "\n"; //plys_vec->getNameOfElement ((*plys)[k]) << "\n";
 			}
-	}
-
-	// writing surfaces as TIN files
-	std::string path;
-	BaseLib::extractPath(fname, path);
-	size_t sfcs_cnt (0);
-	const GEOLIB::SurfaceVec* sfcs_vec (geo.getSurfaceVecObj (geo_name));
-	if (sfcs_vec) {
-		const std::vector<GEOLIB::Surface*>* sfcs (sfcs_vec->getVector());
-		for (size_t k(0); k < sfcs->size(); k++)
-		{
-			os << "#SURFACE" << "\n";
-			std::string sfc_name(path);
-			if (sfcs_vec->getNameOfElementByID (sfcs_cnt, sfc_name)) {
-				os << "\t$NAME " << "\n" << "\t\t" << sfc_name << "\n";
-			} else {
-				os << "\t$NAME " << "\n" << "\t\t" << sfcs_cnt << "\n";
-				sfc_name += number2str (sfcs_cnt);
-			}
-			sfc_name += ".tin";
-			os << "\t$TIN" << "\n";
-			os << "\t\t" << sfc_name << "\n";
-			// create tin file
-			std::ofstream tin_os (sfc_name.c_str());
-			GEOLIB::Surface const& sfc (*(*sfcs)[k]);
-			const size_t n_tris (sfc.getNTriangles());
-			for (size_t l(0); l < n_tris; l++) {
-				GEOLIB::Triangle const& tri (*(sfc[l]));
-				tin_os << l << " " << *(tri.getPoint(0)) << " " << *(tri.getPoint(1)) << " " << *(tri.getPoint(2)) << "\n";
-			}
-			tin_os.close();
-
-			sfcs_cnt++;
-		}
 	}
 
 	os << "#STOP" << "\n";

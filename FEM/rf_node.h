@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************
 FEMLib - Object: Node
 Task: class implementation
@@ -65,16 +56,15 @@ class CNodeValue
       void Write(std::ostream& os=std::cout) const;
       void Read(std::istream& is=std::cin);       //WW
       bool check_me;                              //OK
-      bool _isConstrainedSTNode;
+	  bool COMPDEPEND;                            //WX:07.2014
+	  int FREEOUTFLOW;	//FOR FREE OUT FLOW ST
+	  int EVAPORATION_MODE;
+	  double EVAPORTAION_RN;
+	  double EVAPORATION_TEMP;	//WX:01.2015 FOR EVAP ST
+	  double EVAPORATION_WIND;
 
-      std::size_t getSTVectorIndex() const { return _st_vector_index; }
-      void setSTVectorIndex(int index) { _st_vector_index = index; }
-      std::size_t getSTVectorGroup() const { return _st_vector_group; }
-      void setSTVectorGroup(int group) { _st_vector_group = group; }
 
    private:
       FiniteElement::DistributionType _node_distype;
-      std::size_t _st_vector_index;
-      std::size_t _st_vector_group;
 };
 #endif

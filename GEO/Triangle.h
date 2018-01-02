@@ -3,11 +3,6 @@
  *
  *  Created on: Mar 23, 2010
  *      Author: TF
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
  */
 
 #ifndef TRIANGLE_H_
@@ -75,7 +70,7 @@ public:
 	 * @param pnt
 	 * @return true, if point is in triangle, else false
 	 */
-	bool containsPoint(const double* pnt, double eps = 0) const;
+	bool containsPoint (const double* pnt, double eps = 0) const;
 
 	bool containsPoint (const Point &pnt, double eps = 0) const
 	{
@@ -89,11 +84,6 @@ public:
 	 * @return true, if the point is into the projected triangle
 	 */
 	bool containsPoint2D (const double* pnt) const;
-	void calculateNormal();
-	double const* getNormal() const
-	{
-		return _normal_vector;
-	}
 
 protected:
 	/** a vector of pointers to points */
@@ -102,13 +92,9 @@ protected:
 	size_t _pnt_ids[3];
 	bool _initialized;
 	double _longest_edge;
-	double _normal_vector[3];
 };
 
 void getPlaneCoefficients(Triangle const & tri, double c[3]);
-
-std::ostream & operator<<(std::ostream & out, GEOLIB::Triangle const& tri);
-
 } // end namespace GEOLIB
 
 #endif /* TRIANGLE_H_ */

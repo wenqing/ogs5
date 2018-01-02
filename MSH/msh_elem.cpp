@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************
    MSHLib - Object:
    Task:
@@ -96,7 +87,7 @@ CElem::CElem(size_t Index, CElem* onwer, int Face) :
 {
 	int i, j, k, n, ne;
 	int faceIndex_loc[10];
-	int edgeIndex_loc[10] = {};
+	int edgeIndex_loc[10];
 	no_faces_on_surface = 0;
 	n = owner->GetElementFaceNodes(Face, faceIndex_loc);
 	face_index = Face;
@@ -497,9 +488,7 @@ void CElem:: SetFace(CElem* onwer, const int Face)
 	switch(owner->geo_type)
 	{
 	//case MshElemType::LINE:  // 1-D bar element
-	case MshElemType::QUAD: // 2-D quadrilateral element
-		this->setElementProperties(MshElemType::LINE, true); // JOD 2014-11-10
-		break;
+	//case MshElemType::QUAD: // 2-D quadrilateral element
 	case MshElemType::HEXAHEDRON:             // 3-D hexahedral element
 		this->setElementProperties(MshElemType::QUAD, true);
 		break;
@@ -1299,7 +1288,7 @@ int CElem::GetElementFacesPri(int Face, int* FaceNode)
 			FaceNode[4] = 14;
 			FaceNode[5] =  8;
 			FaceNode[6] = 12;
-			FaceNode[7] = 11;
+			FaceNode[7] = 10;
 			nn = 8;
 		}
 		break;
@@ -1602,27 +1591,9 @@ void CElem::FaceNormal(int index0, int index1, double* face)
 **************************************************************************/
 void CElem::SetNormalVector()
 {
-
 	if(!normal_vector)
 		normal_vector = new double[3];  //WW
-	if (this->GetElementType() == MshElemType::LINE) // JOD 2014-11-10
-	{
 
-		double const* const p0(nodes[0]->getData());
-		double const* const p1(nodes[1]->getData());
-		double v1[3] = { p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2] };
-		if ( fabs(v1[2]) > 1.e-20) {
-			double buffer = v1[1];
-			v1[1] = v1[2];
-			v1[2] = buffer;
-		}
-		const double v2[3] = { 0, 0 , 1 }; // fluxes are on xy plane
-		CrossProduction(v1, v2, normal_vector);
-		NormalizeVector(normal_vector, 3);
-		if (normal_vector[0] < 0)
-			normal_vector[0] = -normal_vector[0];
-
-	}
 	if (this->GetElementType() == MshElemType::TRIANGLE)
 	{
 		double const* const p0 (nodes[0]->getData());
@@ -1735,31 +1706,4 @@ double* CElem::ComputeGravityCenter()
 	gravity_center[2] /= (double) nnodes0;
 	return gravity_center;
 }
-
-/**************************************************************************
-MSHLib-Method:
-11/2014 JOD Implementation
-**************************************************************************/
-void CElem::DirectNormalVector()
-{
-
-	for (int i = 0; i < 3; i++)
-	if (normal_vector[i] < 0)
-		InvertNormalVector();
-
-}
-
-/**************************************************************************
-MSHLib-Method:
-11/2014 JOD Implementation
-**************************************************************************/
-void CElem::InvertNormalVector()
-{
-
-	normal_vector[0] = -normal_vector[0];
-	normal_vector[1] = -normal_vector[1];
-	normal_vector[2] = -normal_vector[2];
-
-}
-
 }                                                 // namespace MeshLib

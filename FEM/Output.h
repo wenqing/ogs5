@@ -1,11 +1,6 @@
 /**
  * \file FEM/Output.h
  * 05/04/2011 LB Refactoring: Moved from rf_out_new.h
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
  */
 
 #ifndef OUTPUT_H
@@ -132,7 +127,7 @@ public:
 	void ELEWriteSFC_TEC();               //OK
 	void ELEWriteSFC_TECHeader(std::fstream&); //OK
 	void ELEWriteSFC_TECData(std::fstream&); //OK
-	void CalcELEFluxes();
+	void CalcELEFluxes();                 //OK
 	void ELEWritePLY_TEC();               //OK
 	void ELEWritePLY_TECHeader(std::fstream&); //OK
 	void ELEWritePLY_TECData(std::fstream&); //OK
@@ -142,19 +137,17 @@ public:
 	void PCONWriteDOMDataTEC();           //MX
 	void WriteTECNodePCONData(std::fstream &); //MX
 
-
-	void NODWriteTotalFlux(double, int);	// JOD 2014-11-10
+	void NODWriteWaterBalance(double);	// 6/2012 JOD
+	void NODWriteWaterBalanceSFC(double);	// 6/2012 JOD
+	void NODWriteWaterBalancePLY(double);	// 6/2012 JOD
+	void NODWriteWaterBalancePNT(double);	// 6/2012 JOD
 	void NODWritePointsCombined(double);	// 6/2012 JOD
-	void NODWritePrimaryVariableList(double);	// JOD 2014-11-10
-	void CalculateTotalFlux(MeshLib::CFEMesh*, std::vector<long>&, std::vector<double>&, std::vector<double>&); // JOD 2014-11-10
-	void SetTotalFluxNodes(std::vector<long>& nodes_vector); //JOD 2014-11-10
-	void SetTotalFluxNodesPLY(std::vector<long>& nodes_vector); // JOD 2014-11-10
-	void SetTotalFluxNodesSURF(std::vector<long>& nodes_vector); // JOD 2014-11-10
-	void SetTotalFluxNodesDOM(std::vector<long>& nodes_vector); // JOD 2014-11-10
+	void CalculateThroughflow(MeshLib::CFEMesh*, std::vector<long>&, std::vector<double>&);	// 6/2012 JOD
+      
     //------------------------------------------------------
 #if defined(USE_PETSC) || defined(USE_MPI) //|| defined(other parallel libs)//03.3012. WW
 	void setMPI_Info(const int rank, const int size, std::string rank_str);
-	/// Head for binary output for parallel computing. 01.2014. WW
+	/// Head for binary output for parallel computing. 01.2014. WW 
 	void NODDomainWriteBinary_Header();
 	/// Binary output for parallel computing. 01.2014. WW
 	void NODDomainWriteBinary();
@@ -168,14 +161,7 @@ public:
 	double getTime () const { return _time; }
 
 	const std::vector<double>& getTimeVector () const { return time_vector; }
-    const std::string& getFileBaseName () const { return file_base_name; }
-
-    /**
-     * @brief sets file_base_name to the full path corresponding to the given base name.
-     *
-     * The function internally uses the defaultOutputPath as set as a commandline argument.
-     */
-    void setFileBaseName(const std::string& fn);
+	std::string& getFileBaseName () { return file_base_name; }
 
 	size_t getNSteps () const { return nSteps; }
 	/**
@@ -262,9 +248,9 @@ private:
 	int int_disp;
 	MPI_Offset offset;
 
-	unsigned domain_output_counter; // WW 04.2014
+	unsigned domain_output_counter; // WW 04.2014 
 
-	void setDataArrayDisp();
+	void setDataArrayDisp();    
 #endif
 };
 #endif // OUTPUT_H

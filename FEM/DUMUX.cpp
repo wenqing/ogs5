@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 //#include "stdafx.h"
 #include "DUMUX.h"
 #include "rf_pcs.h"
@@ -1242,7 +1233,7 @@ void CDUMUXData::WriteDataToGeoSys(CRFProcess* m_pcs)
 			m_ele = m_msh->ele_vector[i]; // get element
 			if (m_ele->GetMark()) // Marked for use
 			{ // Configure Element for interpolation of node velocities to GP velocities
-				fem->ConfigElement(m_ele, m_pcs->m_num->ele_gauss_points);
+				fem->ConfigElement(m_ele);
 
 				std::string tempstring;
 				tempstring = "";

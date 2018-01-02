@@ -1,13 +1,4 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
- /* reaction interface header file */
+/* reaction interface header file */
 
 
 //CB: What's the use of this?
@@ -28,7 +19,7 @@ class REACTINT{
 // Data
     int flowtype;
     bool unitconversion ;
-    bool constantdensity ;
+    bool constantdensity ; 
     bool constanttemperature;
     bool constantpressure;
 	bool residual_back;
@@ -42,20 +33,20 @@ class REACTINT{
     double WaterSatLimit;
     std::string WaterSpeciesName;
     std::string NeutralCO2name;
-    std::string SodiumSpeciesName;
+    std::string SodiumSpeciesName; 
     bool icOutput;
     bool icSolidUpdate ;
     bool readNodePoro;
     std::string porofile;
     bool vle_flag, vle_p_flag ;
-    bool pcs_rename_init_flag ;
-    bool pcs_rename_pre_flag ;
+    bool pcs_rename_init_flag ;	
+    bool pcs_rename_pre_flag ;	
     bool pcs_rename_post_flag ;
     bool poroupdate_flag;
     bool heatpump_2DhTO2Dv;
     double heatpump_Z;
 	int t_step;
-
+    
     std::vector <double> Temp_store;
     std::vector <long> Temp_GHP_mapidx;
 
@@ -78,7 +69,7 @@ class REACTINT{
 
 	typedef struct
 	{
-		int    aq_idx,   vp_idx;        // check input species list and get the species idx
+		int    aq_idx,   vp_idx;        // check input species list and get the species idx 
 		double aq_value, vp_value; // get the value from processes
 		std::string aq_name,  vp_name;   // from input file, name of process
 		int idx_aq_species;
@@ -89,8 +80,8 @@ class REACTINT{
 
 
 // Member functions
-
-    REACTINT* GetREACTINT(void);
+    
+    REACTINT* GetREACTINT(void);  
     bool Read(std::ifstream*);
 	void InitREACTINT(void);
     void CalcWaterConc(void);
@@ -106,9 +97,9 @@ class REACTINT{
     void ReactionPreProcessing(void);
     void ReactionPostProcessing(bool);
     void SetInitialPorosityAndPermToElementValue(void);
-    void PorosityVolumetricReactionUpdate(void);
+    void PorosityVolumetricReactionUpdate(void); 
     void PorosityVolumetricReactionUpdate_2(void);
-    void PermeabilityPorosityUpdate(void);
+    void PermeabilityPorosityUpdate(void); 
     void CopySymmetricConcentrationsInRadialModel(void);
     void DumpSolidSpeciesMoles(void);
     void DumpAllVariables(void);

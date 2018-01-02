@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************
    ROCKFLOW - Modul: matrix.c
 
@@ -91,8 +82,6 @@
 #define noDUMP
 
 /* Header / Andere intern benutzte Module */
-#include "memory.h"
-#include "display.h"
 #include "files0.h"
 #include "mathlib.h"
 #include "matrix_routines.h"
@@ -613,7 +602,7 @@ int MXGetMatrixType(void)
    7/2000     CT        Speichermodell implizit in Matrix-Datenstruktur
 
 *** Modell 1 ************************************************************/
-void* M1CreateMatrix(long param1, long param2, long /*param3*/)
+void* M1CreateMatrix(long param1, long param2, long param3)
 {
 	static Modell1* w;
 
@@ -622,6 +611,7 @@ void* M1CreateMatrix(long param1, long param2, long /*param3*/)
 		MX_Exit("M1CreateMatrix", 0);
 #endif
 
+	param3 = 0;
 	w = (Modell1*) Malloc(sizeof(Modell1));
 	MXSetMatrixPointer((void*) w);
 	Matrix1 = (double*) Malloc(param1 * param1 * sizeof(double));
@@ -632,7 +622,7 @@ void* M1CreateMatrix(long param1, long param2, long /*param3*/)
 }
 
 /**** Modell 2 ************************************************************/
-void* M2CreateMatrix(long param1, long param2, long /*param3*/)
+void* M2CreateMatrix(long param1, long param2, long param3)
 {
 	static Modell2* w;
 	static long i;
@@ -642,6 +632,7 @@ void* M2CreateMatrix(long param1, long param2, long /*param3*/)
 		MX_Exit("M2CreateMatrix", 0);
 #endif
 
+	param3 = 0;
 	w = (Modell2*) Malloc(sizeof(Modell2));
 	MXSetMatrixPointer((void*) w);
 	w->zeile = (M2_Zeile*) Malloc(param1 * sizeof(M2_Zeile));
@@ -661,7 +652,7 @@ void* M2CreateMatrix(long param1, long param2, long /*param3*/)
 }
 
 /**** Modell 3 und 4 ******************************************************/
-void* M34CreateMatrix(long param1, long param2, long /*param3*/)
+void* M34CreateMatrix(long param1, long param2, long param3)
 {
 	Modell34* w = NULL;
 	register long i;
@@ -671,6 +662,7 @@ void* M34CreateMatrix(long param1, long param2, long /*param3*/)
 		MX_Exit("M34CreateMatrix", 0);
 #endif
 
+	param3 = 0;
 	w = (Modell34*) Malloc(sizeof(Modell34));
 	MXSetMatrixPointer((void*) w);
 	dim = w->max_size = param1;
@@ -1543,9 +1535,9 @@ int M5Set(long i, long j, double e_val)
 int M1CopyToAMG1R5Structure(double* A,
                             int* IA,
                             int* JA,
-                            int /*NDA*/,
-                            int /*NDIA*/,
-                            int /*NDJA*/,
+                            int NDA,
+                            int NDIA,
+                            int NDJA,
                             double* x,
                             double* U,
                             double* b,
@@ -1553,6 +1545,9 @@ int M1CopyToAMG1R5Structure(double* A,
 {
 	long i, j, NNA = 0, NIA = 0;
 	double a;
+	NDA = NDA;                            /*TK*/
+	NDIA = NDIA;                          /*TK*/
+	NDJA = NDIA;                          /*TK*/
 
 	for (i = 0; i < dim; i++)
 	{
@@ -1590,9 +1585,9 @@ int M1CopyToAMG1R5Structure(double* A,
 int M2CopyToAMG1R5Structure(double* A,
                             int* IA,
                             int* JA,
-                            int /*NDA*/,
-                            int /*NDIA*/,
-                            int /*NDJA*/,
+                            int NDA,
+                            int NDIA,
+                            int NDJA,
                             double* x,
                             double* U,
                             double* b,
@@ -1604,6 +1599,9 @@ int M2CopyToAMG1R5Structure(double* A,
 	Modell2* w = (Modell2*) wurzel;
 	register int k;
 
+	NDA = NDA;                            /*TK*/
+	NDIA = NDIA;                          /*TK*/
+	NDJA = NDIA;                          /*TK*/
 	for (i = 0; i < dim; i++)
 	{
 		/* Vektoren umkopieren */
@@ -1638,9 +1636,9 @@ int M2CopyToAMG1R5Structure(double* A,
 int M34CopyToAMG1R5Structure(double* A,
                              int* IA,
                              int* JA,
-                             int /*NDA*/,
-                             int /*NDIA*/,
-                             int /*NDJA*/,
+                             int NDA,
+                             int NDIA,
+                             int NDJA,
                              double* x,
                              double* U,
                              double* b,
@@ -1649,6 +1647,9 @@ int M34CopyToAMG1R5Structure(double* A,
 	long i, j, NNA = 0, NIA = 0;
 	double a;
 
+	NDA = NDA;                            /*TK*/
+	NDIA = NDIA;                          /*TK*/
+	NDJA = NDIA;                          /*TK*/
 	for (i = 0; i < dim; i++)
 	{
 		j = i;
@@ -2341,7 +2342,7 @@ void MXResiduum(double* x, double* b, double* ergebnis)
 *** Unterscheidung nach Modell innerhalb der Prozedur! ******************/
 void MXRandbed(long ir, double Ri, double* ReSei)
 {
-	register long i=0, ip, im;
+	register long i, ip, im;
 	long p, q;
 	int k;
 	double diag;
@@ -2352,7 +2353,7 @@ void MXRandbed(long ir, double Ri, double* ReSei)
 	/* Wenn das Diagonalelement ~= 0 ist, ein anderes suchen.
 	   Sollte eigentlich nicht vorkommen. */
 
-	if (fabs(diag) < DBL_MIN) // TODO This probably won't work as intended
+	if (fabs(diag) < DBL_MIN)
 		for (i = 0; i < dim; i++)
 		{
 			ip = ir + i;
@@ -2469,7 +2470,7 @@ End_Zeil:;
 		//WW dim1 = m_msh->NodesInUsage();
 		ReSei[ir] = Ri * MXGet(ir,ir);
 
-		CNode const* const nod_i(mesh->nod_vector[mesh->Eqs2Global_NodeIndex[i]]); // TODO check this. i could be 0.
+		CNode const* const nod_i(mesh->nod_vector[mesh->Eqs2Global_NodeIndex[i]]);
 		std::vector<size_t> const& connected_nodes(nod_i->getConnectedNodes());
 		const size_t n_connected_nodes(connected_nodes.size());
 

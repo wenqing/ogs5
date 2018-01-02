@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 // Some change
 
 /**************************************************************************
@@ -119,23 +110,23 @@ double CFluidMomentum::Execute(int loop_process_number)
 	cpl_max_relative_error = pcs_error;
 
     bool isFlow = false;
-    CRFProcess *a_pcs = NULL;
-    // CRFProcess *f_pcs = NULL;
+    CRFProcess *a_pcs = NULL; 
+    CRFProcess *f_pcs = NULL; 
     for(int k=0; k<no_processes; k++ )
     {
 	   a_pcs = pcs_vector[k];
        if(!a_pcs)
          continue;
-       if(   a_pcs->getProcessType () == FiniteElement::RICHARDS_FLOW
+       if(   a_pcs->getProcessType () == FiniteElement::RICHARDS_FLOW 
 	        || a_pcs->getProcessType () == FiniteElement::LIQUID_FLOW
 	        || a_pcs->getProcessType () == FiniteElement::GROUNDWATER_FLOW
 	        || a_pcs->getProcessType () == FiniteElement::TWO_PHASE_FLOW
-	        || a_pcs->getProcessType () == FiniteElement::MULTI_PHASE_FLOW
+	        || a_pcs->getProcessType () == FiniteElement::MULTI_PHASE_FLOW	   
 	     )
        {
          isFlow = true;
          break;
-       }
+       }  
     }
 	for(int i = 0; i < no_processes; ++i)
 	{
@@ -157,13 +148,13 @@ double CFluidMomentum::Execute(int loop_process_number)
 	    {
            if( isFlow )
               SolveDarcyVelocityOnNode();
-		   else
+		   else  
 		   {
              m_msh = FEMGet("FLUID_MOMENTUM");
              string vel_file = FileName+".vel";
              ifstream ins(vel_file.c_str());
              double vx, vy, vz;
-
+			 
 			 int  nidx = m_pcs->GetNodeValueIndex("VELOCITY1_X")+1;
              int  nidy = m_pcs->GetNodeValueIndex("VELOCITY1_Y")+1;
              int  nidz = m_pcs->GetNodeValueIndex("VELOCITY1_Z")+1;
@@ -177,7 +168,7 @@ double CFluidMomentum::Execute(int loop_process_number)
              }
 		   }
 
-		 }
+		 } 
     }
 
 	// Just one time execution. Needs improvement later on.
@@ -201,8 +192,7 @@ double CFluidMomentum::Execute(int loop_process_number)
 **************************************************************************/
 void CFluidMomentum::SolveDarcyVelocityOnNode()
 {
-#if !defined(USE_PETSC) // || defined(other parallel libs)//03~04.3012. WW
-	int nidx1 = 0;
+	int nidx1 = 0;                        //OK411
 	long i;
 	MeshLib::CElem* elem = NULL;
 
@@ -251,7 +241,9 @@ void CFluidMomentum::SolveDarcyVelocityOnNode()
 		{
 			/* Initializations */
 			/* System matrix */
-#if defined(NEW_EQS)                           //WW
+#if defined(USE_PETSC) // || defined(other parallel libs)//03~04.3012. WW
+		  //TODO
+#elif defined(NEW_EQS)                           //WW
 			m_pcs->EQSInitialize();
 #else
 			SetLinearSolverType(m_pcs->getEQSPointer(), m_num); //NW
@@ -263,7 +255,7 @@ void CFluidMomentum::SolveDarcyVelocityOnNode()
 				elem = m_msh->ele_vector[i];
 				if (elem->GetMark()) // Marked for use
 				{
-					fem->ConfigElement(elem, m_num->ele_gauss_points);
+					fem->ConfigElement(elem);
 					fem->Assembly(0, d);
 				}
 			}
@@ -271,7 +263,9 @@ void CFluidMomentum::SolveDarcyVelocityOnNode()
 			//		MXDumpGLS("rf_pcs.txt",1,m_pcs->eqs->b,m_pcs->eqs->x); //abort();
 			m_pcs->IncorporateBoundaryConditions(-1,d);
 			// Solve for velocity
-#if defined(NEW_EQS)
+#if defined (USE_PETSC) // || defined (other parallel solver lib). 04.2012 WW
+			//TODO
+#elif defined(NEW_EQS)
 
 			double* x;
 			int size = (int)m_msh->nod_vector.size(); //OK411??? long
@@ -309,7 +303,9 @@ void CFluidMomentum::SolveDarcyVelocityOnNode()
 			else
 				abort();  // Just stop something's wrong.
 
-#if defined(NEW_EQS)
+#if defined (USE_PETSC) // || defined (other parallel solver lib). 04.2012 WW
+			//TODO
+#elif defined(NEW_EQS)
 			for(int j = 0; j < size; j++)
 				m_pcs->SetNodeValue(m_msh->Eqs2Global_NodeIndex[j],nidx1,x[j]);
 
@@ -424,7 +420,6 @@ void CFluidMomentum::SolveDarcyVelocityOnNode()
 
 	// Release memroy
 	delete fem;
-#endif
 }
 
 /**************************************************************************

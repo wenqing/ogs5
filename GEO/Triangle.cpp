@@ -3,11 +3,6 @@
  *
  *  Created on: Jun 6, 2011
  *      Author: TF
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
  */
 
 #include "Triangle.h"
@@ -18,7 +13,6 @@
 #include "Matrix.h"
 #include "Vector3.h"
 #include "GaussAlgorithm.h"
-#include "mathlib.h"
 
 namespace GEOLIB
 {
@@ -28,8 +22,6 @@ Triangle::Triangle (std::vector<Point*> const &pnt_vec) :
 	_pnt_ids[0] = std::numeric_limits<size_t>::max();
 	_pnt_ids[1] = std::numeric_limits<size_t>::max();
 	_pnt_ids[2] = std::numeric_limits<size_t>::max();
-	for (int i = 0; i < 3; ++i)
-		_normal_vector[i] = std::numeric_limits<double>::max();
 }
 
 Triangle::Triangle (std::vector<Point*> const &pnt_vec, size_t pnt_a, size_t pnt_b, size_t pnt_c) :
@@ -46,7 +38,6 @@ Triangle::Triangle (std::vector<Point*> const &pnt_vec, size_t pnt_a, size_t pnt
 	if (tmp > _longest_edge)
 		_longest_edge = tmp;
 	_longest_edge = sqrt (_longest_edge);
-	calculateNormal();
 }
 
 void Triangle::setTriangle (size_t pnt_a, size_t pnt_b, size_t pnt_c)
@@ -125,25 +116,4 @@ void getPlaneCoefficients(Triangle const& tri, double c[3])
 	MathLib::GaussAlgorithm<double> gauss (mat);
 	gauss.execute (c);
 }
-
-void Triangle::calculateNormal()
-{
-	GEOLIB::Point const& a(*(_pnts[_pnt_ids[0]]));
-	GEOLIB::Point const& b(*(_pnts[_pnt_ids[1]]));
-	GEOLIB::Point const& c(*(_pnts[_pnt_ids[2]]));
-
-	const double v1[3] = { b[0] - a[0], b[1] - a[1], b[2] - a[2] };
-	const double v2[3] = { c[0] - a[0], c[1] - a[1], c[2] - a[2] };
-	MathLib::crossProd(v1, v2, _normal_vector);
-
-	//normalize normal vector
-	NormalizeVector(_normal_vector, 3);
-}
-
-std::ostream & operator<<(std::ostream & out, GEOLIB::Triangle const& tri)
-{
-	out << *tri.getPoint(0) << " " << *tri.getPoint(1) << " " << *tri.getPoint(2);
-	return out;
-}
-
 } // end namespace GEOLIB

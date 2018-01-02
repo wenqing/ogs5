@@ -3,11 +3,6 @@
  *
  *  Created on: May 6, 2010
  *      Author: TF
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
  */
 
 #include "GaussAlgorithm.h"
@@ -28,9 +23,9 @@ GaussAlgorithm::GaussAlgorithm (Matrix <double> &A) :
 		double t = fabs(_mat(k, k));
 		_perm[k] = k;
 		for (i = k + 1; i < nr; i++)
-			if (std::abs(_mat(i,k)) > t)
+			if (fabs(_mat(i,k)) > t)
 			{
-				t = std::abs(_mat(i,k));
+				t = _mat(i,k);
 				_perm[k] = i;
 			}
 

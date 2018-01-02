@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************
    FEMLib-Object: MAT-MP
    Task: MediumProperties
@@ -111,6 +102,7 @@ private:
 	double PermeabilityPorosityFunction(long index,double* gp,double theta);
 	double PermeabilityFunctionPressure(long index, double PG2); //WX:  05.2010
 	double PermeabilityFunctionStrain(long index, int nnodes, CFiniteElementStd* h_fem); //WX
+	double PermeabilityFunctionPorosity2(long index, int nnodes, CFiniteElementStd* h_fem); //WX:01.2015
 	double PermeabilityFunctionEffStress(long index, int nnodes, CFiniteElementStd *h_fem);//AS:08.2012
 	double StorageFunctionEffStress(long index, int nnodes, CFiniteElementStd *h_fem);//AS 08.2012
 	double PorosityVolStrain(long index, double val0, CFiniteElementStd* assem); //WX: 03.2011
@@ -142,6 +134,7 @@ private:
 	// Capillary pressure functions
 	double CapillaryPressureFunction(const double wetting_saturation);
 	double PressureSaturationDependency(double wetting_saturation, bool invert);
+	double PressureSaturationDependency2(double wetting_saturation,double cap_pc, bool invert);//WX:04.2015
 	//JT: No longer used // double SaturationPressureDependency(const double capillary_pressure, bool allow_zero = false);
 	double SaturationCapillaryPressureFunction(const double capillary_pressure);
 	//WW
@@ -218,25 +211,33 @@ public:
 	double permeability_tensor[9];
 	double permeability_porosity_updating_values[5]; //ABM: Maximum of 2 values in Verma-Pruess case
 	std::string permeability_tensor_type_name;
-	std::string permeability_porosity_updating_type_name; //ABM
+    std::string permeability_porosity_updating_type_name; //ABM
 	std::string tortuosity_tensor_type_name;
 	int permeability_tensor_type;
 	int permeability_porosity_updating_type; //ABM
 	int tortuosity_tensor_type;
 
-	double ElementVolumeMultiplyer; // Multiplyer of element volume
-
-	std::string PhaseHeatedByFriction; //In TNEQ/TES models: dissipated heat due to friction into solid or fluid energy balance
+	  std::string PhaseHeatedByFriction; //In TNEQ models: dissipated heat due to friction into solid or fluid energy balance
 
 	int permeability_pressure_model;
 	double permeability_pressure_model_values[10];
 	double permeability_pressure_rel;
 	int permeability_strain_model;        //WX: permeability function strain model. 05.2010
-	int permeability_strain_model_value[6]; //WX:permeability fuction strain model value. 05.2010
+	int permeability_strain_model_value[3]; //WX:permeability fuction strain model value. 05.2010
 	int permeability_effstress_model_value[3];	//AS:perlmeability function eff stress 08.2012
 	int permeability_effstress_model;
 	int storage_effstress_model_value[3];			//AS:storage function eff stress 08.2012
 	int storage_effstress_model;
+	int permeability_porosity_model2;//WX:01.2015
+	double permeability_porosity_model2_value;//
+	double permeability_porosity_model2_min;
+	double permeability_porosity_model2_max;
+	int permeability_comp_model;//WX:01.2015
+	std::string permeability_comp_name;
+	int porosity_comp_model;//WX:11.2017 test
+	std::string porosity_comp_name;
+	int permeability_temp_model_value[3];	//perlmeability function temperature WX:01.2017
+	int permeability_temp_model;
 	//
 	// Relative permeability (JT)
 	int permeability_saturation_model[MAX_FLUID_PHASES];
@@ -245,6 +246,7 @@ public:
 	double maximum_saturation[MAX_FLUID_PHASES];
 	double saturation_exponent[MAX_FLUID_PHASES];
 	double perm_saturation_value[MAX_FLUID_PHASES];
+	double gama[MAX_FLUID_PHASES];//WX:01.2015
 	//
 	std::string permeability_file;        //SB //OK/MB string permeability_dis_type_file;
 	std::string tortuosity_file;          // PCH
@@ -253,7 +255,7 @@ public:
 	int permeability_porosity_model;
 	double permeability_porosity_model_values[10];
 	double storativity;
-	double capillary_pressure_values[5];		//JT2012
+	double capillary_pressure_values[13];		//JT2012, WX2015 more paras
 	double heat_capacity;                 // thermal properties
 	int mass_dispersion_model;
 	double mass_dispersion_longitudinal;
@@ -265,7 +267,7 @@ public:
 	double heat_conductivity_tensor[9];
 	int fct_number;                       // functions
 	int heat_diffusion_model;
-	double base_heat_diffusion_coefficient;
+	double base_heat_diffusion_coefficient; 
 	int evaporation;                      // if it is 647 then evaporation ON, else OFF: and corresponding heat loss will compensated by heat ST
 	double heatflux;
 	double vaporfraction;
@@ -341,6 +343,7 @@ extern std::list<std::string>mat_name_list;
 
 extern void MMPWrite(std::string);
 extern bool MMPRead(std::string);
+extern void MMPWriteTecplot(std::string);
 extern void MMPDelete();
 extern CMediumProperties* MMPGet(const std::string&);
 extern void MMP2PCSRelation(CRFProcess*);

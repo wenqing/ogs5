@@ -1,13 +1,4 @@
 /**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
- /**
  * \file msh_mesh.h
  */
 
@@ -87,16 +78,15 @@ public:
 
 /// For parallel computing. 03.2012. WW
 #if defined(USE_PETSC) // || defined(using other parallel scheme)
-typedef long MyInt;
-struct MeshNodes
+typedef struct
 {
-  MyInt index;
+  long index;
   double x;
   double y;
   double z;
-};
+} MeshNodes;
 
-#endif
+#endif 
 
 //------------------------------------------------------------------------
 // Class definition
@@ -153,7 +143,7 @@ public:
         CNode* const* getNodes() const //WW 05.2012.
         {
 	  return &nod_vector[0];
-        }
+        }  
 	/**
 	 * do not use this method REMOVE CANDIDATE
 	 * @param val
@@ -171,12 +161,6 @@ public:
 	double getSearchLength() const;
 
 	/**
-	 * set search length to half of minimum edge length.
-	 * @set the search length
-	 */
-	void setSearchLength(double len);
-
-	/**
 	 * @brief Compute the search length for geometric search algorithms.
 	 *
 	 * Let \f$\mu\f$ the mean value of all edge length and \f$s\f$ the
@@ -187,8 +171,8 @@ public:
 	void computeSearchLength(double c = 2);
 
     /*!
-	   \brief Read mesh data.
-       \param fem_file Stream for input, which has to read a line before calling this function
+	   \brief Read mesh data. 
+       \param fem_file Stream for input, which has to read a line before calling this function 
 	   \return Return true if there are other mesh to be read.
 	*/
 	bool Read(std::ifstream *fem_file);
@@ -200,47 +184,41 @@ public:
 	void GenerateHighOrderNodes();
 /// For parallel computing. 03.2012. WW
 #if defined(USE_PETSC) // || defined(other parallel solver libs)
-	void ConfigHighOrderElements();
+	void ConfigHighOrderElements(); 
 
 	/*!
 	   Fill data for subdomain mesh
            @param header  : mesh header
            @param s_nodes : mesh nodes
 	*/
-	void setSubdomainNodes(MyInt *header, const MeshNodes *s_nodes);
+	void setSubdomainNodes(long *header, const MeshNodes *s_nodes);
 	/*!
 	   Fill data for subdomain mesh
            @param header    : mesh header
            @param elem_info : element information
            @param inside    : indicator for elements that are inside the subdomain
 	*/
-	void setSubdomainElements(MyInt *header, const MyInt *elem_info, const bool inside);
+	void setSubdomainElements(long *header, const long *elem_info, const bool inside);
 	int calMaximumConnectedNodes();
-        /// Get number of nodes of the entire mesh
+        /// Get number of nodes of the entire mesh       
         int getNumNodesGlobal() const
         {
-	       return glb_NodesNumber_Linear;
+	   return glb_NodesNumber_Linear; 
         }
-        /// Get number of nodes of the entire mesh of quadratic elements
+        /// Get number of nodes of the entire mesh of quadratic elements      
         int getNumNodesGlobal_Q() const
         {
-	       return glb_NodesNumber_Quadratic;
+	   return glb_NodesNumber_Quadratic; 
         }
-        /// Get number of nodes of the subdomain mesh
+        /// Get number of nodes of the subdomain mesh       
         int getNumNodesLocal() const
         {
-	       return loc_NodesNumber_Linear;
+	   return loc_NodesNumber_Linear; 
         }
-        /// Get number of nodes of the subdomain mesh of quadratic elements
+        /// Get number of nodes of the subdomain mesh of quadratic elements      
         int getNumNodesLocal_Q() const
         {
-	       return loc_NodesNumber_Quadratic;
-        }
-        /// Get the largest ID of active nodes for higher order interpolation
-        size_t getLargestActiveNodeID_Quadratic() const
-        {
-	       return static_cast<size_t> ( NodesNumber_Linear + loc_NodesNumber_Quadratic
-                                    - loc_NodesNumber_Linear );
+	   return loc_NodesNumber_Quadratic; 
         }
 #endif
 
@@ -366,13 +344,9 @@ public:
 	 * GetNODOnPLY search the nearest nodes along the Polyline object
 	 * @param ply constant pointer to a constant Polyline object
 	 * @param msh_nod_vector the mesh node indices are saved in this vector
-	 * @param automatic use the computed search length
-	 * @param eps if automatic is false use eps as search length
 	 * */
 	void GetNODOnPLY(const GEOLIB::Polyline* const ply,
-	                 std::vector<size_t>& msh_nod_vector,
-					 bool automatic = true,
-					 double eps = std::numeric_limits<double>::epsilon());
+	                 std::vector<size_t>& msh_nod_vector, const bool for_s_term = false);
 
 	/**
 	 *
@@ -392,11 +366,7 @@ public:
 	/**
 	 * GetNODOnPLY search the nearest nodes to the Polyline
 	 * */
-	void GetNODOnPLY(const GEOLIB::Polyline* const ply,
-		std::vector<long>& msh_nod_vector,
-		const bool for_s_term = false,
-		bool automatic = true,
-		double search_radius = std::numeric_limits<double>::epsilon());
+	void GetNODOnPLY(const GEOLIB::Polyline* const ply, std::vector<long>& msh_nod_vector, const bool for_s_term = false);
 
 	/**
 	 * \brief gives the indices of CElement elements, which have an edge
@@ -407,9 +377,7 @@ public:
 	/**
 	 * \brief gives the indices of nodes, which are contained in the surface
 	 */
-	void GetNODOnSFC(const GEOLIB::Surface* sfc,
-		std::vector<size_t>& msh_nod_vector,
-		const bool for_s_term = false) const;
+	void GetNODOnSFC(const GEOLIB::Surface* sfc, std::vector<size_t>& msh_nod_vector, const bool for_s_term = false) const;
 
 	/** @} */  // close doxygen group
 
@@ -474,8 +442,6 @@ public:
 	void SetNODPatchAreas();                  //OK4310
 	void SetNetworkIntersectionNodes();       //OK4319->PCH
 
-	void GetConnectedElements(std::vector<long>&nodes_on_sfc, std::vector<long>&vec_elements);
-
 #ifdef NEW_EQS                              // 1.11.2007 WW
 	// Compute the graph of the sparse matrix related to this mesh. 1.11.2007 WW
 	void CreateSparseTable();
@@ -484,7 +450,7 @@ public:
 	const {if(!quad) return sparse_graph;
 	       else return sparse_graph_H; }
 #endif
-
+ 
 	std::string pcs_name;
 	std::string geo_name;                     //MB
 	std::string geo_type_name;                //OK10_4310
@@ -496,17 +462,13 @@ public:
 
 	CFluidMomentum* fm_pcs;                   // by PCH
 
-	std::vector<size_t> sorted_nodes;
-	std::vector<size_t> xy_change;
-	bool nodes_are_sorted;
-
 	/// Import MODFlow grid. 10.2009 WW
 	void ImportMODFlowGrid(std::string const & fname);
 	/// Convert raster cells into grid. 12.2009 WW
 	void ConvertShapeCells(std::string const & fname);
 #ifdef USE_HydSysMshGen
 	// Be activated if it is still needed.
-	// WWmesh_header
+	// WW
 	/// Generate Column-surface grid system for the modeling of surafce-subsuface coupled processes
 	//15.05.2009. WW // removed useless const TF
 	void HydroSysMeshGenerator(std::string fname, int nlayers, double thickness, int mapping);
@@ -573,20 +535,18 @@ private:
 	int glb_NodesNumber_Quadratic;
 	int loc_NodesNumber_Linear; //index of shadow nodes starts from this number
 	int loc_NodesNumber_Quadratic;
-
 #endif
 	bool useQuadratic;
 	bool _axisymmetry;
 	bool top_surface_checked;                 // 07.06.2010.  WW
 
 	// Coordinate indicator
-	// 10:  X component only
-	// 11: Y component only
-	// 12: Z component only
-	// 21:  X, Y component
-	// 22:  X, Z component
-	// 23:  Y, Z component
-	// 32:  X, Y, Z component
+	// 1:  X component only
+	// 12: Y component only
+	// 13: Z component only
+	// 2:  X, Y component
+	// 23:  X, Z component
+	// 3:  X, Y, Z component
 	int coordinate_system;
 	bool has_multi_dim_ele;
 	int max_ele_dim;
@@ -617,12 +577,6 @@ private:
 
 	void CreateLineElementsFromMarkedEdges(CFEMesh* m_msh_ply,
 	                                       std::vector<long> &ele_vector_at_ply); //NW
-
-        /// Find nodes in convex polygon
-	void findNodesInPolygon(const double area_orig, const double tol,
-				 const size_t start_id, const size_t end_id,
-				 const CGLPolyline *ply,
-				 std::vector<long> &node_id_vector) const;
 public:
 	void constructMeshGrid();
 private:

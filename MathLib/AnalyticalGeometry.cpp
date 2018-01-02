@@ -3,11 +3,6 @@
  *
  *  Created on: Mar 17, 2010
  *      Author: TF
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
  */
 
 #include <cmath>
@@ -153,27 +148,11 @@ bool lineSegmentsIntersect (const GEOLIB::Polyline* ply,
 	return false;
 }
 
-double calcTriangleArea(GEOLIB::Point const& a,
-	GEOLIB::Point const& b, GEOLIB::Point const& c)
+bool isPointInTriangle (const double q[3], const double a[3], const double b[3], const double c[3],
+	double eps)
 {
-	double const u[3] = {c[0]-a[0], c[1]-a[1], c[2]-a[2]};
-	double const v[3] = {b[0]-a[0], b[1]-a[1], b[2]-a[2]};
-	double w[3];
-	MathLib::crossProd(u, v, w);
-	return 0.5 * (sqrt(MathLib::scpr(w,w,3)));
-}
-
-bool isPointInTriangle (const double q[3], const double a[3],
-	const double b[3], const double c[3], double eps)
-{
-	if (sqrt(MathLib::sqrDist(q, a)) < eps ||
-		sqrt(MathLib::sqrDist(q, b)) < eps ||
-		sqrt(MathLib::sqrDist(q, c)) < eps) {
-		return true;
-	}
-
-	MathLib::Vector const v(a,b);
-	MathLib::Vector const w(a,c);
+	GEOLIB::Point const v(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+	GEOLIB::Point const w(c[0] - a[0], c[1] - a[1], c[2] - a[2]);
 
 	MathLib::Matrix<double> mat (2,2);
 	mat(0,0) = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
@@ -188,30 +167,28 @@ bool isPointInTriangle (const double q[3], const double a[3],
 	MathLib::GaussAlgorithm<double> gauss (mat);
 	gauss.execute (y);
 
-	const double lower (-eps);
-	const double upper (1 + eps);
+	const double lower (std::numeric_limits<float>::epsilon());
+	const double upper (1 + lower);
 
-	if (lower <= y[0] && y[0] <= upper && lower <= y[1] && y[1] <= upper && y[0] + y[1] <=
+	if (-lower <= y[0] && y[0] <= upper && -lower <= y[1] && y[1] <= upper && y[0] + y[1] <=
 	    upper) {
 		double const q_projected[3] = {
 			a[0] + y[0] * v[0] + y[1] * w[0],
 			a[1] + y[0] * v[1] + y[1] * w[1],
 			a[2] + y[0] * v[2] + y[1] * w[2]
 		};
-		if (sqrt(MathLib::sqrDist(q, q_projected)) < eps) {
+		if (MathLib::sqrDist(q, q_projected) < eps)
 			return true;
-		}
 	}
 
 	return false;
 }
 
-bool isPointInTriangle (const GEOLIB::Point* p, const GEOLIB::Point* a,
-						const GEOLIB::Point* b, const GEOLIB::Point* c,
-						double eps)
+bool isPointInTriangle (const GEOLIB::Point* p,
+                        const GEOLIB::Point* a, const GEOLIB::Point* b, const GEOLIB::Point* c,
+                        double eps)
 {
-	return isPointInTriangle (p->getData(),
-		a->getData(), b->getData(), c->getData(), eps);
+	return isPointInTriangle (p->getData(), a->getData(), b->getData(), c->getData(), eps);
 }
 
 // NewellPlane from book Real-Time Collision detection p. 494

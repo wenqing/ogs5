@@ -1,13 +1,5 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
 
-#include <string>
+#include <string> 
 #include <vector>
 
 //using namespace std;
@@ -38,7 +30,7 @@ public:
 		string N; //name of solute
 		double C; //molality of solute
 		double D; //diffusion coefficient(**final result**)
-	}Solute;
+	}Solute;	
 	vector<Solute> ListS;//initial input condition
 
 	typedef struct
@@ -49,7 +41,7 @@ public:
 		double La; //number of anion
 		double S;  //number of solvent
 		double M;  //molality
-	}speciesE;
+	}speciesE;	
 
 	typedef struct
 	{
@@ -57,7 +49,7 @@ public:
 		double L; //number of neutral species
 		double S; //number of solvent
 		double M; //molality
-	}speciesN;
+	}speciesN;	
 
 
 /* Methods */

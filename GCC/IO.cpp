@@ -1,13 +1,4 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
-#include <string>
+#include <string> 
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -35,7 +26,7 @@ int IO::file2code(string datafile_in, string codefile_out){
 	ofstream out;
 	string instr;
 	vector<string> pies;
-
+	
 	cout << endl << " Reading " << datafile_in << " file... ... ";
 	in.open(datafile_in.c_str(),ios::in);
 	out.open(codefile_out.c_str(),ios::out);
@@ -46,13 +37,13 @@ int IO::file2code(string datafile_in, string codefile_out){
 		//cout << " OK " << endl;
 		while(1){
 			if(in.eof()) break;
-			getline(in, instr);
+			getline(in, instr);	
 			pies=IO::string2vector(instr);
 			if((int)pies.size()>0 && pies[0].substr(0,1)!="*"){
 				out << "\"";
 				for(i=0;i<(int)pies.size();i++)
 					out << pies[i] << " ";
-				out << "\"," << endl;
+				out << "\"," << endl; 
 			}
 		}
 		out << "\"END\"};";
@@ -72,14 +63,14 @@ int IO::file2vector(string datafile_in, vector<string> &vector_out){
 	ifstream in;
 	string instr, pies0;
 	vector<string> pies;
-
+	
 	//cout << endl << " Reading " << datafile_in << " file... ... " ;
 	in.open(datafile_in.c_str(),ios::in);
 	if(in.good()){
 		//cout << " OK. " << endl;
 		while(1){
 			if(in.eof()) break;
-			getline(in, instr);
+			getline(in, instr);	
 			pies=IO::string2vector(instr);
 			if((int)pies.size()>0 && pies[0].substr(0,1)!="*"){
 				pies0="";
@@ -107,7 +98,7 @@ vector<string> IO::string2vector(string line){
 	while(1){
 		if(in.eof()) break;
 		sp="";
-		in >> sp;
+		in >> sp;	
 		if(sp!="") pies.push_back(sp);
 	}
 	return pies;
@@ -128,12 +119,12 @@ vector<int> IO::formula2index(std::string formula){
 	id_iz.clear();
 	type_x.clear();
 	n=int(formula.size());
-
+	
 	element_ia.clear();
 	element_ib.clear();
 	element_iz.clear();
 	element_name.clear();
-
+	
 	number_ia.clear();
 	number_ib.clear();
 	number_iz.clear();
@@ -158,7 +149,7 @@ vector<int> IO::formula2index(std::string formula){
 			type_x.push_back(3);
 		else if(symb_asc==41 || symb_asc==93)  // ])
 			type_x.push_back(4);
-		else
+		else 
 			type_x.push_back(5);
 	}
 	type_x.push_back(-1); //set string end mark
@@ -200,7 +191,7 @@ vector<int> IO::formula2index(std::string formula){
 			}
 			else{
 				if(bracket_ib0[j]>bracket_ia0[i] && bracket_ib0[j]<bracket_ia0[i+1])
-					is_bracket=1;
+					is_bracket=1;	
 			}
 		}
 		if(is_bracket==1)
@@ -215,7 +206,7 @@ vector<int> IO::formula2index(std::string formula){
 			}
 			else{
 				if(bracket_ia0[j]<bracket_ib0[i] && bracket_ia0[j]>bracket_ib0[i-1])
-					is_bracket=1;
+					is_bracket=1;	
 			}
 		}
 		if(is_bracket==1)
@@ -276,7 +267,7 @@ vector<int> IO::formula2index_total(std::string formula){
 	//get Chemical Element list from species.h
 	vector<string> Chemical_Element, pies;
 	Chemical_Element.clear();
-	for (i=0;(size_t)i<(sizeof(ELEMENTS)/sizeof(ELEMENTS[0]));i++){
+	for (i=0;i<(unsigned)sizeof(ELEMENTS)/(unsigned)sizeof(ELEMENTS[0]);i++){
 		pies= IO::string2vector(ELEMENTS[i]);
 		Chemical_Element.push_back(pies[2]);
 	}
@@ -284,12 +275,12 @@ vector<int> IO::formula2index_total(std::string formula){
 	id_iz.clear();
 	type_x.clear();
 	n=int(formula.size());
-
+	
 	element_ia.clear();
 	element_ib.clear();
 	element_iz.clear();
 	element_name.clear();
-
+	
 	number_ia.clear();
 	number_ib.clear();
 	number_iz.clear();
@@ -314,7 +305,7 @@ vector<int> IO::formula2index_total(std::string formula){
 			type_x.push_back(3);
 		else if(symb_asc==41 || symb_asc==93)  // ])
 			type_x.push_back(4);
-		else
+		else 
 			type_x.push_back(5);
 	}
 	type_x.push_back(-1); //set string end mark
@@ -356,7 +347,7 @@ vector<int> IO::formula2index_total(std::string formula){
 			}
 			else{
 				if(bracket_ib0[j]>bracket_ia0[i] && bracket_ib0[j]<bracket_ia0[i+1])
-					is_bracket=1;
+					is_bracket=1;	
 			}
 		}
 		if(is_bracket==1)
@@ -371,7 +362,7 @@ vector<int> IO::formula2index_total(std::string formula){
 			}
 			else{
 				if(bracket_ia0[j]<bracket_ib0[i] && bracket_ia0[j]>bracket_ib0[i-1])
-					is_bracket=1;
+					is_bracket=1;	
 			}
 		}
 		if(is_bracket==1)
@@ -432,12 +423,12 @@ vector<int> IO::formula2index_define(std::string formula, vector<string> Chemica
 	id_iz.clear();
 	type_x.clear();
 	n=int(formula.size());
-
+	
 	element_ia.clear();
 	element_ib.clear();
 	element_iz.clear();
 	element_name.clear();
-
+	
 	number_ia.clear();
 	number_ib.clear();
 	number_iz.clear();
@@ -462,7 +453,7 @@ vector<int> IO::formula2index_define(std::string formula, vector<string> Chemica
 			type_x.push_back(3);
 		else if(symb_asc==41 || symb_asc==93)  // ])
 			type_x.push_back(4);
-		else
+		else 
 			type_x.push_back(5);
 	}
 	type_x.push_back(-1); //set string end mark
@@ -504,7 +495,7 @@ vector<int> IO::formula2index_define(std::string formula, vector<string> Chemica
 			}
 			else{
 				if(bracket_ib0[j]>bracket_ia0[i] && bracket_ib0[j]<bracket_ia0[i+1])
-					is_bracket=1;
+					is_bracket=1;	
 			}
 		}
 		if(is_bracket==1)
@@ -519,7 +510,7 @@ vector<int> IO::formula2index_define(std::string formula, vector<string> Chemica
 			}
 			else{
 				if(bracket_ia0[j]<bracket_ib0[i] && bracket_ia0[j]>bracket_ib0[i-1])
-					is_bracket=1;
+					is_bracket=1;	
 			}
 		}
 		if(is_bracket==1)
@@ -568,7 +559,7 @@ vector<int> IO::formula2index_define(std::string formula, vector<string> Chemica
 }
 
 bool IO::file_compare(std::string in_file_new, std::string in_file_old){
-
+	
 	ifstream in_new,in_old;
 	string instr_new,instr_old;
 	bool res=true;
@@ -580,7 +571,7 @@ bool IO::file_compare(std::string in_file_new, std::string in_file_old){
 
 	if(in_new.good() && in_old.good()){
 		while(1){
-			if(in_new.eof())
+			if(in_new.eof()) 
 				break;
 			getline(in_new, instr_new);
 			getline(in_old, instr_old);
@@ -592,7 +583,7 @@ bool IO::file_compare(std::string in_file_new, std::string in_file_old){
 	}
 	else
 		res=false;
-
+	
 	return res;
 }
 

@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************
 FEMLib-Object: CNodeValue
 Task: Functions
@@ -39,7 +30,6 @@ _node_distype (FiniteElement::INVALID_DIS_TYPE)
    CurveIndex = -1;
    conditional = -1;
    check_me = true;                               //OK
-   _isConstrainedSTNode = false;
 }
 
 

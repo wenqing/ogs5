@@ -1,13 +1,4 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
-class VLE
+class VLE 
 {
 private:
 
@@ -19,7 +10,7 @@ public:
 
 /* Methods */
 	static double Psat(double T);//unit MPa
-
+	
 	//unit T K, P bar, V cm^3, D g/cm^3
 	static double density_CO2(double T, double P);//~1300K, 8000bar
 	static double   LnPHI_CO2(double T, double P);

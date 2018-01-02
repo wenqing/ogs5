@@ -3,11 +3,6 @@
  *
  *  Created on: Aug 9, 2010
  *      Author: TF
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
  */
 
 // Base
@@ -22,15 +17,30 @@
 namespace MeshLib
 {
 MeshNodesAlongPolyline::MeshNodesAlongPolyline(
-		GEOLIB::Polyline const* const ply, MeshLib::CFEMesh const* mesh,
-		double search_radius) :
-	_ply(ply), _mesh(mesh), _linear_nodes (0)
+        GEOLIB::Polyline const* const ply, MeshLib::CFEMesh const* mesh,  const bool for_s_term) :
+	_ply(ply), _mesh(mesh), _linear_nodes (0), for_source_term(for_s_term)
 {
 	std::vector<CNode*> const& mesh_nodes (mesh->getNodeVector());
+	double epsilon_radius (mesh->getMinEdgeLength()); // getSearchLength());
 
+#if defined(USE_PETSC) // || defined (other parallel linear solver lib). //WW. 05.2012
+	size_t n_linear_order_nodes;
+	size_t n_nodes;
+ 
+    if(for_s_term)
+	{
+	    n_linear_order_nodes = mesh->GetNodesNumber (false);
+	    n_nodes = mesh->GetNodesNumber (true);
+	}
+	else
+	{
+           n_linear_order_nodes = mesh->getNumNodesLocal();
+	   n_nodes = mesh->getNumNodesLocal_Q();
+	}
+#else
 	size_t n_linear_order_nodes (mesh->GetNodesNumber (false));
 	size_t n_nodes (mesh->GetNodesNumber (true));
-
+#endif
 	std::vector<size_t> msh_node_higher_order_ids;
 	std::vector<double> dist_of_proj_higher_order_node_from_ply_start;
 
@@ -45,8 +55,8 @@ MeshNodesAlongPolyline::MeshNodesAlongPolyline(
 		{
 			double act_length_of_ply(ply->getLength(k));
 			double seg_length (sqrt(MathLib::sqrDist(_ply->getPoint(k), _ply->getPoint(k + 1))));
-			double lower_lambda (- search_radius / seg_length);
-			double upper_lambda (1 + search_radius / seg_length);
+			double lower_lambda (- epsilon_radius / seg_length);
+			double upper_lambda (1 + epsilon_radius / seg_length);
 
 			// loop over all nodes
 			for (size_t j = 0; j < n_nodes; j++)
@@ -58,7 +68,7 @@ MeshNodesAlongPolyline::MeshNodesAlongPolyline(
 				// at the k-th line segment of the polyline, i.e. 0 <= lambda <= 1?
 				if (MathLib::calcProjPntToLineAndDists(mesh_nodes[j]->getData(),
 								(_ply->getPoint(k))->getData(), (_ply->getPoint(k + 1))->getData(),
-								lambda, dist) <= search_radius) {
+								lambda, dist) <= epsilon_radius) {
 					if (lower_lambda <= lambda && lambda <= upper_lambda) {
 						if (mesh_nodes[j]->GetIndex() < n_linear_order_nodes) {
 							// check if node id is already in the vector
@@ -83,10 +93,10 @@ MeshNodesAlongPolyline::MeshNodesAlongPolyline(
 			} // end node loop
 		} // end line segment loop
 
-		//We need exactly defined polyline for DDC.
+		//We need exactly defined polyline for DDC. 
 		//Therefore, the following two line should be dropped.
 		//if (_msh_node_ids.empty())
-		//	search_radius *= 2.0;
+		//	epsilon_radius *= 2.0;
 	}
 
 	// sort the (linear) nodes along the polyline according to their distances
@@ -103,7 +113,7 @@ MeshNodesAlongPolyline::MeshNodesAlongPolyline(
 //	}
 //
 //	std::cout << "distances of linear nodes along polyline " << ply_name <<
-//	" (epsilon radius = " << search_radius << "): " << "\n";
+//	" (epsilon radius = " << epsilon_radius << "): " << "\n";
 //	for (size_t k(0); k < _dist_of_proj_node_from_ply_start.size(); k++)
 //		std::cout << "\t" << _msh_node_ids[k] << " " <<
 //		_dist_of_proj_node_from_ply_start[k] << "\n";

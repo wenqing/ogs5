@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************
    FEMLib - Object: Initial Conditions IC
    Task: class implementation
@@ -22,7 +13,7 @@
 // C++ STL
 //#include <fstream>
 //#include <string>
-#include <vector>
+//#include <vector>
 
 // FEM
 #include "DistributionInfo.h"                     // TF
@@ -73,9 +64,7 @@ public:
 	void SetByNodeIndex(int);             // 19.11.2009 PCH
 	void SetPolyline(int);
 	void SetSurface(int);
-	void SetPoint(int);
-	void StoreInitialValues();// JOD 2014-11-10
-	bool storeValues;
+	void SetPoint(int);                   //MX
 	//void SetMaterialDomain(int); //MX
 	double gradient_ref_depth;
 	double gradient_ref_depth_value;

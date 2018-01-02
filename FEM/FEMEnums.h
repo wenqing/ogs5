@@ -2,11 +2,6 @@
  * \file FEMEnums.h
  * 31/08/2010 KR inital implementation
  *
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
  */
 
 #ifndef FEMENUMS_H
@@ -49,9 +44,8 @@ enum ProcessType
 	/// H process, incompressible flow
 	OVERLAND_FLOW,                        //!< OVERLAND_FLOW
 	PS_GLOBAL,                            //!< PS_GLOBAL
-	MULTI_COMPONENTIAL_FLOW,              //!< Fluid flow coupled with heat transport
-	TNEQ,                                 //!< reactive thermal nonequilibrium
-	TES,                                  //!< reactive thermal equilibrium
+	MULTI_COMPONENTIAL_FLOW,                             // Fluid flow coupled with heat transport
+	TNEQ,									//reactive thermal nonequilibrium
 	RANDOM_WALK,                          //!< RANDOM_WALK
 	/// H process, incompressible flow
 	RICHARDS_FLOW,                        //!< RICHARDS_FLOW
@@ -141,8 +135,8 @@ enum PrimaryVariable
 	STRESS_ZZ,                            // IC
 	/// Heat transport
 	TEMPERATURE,                          //!< TEMPERATURE
-	TEMPERATURE1,                         //!< for TNEQ/TES models
-	TEMPERATURE2,                         //!< for TNEQ model
+	TEMPERATURE1,							// for TNEQ models
+	TEMPERATURE2,							// for TNEQ models
 	VELOCITY_DM_X,                        //!< VELOCITY_DM_X
 	VELOCITY_DM_Y,                        //!< VELOCITY_DM_Y
 	VELOCITY_DM_Z,                        //!< VELOCITY_DM_Z
@@ -184,10 +178,8 @@ const std::list<std::string> getAllPrimaryVariableNames();
 	CONSTANT,                             // IC, BC, ST
 	CONSTANT_GEO,
 	CONSTANT_NEUMANN,                     // ST
-	SWITCH,
 	CRITICALDEPTH,                        // ST
 	DIRECT,
-	RECHARGE_DIRECT,
 	FUNCTION,
 	GRADIENT,                             // IC
 	GREEN_AMPT,                           // ST
@@ -201,7 +193,6 @@ const std::list<std::string> getAllPrimaryVariableNames();
 	TRANSFER_SURROUNDING,
 	NODESCONSTANT,                        // IC (for DOMAIN keyword)
 	CLIMATE,	// climate data (by NB)
-	RECHARGE,	// MW
 	// Sort of Neumann BC //WW
 	// make sure that this is always the last entry (important for iterating over the enum entries)!
 	// make sure that this is always the last entry (important for iterating over the enum entries)!
@@ -228,7 +219,7 @@ const std::list<std::string> getAllDistributionNames();
 /** \brief Types of error method supported by OpenGeoSys.
  * If you change this enum, make sure you apply the changes to
  * the functions convertErrorMethod(), convertErrorMethodToString()
-   Non-Linear and Coupling options (see also CRFProcess::CalcIterationNODError()):
+   Non-Linear and Coupling options (see also CRFProcess::CalcIterationNODError()): 
    --> LMAX:	max(|x1-x0|)  -- Infinity norm: Local max error (across all elements) of solution vector delta (absolute error). Tolerance required for each primary variable.
    --> ENORM:	|x1-x0|       -- Euclidian norm: Norm of the solution vector delta (absolute error). Norm taken over entire solution vector (all primary variables) and checked against a single tolerance.
    --> EVNORM:	|x1-x0|       -- Euclidian varient norm: Norm of the solution vector delta (absolute error). Norm taken over solution vector of each primary variable, checked againes a tolerence specific to each variable.
@@ -237,10 +228,10 @@ const std::list<std::string> getAllDistributionNames();
  */
 enum ErrorMethod
 {
-	INVALID_ERROR_METHOD = 0,
+	INVALID_ERROR_METHOD = 0,   
 	LMAX,
-	ENORM,
-	EVNORM,
+	ENORM, 
+	EVNORM,	
 	ERNORM,
 	BNORM
 };
@@ -271,46 +262,13 @@ enum SolidReactiveSystem
 	INERT,
 	SINUSOIDAL,
 	CaOH2,
-	Mn3O4,
-	Z13XBF
+	Mn3O4
 };
 
 SolidReactiveSystem convertSolidReactiveSystem( const std::string& reactive_string);
 std::string convertSolidReactiveSystemToString(SolidReactiveSystem reactive_system);
 
 } // end namespace FiniteElement
-
-struct TimType
-{
-	enum type
-	{
-		INVALID_TIM_TYPE = 0,
-		STEADY,
-		TRANSIENT,
-		PURERWPT
-	};
-};
-
-TimType::type convertTimType(const std::string& str);
-
-std::string convertTimTypeToString(TimType::type type);
-
-
-struct IterationType
-{
-	enum type
-	{
-		INVALID,
-		LINEAR,
-		NONLINEAR,
-		COUPLED,
-		COUPLED_STABLE_ERROR
-	};
-};
-
-IterationType::type convertIterationType(const std::string& str);
-
-std::string convertIterationTypeToString(IterationType::type type);
 
 struct TimeControlType
 {
@@ -325,40 +283,12 @@ struct TimeControlType
 		STEP_SIZE_RESTRICTION,
 		NEUMANN,
 		ERROR_CONTROL_ADAPTIVE,
-		SELF_ADAPTIVE,
-		STABLE_ERROR_ADAPTIVE
+		SELF_ADAPTIVE
 	};
 };
 
 TimeControlType::type convertTimeControlType(const std::string &str);
 
 std::string convertTimeControlTypeToString(TimeControlType::type st_type);
-
-struct ConstrainedType
-{
-	enum type
-	{
-		INVALID_CONSTRAINED_TYPE = 0,
-		SMALLER,
-		GREATER,
-		POSITIVE,
-		NEGATIVE
-	};
-};
-
-ConstrainedType::type convertConstrainedType(const std::string &str);
-std::string convertConstrainedTypeToString(ConstrainedType::type constrained_type);
-
-struct ConstrainedVariable
-{
-	enum type
-	{
-		INVALID_CONSTRAINED_VARIABLE = 0,
-		VELOCITY
-	};
-};
-
-ConstrainedVariable::type convertConstrainedVariable(const std::string &str);
-std::string convertConstrainedVariableToString(ConstrainedVariable::type constrained_variable);
 
 #endif                                            //FEMENUMS_H

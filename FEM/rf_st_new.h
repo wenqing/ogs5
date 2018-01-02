@@ -1,13 +1,4 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
- /**************************************************************************
+/**************************************************************************
    FEMLib - Object: Source Terms ST
    Task: class implementation
    Programing:
@@ -23,7 +14,6 @@
 #include "LinearFunctionData.h" // TF
 #include "ProcessInfo.h"                          // TF
 #include "fem_ele.h"
-#include "Constrained.h"
 
 class CNodeValue;
 class CGLPolyline;
@@ -118,7 +108,7 @@ public:
 	void DirectAssign(const long ShiftInNodeVector);
 
 	// KR / NB
-
+	
 	// including climate data into source terms
 	const MathLib::InverseDistanceInterpolation<GEOLIB::PointWithID*, GEOLIB::Station*> *getClimateStationDistanceInterpolation() const { return this->_distances; };
 	const std::vector<GEOLIB::Station*>& getClimateStations() const { return this->_weather_stations; }; //NB
@@ -142,32 +132,13 @@ public:
 	int CurveIndex;
 	std::vector<int> element_st_vector;
 
-	double st_rill_height, coup_given_value, coup_residualPerm; // JOD
+	double st_rill_height, coup_given_value, coup_residualPerm; // JOD 
 	double sorptivity, constant, rainfall, rainfall_duration, moistureDeficit /*1x*/;
-	bool node_averaging, distribute_volume_flux; // JOD
-	bool no_surface_water_pressure, explicit_surface_water_pressure; // JOD
-
+	bool node_averaging, distribute_volume_flux; // JOD 
+	bool no_surface_water_pressure, explicit_surface_water_pressure; // JOD 
+	
 	bool isCoupled () const { return _coupled; }
 	double getNormalDepthSlope () const { return normaldepth_slope; }
-
-	// constrain a ST by other process
-	bool isConstrainedST() const { return _isConstrainedST; }
-	Constrained const & getConstrainedST(std::size_t constrainedID) const { return _constrainedST[constrainedID]; }
-	std::size_t getNumberOfConstrainedSTs() const { return _constrainedST.size(); }
-	bool isCompleteConstrainST(std::size_t constrainedID) const { return _constrainedST[constrainedID]._isCompleteConstrained; }
-	bool getCompleteConstrainedSTStateOff(std::size_t constrainedID) const { return _constrainedST[constrainedID]._completeConstrainedStateOff; }
-	void setCompleteConstrainedSTStateOff(bool status, std::size_t i) { _constrainedST[i]._completeConstrainedStateOff = status; }
-
-	void pushBackConstrainedSTNode(std::size_t constrainedID, bool constrainedStatus) { _constrainedST[constrainedID]._constrainedNodes.push_back(constrainedStatus); }
-	bool getConstrainedSTNode(std::size_t constrainedID, int position) const { return _constrainedST[constrainedID]._constrainedNodes[position]; }
-	void setConstrainedSTNode(std::size_t constrainedID, bool node_status, int position) { _constrainedST[constrainedID]._constrainedNodes[position] = node_status; }
-	std::size_t getNumberOfConstrainedSTNodes(std::size_t constrainedID) const { return _constrainedST[constrainedID]._constrainedNodes.size(); }
-	int getConstrainedSTNodesIndex(int position) const { return _constrainedSTNodesIndices[position]; }
-	void setConstrainedSTNodesIndex(int st_node_index, int position) { _constrainedSTNodesIndices[position]=st_node_index; }
-
-
-	std::size_t getSTVectorGroup() const { return _st_vector_group; }
-	void setSTVectorGroup(int group) { _st_vector_group = group; }
 
 	const std::string& getFunctionName () const { return fct_name; }
 	int getFunctionMethod () const { return fct_method; }
@@ -209,6 +180,19 @@ public:
 	  std::vector<double> get_node_value_vectorArea(){ return node_value_vectorArea;} //TN
 
 	  std::vector<long> st_node_ids;
+
+	  bool COMP_DEPEND_ST;//WX 07.2014
+	  int FREEOUTFLOW;	//WX01.2015
+	  int EVAPORATION_ST; //WX 01.2015
+	  double EVAPORATION_ST_RN; 
+	  double EVAPORATION_ST_TEMP; 
+	  double EVAPORATION_ST_WIND;
+	  int EVAPORATION_ST_H_curve;
+	  double EVAPORATION_ST_MODE_VALUE[3];
+	  int gas_break_through;
+	  double break_pressure;
+	  double third_bc_factor_T;
+	  double value_outside;
 
 private:                                          // TF, KR
 	void ReadDistributionType(std::ifstream* st_file);
@@ -279,14 +263,6 @@ private:                                          // TF, KR
 	// including climate data into source terms
 	MathLib::InverseDistanceInterpolation<GEOLIB::PointWithID*, GEOLIB::Station*> *_distances; // NB
 	std::vector<GEOLIB::Station*> _weather_stations; //NB
-
-	bool _isConstrainedST;
-	std::vector<Constrained> _constrainedST;
-	//std::vector<bool> _constrainedSTNodes;
-	std::vector<int> _constrainedSTNodesIndices;
-
-	std::size_t _st_vector_group;
-
 };
 
 class CSourceTermGroup
@@ -377,15 +353,13 @@ private:
 
 	// JOD
 	void SetSurfaceNodeVector(Surface* m_sfc, std::vector<long>&sfc_nod_vector);
-	void SetSurfaceNodeVector(GEOLIB::Surface const* sfc,
-		std::vector<std::size_t> & sfc_nod_vector);
 	void SetSurfaceNodeValueVector( CSourceTerm* m_st,
 	                                Surface* m_sfc,
 	                                std::vector<long> const &sfc_nod_vector,
 	                                std::vector<double>&sfc_nod_val_vector);
 	void AreaAssembly(const CSourceTerm* const st, const std::vector<long>& ply_nod_vector_cond,
 	                  std::vector<double>&  ply_nod_val_vector) const;
-	void DistributeVolumeFlux(CSourceTerm* st, std::vector<long> const & ply_nod_vector, // 5.3.07
+	void DistributeVolumeFlux(CSourceTerm* st, std::vector<long> const & ply_nod_vector, // 5.3.07 
 		                      std::vector<double>& ply_nod_val_vector);
 };
 
@@ -445,7 +419,7 @@ extern double CalcCouplingValue(double factor,
 // JOD
 extern void GetCouplingNODValueMixed(double& value, CSourceTerm* m_st, CNodeValue* cnodev);
 // JOD
-extern void GetCouplingFieldVariables(CRFProcess* m_pcs_this,
+extern void GetCouplingFieldVariables(CRFProcess* m_pcs_this,  
                                       CRFProcess* m_pcs_cond,
 									  double* h_this,
                                       double* h_cond,
@@ -454,9 +428,9 @@ extern void GetCouplingFieldVariables(CRFProcess* m_pcs_this,
                                       double* z_this,
                                       double* z_cond,
                                       CSourceTerm* m_st,
-                                      CNodeValue* cnodev,
-									  long msh_node_number,
-									  long msh_node_number_cond,
+                                      CNodeValue* cnodev, 
+									  long msh_node_number, 
+									  long msh_node_number_cond, 
 									  double gamma);
 
 // JOD

@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************/
 /* ROCKFLOW - Modul: files0.c
  */
@@ -40,15 +31,12 @@
 /**************************************************************************/
 #include "Configure.h"
 //#include <iostream>
-#include "display.h"
-#include "memory.h"
 //#include "makros.h"
 //#ifndef NEW_EQS //WW. 07.11.2008
 //#include "solver.h"
 //#endif
 //#include "rf_pcs.h"
 //#include "rf_mmp_new.h"
-#include "FileTools.h"
 #include "rf_bc_new.h"
 #include "rf_ic_new.h"
 #include "rf_st_new.h"
@@ -67,8 +55,8 @@
 #include "rf_react.h"
 #include "rf_react_int.h"
 //CB2406 #ifdef OGS_FEM_CAP // CAP_REACT
-  // CB_merge_0513
-  #include "rf_react_cap.h"
+  // CB_merge_0513 
+  #include "rf_react_cap.h"  
 
 #ifdef CHEMAPP
 #include "eqlink.h"                               //MX
@@ -107,46 +95,6 @@ void CURWrite();                                  //OK
 //#include "FEMIO.h"
 
 using namespace std;
-
-static bool isValidTextFileFormat(const std::string &basename, const std::string &fext)
-{
-	const std::string fname(basename + fext);
-	if (!IsFileExisting(fname))
-		return true;
-#ifdef _WIN32
-	const bool is_win32 = true;
-#else
-	const bool is_win32 = false;
-#endif
-	if (is_win32 == HasCRInLineEnding(fname)) {
-		return true;
-	} else {
-		if (is_win32)
-			std::cout << "*** ERROR: Detect UNIX file format " << fname.data() << std::endl;
-		else
-			std::cout << "*** ERROR: Detect Windows file format " << fname.data() << std::endl;
-		return false;
-	}
-}
-
-static bool checkFormatOfInputFiles(const std::string &basename)
-{
-	bool valid = true;
-	valid &= isValidTextFileFormat(basename, ".gli");
-	valid &= isValidTextFileFormat(basename, ".msh");
-	valid &= isValidTextFileFormat(basename, ".pcs");
-	valid &= isValidTextFileFormat(basename, ".ic");
-	valid &= isValidTextFileFormat(basename, ".bc");
-	valid &= isValidTextFileFormat(basename, ".st");
-	valid &= isValidTextFileFormat(basename, ".mfp");
-	valid &= isValidTextFileFormat(basename, ".msp");
-	valid &= isValidTextFileFormat(basename, ".mmp");
-	valid &= isValidTextFileFormat(basename, ".mcp");
-	valid &= isValidTextFileFormat(basename, ".out");
-	valid &= isValidTextFileFormat(basename, ".tim");
-
-	return valid;
-}
 
 /**************************************************************************/
 /* ROCKFLOW - Funktion: ReadData
@@ -203,12 +151,6 @@ int ReadData ( char* dateiname, GEOLIB::GEOObjects& geo_obj, std::string& unique
 			msgdat = (char*)Free(msgdat);
 		else
 			fclose (f);
-	}
-	//----------------------------------------------------------------------
-	// Check line ending of input files
-	if (!checkFormatOfInputFiles(dateiname)) {
-		ScreenMessage("terminate this program");
-		exit(0);
 	}
 	//----------------------------------------------------------------------
 	// Read GEO data
@@ -840,10 +782,10 @@ int LineFeed ( FILE* f )
 //   return 1;
 //}
 
-//int TFString ( char* x, FILE* f )
-//{
-//	return 1;
-//}
+int TFString ( char* x, FILE* f )
+{
+	return 1;
+}
 
 /**************************************************************************
    STRLib-Method:
@@ -990,7 +932,7 @@ int StrTestHash ( char* s, int* pos )
  */
 /**************************************************************************/
 /*MX*/
-int StrOnlyReadStr ( char* x, char* s, FILE* /*f*/, /*FctTestString func,*/ int* pos )
+int StrOnlyReadStr ( char* x, char* s, FILE* f, /*FctTestString func,*/ int* pos )
 {
 //   int test;
 

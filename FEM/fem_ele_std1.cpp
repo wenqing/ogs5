@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /*! \file extend of file fem_ele_std1.cpp
    The definitions of members of class CFiniteElementStd.
  */
@@ -128,7 +119,7 @@ void CFiniteElementStd::ComputeAdditionalJacobi_H2()
 		dkdp2 = dSdp * ( MediaProp->PermeabilitySaturationFunction(S1,1)
 		                 - MediaProp->PermeabilitySaturationFunction(Sw,1)) / perturb;
 
-		for (size_t i = 0; i < dim && i < 3; i++)
+		for (size_t i = 0; i < dim; i++)
 		{
 			vw[i] = 0.0;
 			vg[i] = 0.;
@@ -298,7 +289,7 @@ void CFiniteElementStd::ComputeAdditionalJacobi_Richards()
 		dkdp1 = dSdp * ( MediaProp->PermeabilitySaturationFunction(S1,0)
 		                 - MediaProp->PermeabilitySaturationFunction(Sw,0)) / perturb;
 
-		for (size_t i = 0; i < dim && i < 3; i++)
+		for (size_t i = 0; i < dim; i++)
 		{
 			vw[i] = 0.0;
 			for(size_t j = 0; j < dim; j++)

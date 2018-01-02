@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************
    ROCKFLOW - Object: Process PCS
    Task:
@@ -16,9 +7,6 @@
 **************************************************************************/
 #ifndef rf_pcs_INC
 #define rf_pcs_INC
-
-#include <ctime>
-#include <valarray>
 
 #include "makros.h"
 
@@ -32,6 +20,8 @@
 #include "rf_tim_new.h"
 #include "conversion_rate.h"          // HS, 10.2011
 #include "SparseMatrixDOK.h"
+//#include "Stiff_Bulirsch-Stoer.h"   // HS, 10.2011
+#include "StepperBulischStoer.h"   // HS, 10.2011
 
 #include "Eigen/Eigen"
 
@@ -222,9 +212,6 @@ private:
     double *eqs_x;     //> Pointer to x array of eqs (added due to PETSC)
 
 	std::vector<std::string> pcs_type_name_vector;
-	bool _hasConstrainedBC;
-	bool _hasConstrainedST;
-	long _idxVx, _idxVy, _idxVz;
 
 protected:                                        //WW
 	friend class FiniteElement::CFiniteElementStd;
@@ -281,8 +268,8 @@ protected:                                        //WW
 	//New equation and solver objects WW
 #if defined(USE_PETSC) // || defined(other parallel libs)//03.3012. WW
    petsc_group::PETScLinearSolver *eqs_new;
-  int mysize;
-  int myrank;
+  int mysize;                               
+  int myrank; 
 #elif defined(NEW_EQS)
 #ifdef LIS
 public:
@@ -294,6 +281,8 @@ public:
 #else
   LINEAR_SOLVER* eqs;
 #endif
+
+
 
 	//
 #if defined( USE_MPI) || defined( USE_PETSC)     //WW
@@ -586,7 +575,7 @@ public:
 	int rwpt_count;                       //YS 05.2013 Count the number of particles.
 	int srand_seed;
 	const char* pcs_num_name[2];          //For monolithic scheme
-	TimType::type tim_type;
+	std::string tim_type_name;            //OK
 	const char* pcs_sol_name;
 	std::string cpl_type_name;
 	CNumerics* m_num;
@@ -650,8 +639,7 @@ public:
 	void ConfigMultiPhaseFlow();
 	void ConfigPS_Global();               // PCH
 	void ConfigMULTI_COMPONENTIAL_FLOW();                // AKS/NB
-	void ConfigTNEQ();						//HS,TN
-	void ConfigTES();						//HS,TN
+	  void ConfigTNEQ();						//HS,TN
 	// Configuration 1 - NOD
 #if defined(USE_PETSC) // || defined(other parallel libs)//03.3012. WW
         void setSolver( petsc_group::PETScLinearSolver *petsc_solver );
@@ -689,6 +677,7 @@ public:
 	//void CalcELEMassFluxes();				//BG
 	//WW   double GetELEValue(long index,double*gp,double theta,string nod_fct_name);
 	void CheckMarkedElement();            //WW
+	void CheckMarkedElement2();				//WX 12.2015
 	void CheckExcavedElement();           //WX
 	// Configuration 3 - ELE matrices
 	void CreateELEMatricesPointer(void);
@@ -732,19 +721,6 @@ public:
 	// This function is a part of the monolithic scheme
 	//  and it is related to ST, BC, IC, TIM and OUT. WW
 	void SetOBJNames();
-
-
-	//MW
-	int getFirstNodeBelowGWL(size_t i);
-	bool hasConstrainedBC(){ return _hasConstrainedBC; }
-	bool hasConstrainedST(){ return _hasConstrainedST; }
-	void hasConstrainedBC(const bool state){ _hasConstrainedBC = state; }
-	void hasConstrainedST(const bool state){ _hasConstrainedST = state; }
-
-	void setidxVx(int index){ _idxVx = index; }
-	void setidxVy(int index){ _idxVy = index; }
-	void setidxVz(int index){ _idxVz = index; }
-
 	// ST
 	void IncorporateSourceTerms(const int rank = -1);
 	//WW void CheckSTGroup(); //OK
@@ -778,9 +754,7 @@ public:
 	int num_diverged;
 	int num_notsatisfied;
 	int iter_nlin;
-	int iter_nlin_max;
 	int iter_lin;
-	int iter_lin_max;
 	int iter_outer_cpl;							// JT2012
 	int iter_inner_cpl;							// JT2012
 	int pcs_num_dof_errors;						// JT2012
@@ -788,8 +762,6 @@ public:
 	double pcs_absolute_error[DOF_NUMBER_MAX];	// JT2012: for NLS, we store error for each DOF
 	double pcs_unknowns_norm;
 	double cpl_max_relative_error;				// JT2012: For CPL, we just store the maximum, not each dof value
-	double cpl_max_relative_error_overall;
-	double nls_max_relative_error;
 	double cpl_absolute_error[DOF_NUMBER_MAX];	// JT2012:
 	double temporary_absolute_error[DOF_NUMBER_MAX];	// JT2012:
 	int temporary_num_dof_errors;
@@ -832,11 +804,10 @@ public:
 	//WW Reomve int timelevel, bool update
 	//WW
 
-	void CalcSecondaryVariablesTNEQ();      //HS
-	void CalcSecondaryVariablesTES();      //HS
+	  void CalcSecondaryVariablesTNEQ();      //HS
 	void CalcSecondaryVariablesUnsaturatedFlow(bool initial = false);
 	void CalcSecondaryVariablesPSGLOBAL(); // PCH
-	void CalcSecondaryVariablesLiquidFlow();                                                  // PCH
+    void CalcSecondaryVariablesLiquidFlow();                                                  // PCH
 	double GetCapillaryPressureOnNodeByNeighobringElementPatches(int nodeIdx,
 	                                                             int meanOption,
 	                                                             double Sw);
@@ -864,8 +835,8 @@ public:
 	 * @param result
 	 */
 	void CalcELEMassFluxes(const GEOLIB::Polyline* const ply, std::string const& NameofPolyline, double *result);
-	double TotalMass[10];																				// Necessary for the output of mass fluxes over polylines, BG 08/2011
-	std::vector <std::string> PolylinesforOutput;														// Necessary for the output of mass fluxes over polylines, BG 08/2011
+    double TotalMass[10];																				// Necessary for the output of mass fluxes over polylines, BG 08/2011
+    std::vector <std::string> PolylinesforOutput;														// Necessary for the output of mass fluxes over polylines, BG 08/2011
 
 	/**
 	 * Necessary for the output of mass fluxes over polylines, BG 08/2011
@@ -902,6 +873,8 @@ public:
 	int PCS_ExcavState;                   //WX
 	int Neglect_H_ini;                    //WX
 	int UpdateIniState;                   //WX
+	void PostExcavation();				//WX 12.2015
+	int If_Reactive;
 #if defined(USE_MPI) || defined (USE_PETSC)                                 //WW
 	void Print_CPU_time_byAssembly(std::ostream &os = std::cout) const
 	{
@@ -911,15 +884,16 @@ public:
 	}
 #endif
 	// HS 10.2011
-	double m_rho_s_0;
+	double m_rho_s_0; 
 	conversion_rate *m_conversion_rate;
+	StepperBulischStoer<conversion_rate> *m_solver;
+	Eigen::VectorXd yy_rho_s;     // rho_s
+	Eigen::VectorXd dydxx_rho_s;  // d{rho_s}/dt
+	// end of thermal storage problem 
 
 #if defined(USE_PETSC) //03.3012. WW
         /// Initialize the RHS array of the system of equations with the previous solution.
         void InitializeRHS_with_u0(const bool quad = false); //in rf_pcs1.cpp
-
-        /// Initialize the unknows of equations with existing solutions within a index range.
-        void initializeRHS_with_u0(const int min_id, const int max_id); //in rf_pcs1.cpp
 #endif
 
 private:
@@ -929,17 +903,7 @@ private:
 	 * PERMEABILITY_X1 and POROSITY
 	 */
 	void configMaterialParameters ();
-	// method to check on constrained source terms
-	bool checkConstrainedST(std::vector<CSourceTerm*> & st_vector, CSourceTerm const & st, CNodeValue const & st_node);
-	// method to check on constrained boundary conditions
-	bool checkConstrainedBC(CBoundaryCondition const & bc, CBoundaryConditionNode & bc_node, double & bc_value);
-	std::valarray<double> getNodeVelocityVector(const long node_id);
-	double calcPressureFromHead(CBoundaryCondition const & bc, std::size_t node_number, double pressure_value,
-			 double const & time_fac = 1, double const & fac = 1);
-	double calcHeadFromPressure(CBoundaryCondition const & bc, std::size_t node_number, double pressure_value,
-			 double const & time_fac = 1, double const & fac = 1);
 
-	double evaluteSwitchBC(CBoundaryCondition const & bc, CBoundaryConditionNode const & bc_node, double time_fac, double fac);
 };
 
 //========================================================================
@@ -1066,8 +1030,6 @@ extern int GetRFProcessNumContinua(void);
 extern int GetRFProcessNumElectricFields(void);
 extern int GetRFProcessNumTemperatures(void);
 extern int GetRFProcessSimulation(void);
-
-extern void initializeConstrainedProcesses(std::vector<CRFProcess*> &pcs_vector);
 
 // Coupling Flag. WW
 extern bool T_Process;					// Heat

@@ -1,19 +1,9 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 #include <iostream>
 #include <iomanip>
 #include <fstream>
 #include <sstream>
 #include <vector>
 #include <stdlib.h>
-#include <cstring>
 #if defined(WIN32)
   #include <direct.h>
 #else
@@ -44,10 +34,10 @@ char getPathSepatator() //WW
 	return '/';
 #endif
 }
-
+ 
 void write_file(void)
 {
-
+	
 #ifdef OGS_FEM_CAP // CAP_REACT
     stringstream ss;
 	ofstream out;
@@ -65,7 +55,7 @@ void write_file(void)
 	if(CAP_count==1){
 #if defined(WIN32)
       mkdir(path_name.c_str());
-
+	  
 	  copy_file="copy " + FileName + ".* " + path_name;
 	  system(copy_file.c_str());
 
@@ -91,13 +81,13 @@ void write_file(void)
 			out << endl;
 			tqgnpc(ip,ipc,pcname,&noerror);
 			out << ip << " " << ipc << " " << pcname;
-			tqgetr("a", ip, ipc, &value, &noerror);
+			tqgetr("a", ip, ipc, &value, &noerror); 
 			out << " " << value;
-			tqgetr("ia", ip, ipc, &value, &noerror);
+			tqgetr("ia", ip, ipc, &value, &noerror); 
 			out << " " << value;
-			tqgetr("ac", ip, ipc, &value, &noerror);
+			tqgetr("ac", ip, ipc, &value, &noerror); 
 			out << " " << value;
-			tqgdpc("G", ip, ipc, &value, &noerror);
+			tqgdpc("G", ip, ipc, &value, &noerror); 
 			out << " " << value;
 		}
 	}
@@ -115,7 +105,7 @@ void write_file(void)
 		out << " " << value;
 	}
 	out.close();
-#endif
+#endif  
 
 }
 
@@ -131,7 +121,7 @@ bool CAP_check_file(void)
 
 	ss << FilePath << "_CHEM_STATE" << getPathSepatator()<< "T" << CAP_Time << "N" << CAP_Node << "C" << CAP_icount;
 
-	ss >> file_name;
+	ss >> file_name;		
 
 	in.clear();
 	in.open(file_name.c_str(),ios::in);
@@ -165,6 +155,7 @@ bool CAP_check_file(void)
     cout <<  locfilename<< endl;
     cout <<    locfilepath << endl;
 
+	bool is_same_file;
 	int i;
 	vector< string > ext_name0,ext_name;
 
@@ -212,7 +203,7 @@ bool CAP_check_file(void)
 
 
 int OGS_keyword_check(std::string in_file_new, std::string in_file_old, std::string ext_name){
-
+	
 	ifstream in_new,in_old;
 	stringstream ss;
 	string instr_new,instr_old,instr,line_no,subkey;
@@ -239,10 +230,10 @@ int OGS_keyword_check(std::string in_file_new, std::string in_file_old, std::str
 		getline(in_old, instr_old);
 		icount=1;
 
-		while(1){
-			if(in_new.eof())
+		while(1){			
+			if(in_new.eof()) 
 				break;
-			icount++;
+			icount++;					
 			ss.clear();
 			ss << icount;
 			ss >> line_no;
@@ -262,14 +253,14 @@ int OGS_keyword_check(std::string in_file_new, std::string in_file_old, std::str
 					for(i=0;i<(int)pies.size();i++)
 						instr=instr+" "+pies[i];
 					subkey=instr;
-					instr=line_no+" "+instr;
+					instr=line_no+" "+instr;	
 					subkey_new.push_back(instr);
 				}
 				else{
 					instr="";
 					for(i=0;i<(int)pies.size();i++)
 						instr=instr+" "+pies[i];
-					instr=line_no+" "+subkey+" "+instr;
+					instr=line_no+" "+subkey+" "+instr;	
 					line_new.push_back(instr);
 				}
 			}
@@ -277,9 +268,9 @@ int OGS_keyword_check(std::string in_file_new, std::string in_file_old, std::str
 
 		icount=1;
 		while(1){
-			if(in_old.eof())
+			if(in_old.eof()) 
 				break;
-			icount++;
+			icount++;					
 			ss.clear();
 			ss << icount;
 			ss >> line_no;
@@ -291,7 +282,7 @@ int OGS_keyword_check(std::string in_file_new, std::string in_file_old, std::str
 					instr="";
 					for(i=0;i<(int)pies.size();i++)
 						instr=instr+" "+pies[i]; //remove more blank in one line
-					instr=line_no+" "+instr;
+					instr=line_no+" "+instr;	
 					key_old.push_back(instr);
 				}
 				else if(pies[0].substr(0,1)=="$"){
@@ -299,14 +290,14 @@ int OGS_keyword_check(std::string in_file_new, std::string in_file_old, std::str
 					for(i=0;i<(int)pies.size();i++)
 						instr=instr+" "+pies[i];
 					subkey=instr;
-					instr=line_no+" "+instr;
+					instr=line_no+" "+instr;	
 					subkey_old.push_back(instr);
 				}
 				else{
 					instr="";
 					for(i=0;i<(int)pies.size();i++)
 						instr=instr+" "+pies[i];
-					instr=line_no+" "+subkey+" "+instr;
+					instr=line_no+" "+subkey+" "+instr;	
 					line_old.push_back(instr);
 				}
 			}
@@ -358,12 +349,12 @@ int OGS_keyword_check(std::string in_file_new, std::string in_file_old, std::str
 		line_old=IO::vector_reduce(line_old);
 
 
-		for(i=0;i<(int)key_new.size();i++) cout << ext_name << " file: Line. " << key_new[i] << "   -> not consistent !" << endl;
-		for(i=0;i<(int)key_old.size();i++) cout << ext_name << " file: Line. " << key_old[i] << "   -> changed !" << endl;
-		for(i=0;i<(int)subkey_new.size();i++) cout << ext_name << " file: Line. " << subkey_new[i] << "   -> not consistent !" << endl;
-		for(i=0;i<(int)subkey_old.size();i++) cout << ext_name << " file: Line. " << subkey_old[i] << "   -> changed !" << endl;
-		for(i=0;i<(int)line_new.size();i++) cout << ext_name << " file: Line. " << line_new[i] << "   -> not consistent !" << endl;
-		for(i=0;i<(int)line_old.size();i++) cout << ext_name << " file: Line. " << line_old[i] << "   -> changed !" << endl;
+		for(i=0;i<key_new.size();i++) cout << ext_name << " file: Line. " << key_new[i] << "   -> not consistent !" << endl;
+		for(i=0;i<key_old.size();i++) cout << ext_name << " file: Line. " << key_old[i] << "   -> changed !" << endl;
+		for(i=0;i<subkey_new.size();i++) cout << ext_name << " file: Line. " << subkey_new[i] << "   -> not consistent !" << endl;
+		for(i=0;i<subkey_old.size();i++) cout << ext_name << " file: Line. " << subkey_old[i] << "   -> changed !" << endl;
+		for(i=0;i<line_new.size();i++) cout << ext_name << " file: Line. " << line_new[i] << "   -> not consistent !" << endl;
+		for(i=0;i<line_old.size();i++) cout << ext_name << " file: Line. " << line_old[i] << "   -> changed !" << endl;
 
 	}
 	else{
@@ -385,13 +376,13 @@ void read_file(void)
 	string file_name,instr;
 	vector<int> idx;
 	long int ip,i;
-
+	
 	CHEM_STATE.clear();
 	CHEM_STATE_AP.clear();
 
     ss.clear();
 	ss << FilePath << "_CHEM_STATE" << getPathSepatator() << "T" << CAP_Time << "N" << CAP_Node << "C" << CAP_icount;
-	ss >> file_name;
+	ss >> file_name;		
 
 	//cout << file_name << "\n";
     //read file to vector
@@ -400,7 +391,7 @@ void read_file(void)
 	if(in.good()){
 		while(1){
 			if(in.eof()) break;
-			getline(in, instr);
+			getline(in, instr);	
 			//CHEM_STATE.push_back(REACT_PRQ::string2vector(instr));
 			CHEM_STATE.push_back(REACTINT::string2vector(instr));
 			std::cout << "CHEM_STATE pushback: size: " << CHEM_STATE.size() << " CAP_Time: " << CAP_Time << " CaP_Node: " << CAP_Node << " CAP_icount: " << CAP_icount << " f:" << file_name << "\n";
@@ -413,7 +404,7 @@ void read_file(void)
 	if(in.good()){
 		while(1){
 			if(in.eof()) break;
-			getline(in, instr);
+			getline(in, instr);	
 			//CHEM_STATE_AP.push_back(REACT_PRQ::string2vector(instr));
 			CHEM_STATE_AP.push_back(REACTINT::string2vector(instr));
 		}
@@ -425,8 +416,8 @@ void read_file(void)
 		idx.clear();
 		ip=0;
 		for(i=0;i<(int)CHEM_STATE.size();i++){
-			if(atoi(CHEM_STATE[i][0].c_str())>ip){
-				PHASE_CONSTI_MAP.push_back(idx);
+			if(atoi(CHEM_STATE[i][0].c_str())>ip){		
+				PHASE_CONSTI_MAP.push_back(idx);				
 				idx.clear();
 				idx.push_back(i);
 				ip=atoi(CHEM_STATE[i][0].c_str());
@@ -439,11 +430,7 @@ void read_file(void)
 }
 
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqce (CHP OPTION, LI INDEXP, LI INDEXC, DBP VALS, LIP NOERR)
-#else
-int CAP_tqce (CHP, LI, LI, DBP, LIP)
-#endif
 {
 	CAP_count++;
 	CAP_icount++;
@@ -469,15 +456,11 @@ int CAP_tqce (CHP, LI, LI, DBP, LIP)
 		read_file();
 		return 0;
 	}
-    else
-      return -1;
+    else 
+      return -1;  
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqcel (CHP OPTION, LI INDEXP, LI INDEXC, DBP VALS, LIP NOERR)
-#else
-int CAP_tqcel (CHP, LI, LI, DBP, LIP)
-#endif
 {
 
 	CAP_count++;
@@ -503,16 +486,12 @@ int CAP_tqcel (CHP, LI, LI, DBP, LIP)
 	{
 		read_file();
 		return 0;
-	}
-    else
+	}	
+    else         
       return -1; //CB should not occur
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqcen (CHP OPTION, LI INDEXP, LI INDEXC, DBP VALS, LIP NOERR)
-#else
-int CAP_tqcen (CHP, LI, LI, DBP, LIP)
-#endif
 {
 	CAP_count++;
 	CAP_icount++;
@@ -537,16 +516,12 @@ int CAP_tqcen (CHP, LI, LI, DBP, LIP)
 	{
 		read_file();
 		return 0;
-	}
+	}	
     else
         return -1; //CB should not occur
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqcenl (CHP OPTION, LI INDEXP, LI INDEXC, DBP VALS, LIP NOERR)
-#else
-int CAP_tqcenl (CHP, LI, LI, DBP, LIP)
-#endif
 {
 	CAP_count++;
 	CAP_icount++;
@@ -572,18 +547,14 @@ int CAP_tqcenl (CHP, LI, LI, DBP, LIP)
 		read_file();
 		return 0;
 	}
-    else
+    else 
         return -1; //CB should not occur
 }
 
 
 
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqgetr(CHP OPTION, LI INDEXP, LI INDEX, DBP VAL, LIP NOERR)
-#else
-int CAP_tqgetr(CHP OPTION, LI INDEXP, LI INDEX, DBP VAL, LIP)
-#endif
 {
 	int i;
     if(CAP_MODE==0 || CAP_MODE==1){ //normal chemapp   or //using chemapp to create chemical state files
@@ -609,14 +580,10 @@ int CAP_tqgetr(CHP OPTION, LI INDEXP, LI INDEX, DBP VAL, LIP)
 		return 0;
 	}
     else
-        return -1; //CB should not occur
+        return -1; //CB should not occur    
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqgdpc(CHP OPTION, LI INDEXP, LI INDEXC,DBP VAL, LIP NOERR)
-#else
-int CAP_tqgdpc(CHP OPTION, LI INDEXP, LI INDEXC,DBP VAL, LIP)
-#endif
 {
 	int i;
     if(CAP_MODE==0 || CAP_MODE==1){ //normal chemapp   or //using chemapp to create chemical state files
@@ -638,7 +605,7 @@ int CAP_tqgdpc(CHP OPTION, LI INDEXP, LI INDEXC,DBP VAL, LIP)
 		return 0;
 	}
     else
-        return -1; //CB should not occur
+        return -1; //CB should not occur    
 }
 
 
@@ -657,11 +624,7 @@ int CAP_tqini (LIP NOERR){
   }
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
-int CAP_tqvers(LIP NVERS, LIP NOERR){
-#else
-int CAP_tqvers(LIP, LIP NOERR){
-#endif
+int CAP_tqvers(LIP NVERS, LIP NOERR){	
 	if(CAP_MODE==0 || CAP_MODE==1){
 #ifdef OGS_FEM_CAP // CAP_REACT
 		return tqvers(NVERS, NOERR);
@@ -675,11 +638,7 @@ int CAP_tqvers(LIP, LIP NOERR){
 	}
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqopna(CHP FILE, LI LUN, LIP NOERR){
-#else
-int CAP_tqopna(CHP, LI, LIP NOERR){
-#endif
 	if(CAP_MODE==0 || CAP_MODE==1){
 #ifdef OGS_FEM_CAP // CAP_REACT
 		return tqopna(FILE, LUN, NOERR);
@@ -693,11 +652,7 @@ int CAP_tqopna(CHP, LI, LIP NOERR){
 	}
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqopnb(CHP FILE, LI LUN, LIP NOERR){
-#else
-	int CAP_tqopnb(CHP, LI, LIP NOERR){
-#endif
 	if(CAP_MODE==0 || CAP_MODE==1){
 #ifdef OGS_FEM_CAP // CAP_REACT
 		return tqopnb(FILE, LUN, NOERR);
@@ -711,11 +666,7 @@ int CAP_tqopnb(CHP FILE, LI LUN, LIP NOERR){
 	}
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqopnt(CHP FILE, LI LUN, LIP NOERR){
-#else
-int CAP_tqopnt(CHP, LI, LIP NOERR){
-#endif
 	if(CAP_MODE==0 || CAP_MODE==1){
 #ifdef OGS_FEM_CAP // CAP_REACT
 		return tqopnt(FILE, LUN, NOERR);
@@ -729,11 +680,7 @@ int CAP_tqopnt(CHP, LI, LIP NOERR){
 	}
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqclos(LI LUN, LIP NOERR){
-#else
-int CAP_tqclos(LI, LIP NOERR){
-#endif
 	if(CAP_MODE==0 || CAP_MODE==1){
 #ifdef OGS_FEM_CAP // CAP_REACT
 		return tqclos(LUN, NOERR);
@@ -803,11 +750,7 @@ int CAP_tqnosc(LIP NSCOM, LIP NOERR){
 	}
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqgnsc(LI INDEXS, CHP NAME, LIP NOERR){
-#else
-int CAP_tqgnsc(LI, CHP, LIP NOERR){
-#endif
 	if(CAP_MODE==0 || CAP_MODE==1){
 #ifdef OGS_FEM_CAP // CAP_REACT
 		return tqgnsc(INDEXS, NAME, NOERR);
@@ -821,11 +764,7 @@ int CAP_tqgnsc(LI, CHP, LIP NOERR){
 	}
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqnop (LIP NPHASE, LIP NOERR){
-#else
-int CAP_tqnop (LIP, LIP NOERR){
-#endif
 	if(CAP_MODE==0 || CAP_MODE==1){
 #ifdef OGS_FEM_CAP // CAP_REACT
 		return tqnop (NPHASE, NOERR);
@@ -839,11 +778,7 @@ int CAP_tqnop (LIP, LIP NOERR){
 	}
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqgnp (LI INDEXP, CHP NAME, LIP NOERR){
-#else
-int CAP_tqgnp (LI, CHP, LIP NOERR){
-#endif
 	if(CAP_MODE==0 || CAP_MODE==1){
 #ifdef OGS_FEM_CAP // CAP_REACT
 		return tqgnp (INDEXP, NAME, NOERR);
@@ -857,11 +792,7 @@ int CAP_tqgnp (LI, CHP, LIP NOERR){
 	}
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqnopc(LI INDEXP, LIP NPCON, LIP NOERR){
-#else
-int CAP_tqnopc(LI, LIP, LIP NOERR){
-#endif
 	if(CAP_MODE==0 || CAP_MODE==1){
 #ifdef OGS_FEM_CAP // CAP_REACT
 		return tqnopc(INDEXP, NPCON, NOERR);
@@ -875,11 +806,7 @@ int CAP_tqnopc(LI, LIP, LIP NOERR){
 	}
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqgnpc(LI INDEXP, LI INDEXC, CHP NAME, LIP NOERR){
-#else
-int CAP_tqgnpc(LI, LI, CHP, LIP NOERR){
-#endif
 	if(CAP_MODE==0 || CAP_MODE==1){
 #ifdef OGS_FEM_CAP // CAP_REACT
 		return tqgnpc(INDEXP, INDEXC, NAME, NOERR);
@@ -931,11 +858,7 @@ int CAP_tqinpc(CHP NAME, LI INDEXP, LIP INDEXC, LIP NOERR){
 	}
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqcsp (LI INDEXP, CHP OPTION, LIP NOERR){
-#else
-int CAP_tqcsp (LI, CHP, LIP NOERR){
-#endif
 	if(CAP_MODE==0 || CAP_MODE==1){
 #ifdef OGS_FEM_CAP // CAP_REACT
 		return tqcsp (INDEXP, OPTION, NOERR);
@@ -949,11 +872,7 @@ int CAP_tqcsp (LI, CHP, LIP NOERR){
 	}
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqcspc(LI INDEXP, LI INDEXC, CHP OPTION, LIP NOERR){
-#else
-int CAP_tqcspc(LI, LI, CHP, LIP NOERR){
-#endif
 	if(CAP_MODE==0 || CAP_MODE==1){
 #ifdef OGS_FEM_CAP // CAP_REACT
 		return tqcspc(INDEXP, INDEXC, OPTION, NOERR);
@@ -967,11 +886,7 @@ int CAP_tqcspc(LI, LI, CHP, LIP NOERR){
 	}
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqstpc(LI INDEXP, LI INDEXC, DBP STOI, DBP WMASS, LIP NOERR){
-#else
-int CAP_tqstpc(LI, LI, DBP, DBP, LIP NOERR){
-#endif
 	if(CAP_MODE==0 || CAP_MODE==1){
 #ifdef OGS_FEM_CAP // CAP_REACT
 		return tqstpc(INDEXP, INDEXC, STOI, WMASS, NOERR);
@@ -985,11 +900,7 @@ int CAP_tqstpc(LI, LI, DBP, DBP, LIP NOERR){
 	}
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqcsc (CHP NAME, LIP NOERR){
-#else
-int CAP_tqcsc (CHP, LIP NOERR){
-#endif
 	if(CAP_MODE==0 || CAP_MODE==1){
 #ifdef OGS_FEM_CAP // CAP_REACT
 		return tqcsc (NAME, NOERR);
@@ -1003,11 +914,7 @@ int CAP_tqcsc (CHP, LIP NOERR){
 	}
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqinsc(CHP NAME, LIP INDEXS, LIP NOERR){
-#else
-int CAP_tqinsc(CHP, LIP, LIP NOERR){
-#endif
 	if(CAP_MODE==0 || CAP_MODE==1){
 #ifdef OGS_FEM_CAP // CAP_REACT
 		return tqinsc(NAME, INDEXS, NOERR);
@@ -1021,11 +928,7 @@ int CAP_tqinsc(CHP, LIP, LIP NOERR){
 	}
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqcio (CHP OPTION, LI IVAL, LIP NOERR){
-#else
-int CAP_tqcio (CHP, LI, LIP NOERR){
-#endif
 	if(CAP_MODE==0 || CAP_MODE==1){
 #ifdef OGS_FEM_CAP // CAP_REACT
 		return tqcio (OPTION, IVAL, NOERR);
@@ -1039,11 +942,7 @@ int CAP_tqcio (CHP, LI, LIP NOERR){
 	}
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqremc(LI NUMCON, LIP NOERR){
-#else
-int CAP_tqremc(LI, LIP NOERR){
-#endif
 	if(CAP_MODE==0 || CAP_MODE==1){
 #ifdef OGS_FEM_CAP // CAP_REACT
 		return tqremc(NUMCON, NOERR);
@@ -1057,11 +956,7 @@ int CAP_tqremc(LI, LIP NOERR){
 	}
 }
 
-#ifdef OGS_FEM_CAP // CAP_REACT
 int CAP_tqsetc(CHP OPTION, LI INDEXP, LI INDEX, DB VAL, LIP NUMCON, LIP NOERR){
-#else
-int CAP_tqsetc(CHP, LI, LI, DB, LIP, LIP NOERR){
-#endif
 	if(CAP_MODE==0 || CAP_MODE==1){
 #ifdef OGS_FEM_CAP // CAP_REACT
 		return tqsetc(OPTION, INDEXP, INDEX, VAL, NUMCON, NOERR);

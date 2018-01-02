@@ -1,13 +1,4 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
-//#pragma once
+//#pragma once 
 
 #include <string>
 #include <vector>
@@ -33,13 +24,13 @@ public:
 		std::string ecform; //elemental chemical formula
 		std::string ref[2];
 		double charge;  //charge
-		int    type  ;  //phase flag
+		int    type  ;  //phase flag 
 						//0-minerals that do not undergo phase transitions
 						//1-minerals that undergo one phase transition
 						//2-minerals that undergo two phase transitions
 						//3-minerals that undergo three phase transitions
 						//4-gases
-						//5-aqueous species
+						//5-aqueous species 
 		double param[9][4]; //parameters
 		//calculating result
 		double S; //entropy
@@ -59,9 +50,9 @@ public:
 	static int HelgesonEquation(double T, double P, std::vector<SpeciesData> &spec);
 
 	static double HKFcalc(double T, double P, int ghs, std::string name, int sub, int type);
-	//T K, P bar,
-	//ghs 0-gibbs energy 1-enthalpy 2-entropy,
-	//name, sub 0-name 1-scform 2-abbrev 3-ecform other-all,
+	//T K, P bar, 
+	//ghs 0-gibbs energy 1-enthalpy 2-entropy, 
+	//name, sub 0-name 1-scform 2-abbrev 3-ecform other-all, 
 	//type 0-min 1-min 2-min 3-min 4-gases 5-aq others-last found in list
 
 	static double HKFcalcw(double T, double P, int ghs);
@@ -82,4 +73,3 @@ public:
 
 	static void entrance(void);
 };
-

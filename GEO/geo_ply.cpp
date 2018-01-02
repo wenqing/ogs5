@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 #include <stdlib.h>
 /* Objects */
 #include "files0.h"
@@ -31,10 +22,10 @@ std::vector<CSoilProfile*> profile_vector; //YD
 /*----------------------------------------------------------------------*/
 // constructor
 CGLPolyline::CGLPolyline(void)
-	: _set_eps(false), epsilon(0.01)
 {
 	name = "POLYLINE";
 //	closed = false;
+	epsilon = 0.01;
 	type = 2;
 	computeline = false;
 	mat_group = -1;
@@ -52,9 +43,10 @@ CGLPolyline::CGLPolyline(void)
    11/2005 OK Implementation
 **************************************************************************/
 CGLPolyline::CGLPolyline(const std::string &ply_name) :
-	name(ply_name), _set_eps(false), epsilon(0.01)
+	name(ply_name)
 {
 //	closed = false;
+	epsilon = 0.01;
 	type = 2;
 	computeline = false;
 	mat_group = -1;
@@ -101,9 +93,15 @@ void CGLPolyline::setID (size_t nid)
 **************************************************************************/
 CGLPolyline* GEOGetPLYByName(const std::string& name)
 {
-	for (std::vector<CGLPolyline*>::iterator it = polyline_vector.begin(); it != polyline_vector.end(); ++it)
+	std::vector<CGLPolyline*>::iterator p = polyline_vector.begin(); //CC
+	while (p != polyline_vector.end())
 	{
-		if ((*it)->getName() == name) return *it;
+		if ((*p)->getName().find(name,0) == 0)
+		{
+			return *p;
+			break;
+		}
+		++p;
 	}
 	return NULL;
 }
@@ -603,7 +601,6 @@ ios::pos_type CGLPolyline::Read(std::ifstream &gli_file) //CC8888
 			line_string = line;
 			remove_white_space(&line_string);
 			epsilon = strtod(line_string.data(), NULL);
-			_set_eps = true;
 			continue;
 		} // subkeyword found
 		  //....................................................................

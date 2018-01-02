@@ -3,11 +3,6 @@
  *
  *  Created on: Sep 29, 2010
  *      Author: TF
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
  */
 
 #include <sstream>
@@ -31,23 +26,31 @@ bool GeoIO::readGeoInfo (GeoInfo* geo_info, std::istream& in_str, std::string& g
 	{
 		geo_info->setGeoType(GEOLIB::POINT);
 		strstream >> geo_name;
-
+		
 		const GEOLIB::PointVec* pnt_vec(geo_obj.getPointVecObj(unique_geo_name));
 		if (pnt_vec)
 		{
 			const GEOLIB::Point* pnt(pnt_vec->getElementByName(geo_name));
 			if (pnt == NULL)
 			{
-				std::cerr << "ERROR in GeoIO::readGeoInfo: point name \""
+				std::cerr << "ERROR in GeoIO::readGeoInfo: point name \"" 
 						  << geo_name << "\" not found!" << "\n";
+#ifdef OGS_USE_QT
+				return false;
+#else
 				exit(1);
+#endif
 			}
 			geo_info->setGeoObj(pnt);
 			return true;
 		}
 
 		std::cerr << "Error in GeoIO::readGeoInfo: point vector not found!" <<"\n";
+#ifdef OGS_USE_QT
+		return false;
+#else
 		exit(1);
+#endif
 	}
 
 	else if (geo_type_name.find("POLYLINE") != std::string::npos)
@@ -60,16 +63,24 @@ bool GeoIO::readGeoInfo (GeoInfo* geo_info, std::istream& in_str, std::string& g
 			const GEOLIB::Polyline* ply(ply_vec->getElementByName(geo_name));
 			if (ply == NULL)
 			{
-				std::cerr << "error in GeoIO::readGeoInfo: polyline name \""
+				std::cerr << "error in GeoIO::readGeoInfo: polyline name \"" 
 					      << geo_name << "\" not found!" << "\n";
+#ifdef OGS_USE_QT
+				return false;
+#else
 				exit(1);
+#endif
 			}
 			geo_info->setGeoObj(ply);
 			return true;
 		}
 
 		std::cerr << "Error in GeoIO::readGeoInfo: polyline vector not found!" <<"\n";
+#ifdef OGS_USE_QT
+		return false;
+#else
 		exit(1);
+#endif
 	}
 
 	else if (geo_type_name.find("SURFACE") != std::string::npos)
@@ -82,16 +93,24 @@ bool GeoIO::readGeoInfo (GeoInfo* geo_info, std::istream& in_str, std::string& g
 			const GEOLIB::Surface* sfc(sfc_vec->getElementByName(geo_name));
 			if (sfc == NULL)
 			{
-				std::cerr << "Error in GeoIO::readGeoInfo: surface name \""
+				std::cerr << "Error in GeoIO::readGeoInfo: surface name \"" 
 						  << geo_name << "\" not found!" << "\n";
+#ifdef OGS_USE_QT
+				return false;
+#else
 				exit(1);
+#endif
 			}
 			geo_info->setGeoObj(sfc);
 			return true;
 		}
 
 		std::cerr << "Error in GeoIO::readGeoInfo: surface vector not found!" <<"\n";
+#ifdef OGS_USE_QT
+		return false;
+#else
 		exit(1);
+#endif
 	}
 
 	else if (geo_type_name.find("VOLUME") != std::string::npos)

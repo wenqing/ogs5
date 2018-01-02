@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 #ifndef STRINGTOOLS_H
 #define STRINGTOOLS_H
 
@@ -66,20 +57,6 @@ template<typename T> T str2number (const std::string &str)
  * Strip whitespace (or other characters) from the beginning and end of a string.
  */
 void trim(std::string &str, char ch = ' ');
-
-/**
- * Removes all occurences of c from the beginning of str.
- *
- * Leves the original string unchanged.
- */
-std::string ltrim(const std::string& str, const char c);
-
-/**
- * Removes all occurences of c from the end of str
- *
- * Leves the original string unchanged.
- */
-std::string rtrim(const std::string& str, const char c);
 
 
 namespace BaseLib {

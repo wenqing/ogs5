@@ -3,11 +3,6 @@
  *
  *  Created on: Feb 23, 2011
  *      Author: TF
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
  */
 
 // STL
@@ -26,9 +21,6 @@ namespace MathLib
 EarClippingTriangulation::EarClippingTriangulation(const GEOLIB::Polygon* polygon,
                                                    std::list<GEOLIB::Triangle> &triangles, bool rot)
 {
-	if (polygon->getNumberOfPoints()<4)
-		return;
-
 	copyPolygonPoints (polygon);
 
 	if (rot)

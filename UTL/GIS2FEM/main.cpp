@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 // expre_new_Operator.cpp
 // compile with: /EHsc
 #include <cmath>
@@ -94,7 +85,7 @@ int main(int argc, char* argv[])
 	indexChWin = file_name.find_last_of('\\');
 	indexChLinux = file_name.find_last_of('/');
 	//
-    string file_path;
+    string file_path; 
 	if(indexChWin != string::npos)
 		file_path = file_name.substr(0,indexChWin) + "\\";
 	else if(indexChLinux != string::npos)
@@ -109,15 +100,15 @@ int main(int argc, char* argv[])
 
 		std::getline(is_mesh, s_buff);
 
-        if(s_buff.find("#FEM_MSH") != std::string::npos)
+        if(s_buff.find("#FEM_MSH") != std::string::npos) 
 		{
            a_mesh = new CFEMesh(NULL, &file_name);
            a_mesh->Read(&is_mesh);
-		}
+		} 
 		else
 		{
             std::cout<<"Cannot open mesh file "<< fname << endl;
-            return EXIT_FAILURE;
+            return EXIT_FAILURE;			 
 		}
 	}
 

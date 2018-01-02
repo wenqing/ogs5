@@ -1,12 +1,3 @@
-/**
- * \copyright
- * Copyright (c) 2015, OpenGeoSys Community (http://www.opengeosys.org)
- *            Distributed under a Modified BSD License.
- *              See accompanying file LICENSE.txt or
- *              http://www.opengeosys.org/project/license
- *
- */
-
 /**************************************************************************
    FEMLib-Object: FCT
    Task: Functions
@@ -15,6 +6,7 @@
    09/2008 NB Function with multiple arguments
 **************************************************************************/
 #include "files0.h"
+#include "gs_project.h"
 #include "makros.h"
 #include "rf_fct.h"
 
