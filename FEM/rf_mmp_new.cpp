@@ -4262,6 +4262,30 @@ double CMediumProperties::Porosity(long number,double theta)
 	   return porosity;
 	   }
 	 */
+	 //WX:01.2018 porosity funciton component if poro is dependent on deformaiton
+	if (porosity_comp_model == 1 && porosity_model==12)
+	{
+		CRFProcess* tmp_pcs = NULL;
+		double tmp_value = 1.;
+		int tmp_index;
+		porosity = 1.0;  //init the poro value first, if porosity model == 12 
+		for (int tmp_i = 0; tmp_i<(int)pcs_vector.size(); tmp_i++)
+		{
+			if (std::string(pcs_vector[tmp_i]->pcs_primary_function_name[0]) == porosity_comp_name)
+			{
+				tmp_index = pcs_vector[tmp_i]->GetNodeValueIndex(porosity_comp_name);
+				tmp_value = 0.;
+				for (int tmp_j = 0; tmp_j<pcs_vector[tmp_i]->m_msh->ele_vector[number]->GetNodesNumber(false); tmp_j++)
+				{
+					tmp_value += pcs_vector[tmp_i]->GetNodeValue(pcs_vector[tmp_i]->m_msh->ele_vector[number]->getNodeIndices()[tmp_j]
+						, tmp_index) / pcs_vector[tmp_i]->m_msh->ele_vector[number]->GetNodesNumber(false);
+				}
+			}
+		}
+		porosity *= tmp_value;
+	}
+
+
 	switch (porosity_model)
 	{
 	case 0:                               // n = f(x)
@@ -4307,7 +4331,10 @@ double CMediumProperties::Porosity(long number,double theta)
 		porosity = _mesh->ele_vector[number]->mat_vector(por_index);
 		break;
 	case 12:                              // n = n0 + vol_strain, WX: 03.2011
-		porosity = PorosityVolStrain(number, porosity_model_values[0], assem);
+		if (porosity_comp_model == 1)
+			porosity = PorosityVolStrain(number, porosity, assem);
+		else
+			porosity = PorosityVolStrain(number, porosity_model_values[0], assem);
 		break;
     case 13:
 		// porosity change through dissolution/precipitation
@@ -4388,22 +4415,22 @@ double CMediumProperties::Porosity(long number,double theta)
 		break;
 	}
 	//WX:11.2017 porosity funciton component
-	if (porosity_comp_model==1)
+	if (porosity_comp_model == 1 && porosity_model != 12)
 	{
 		CRFProcess* tmp_pcs = NULL;
 		double tmp_value = 1.;
-		int tmp_index;		
-		for(int tmp_i = 0; tmp_i<(int)pcs_vector.size(); tmp_i++)
+		int tmp_index;
+		for (int tmp_i = 0; tmp_i<(int)pcs_vector.size(); tmp_i++)
 		{
-			if (std::string(pcs_vector[tmp_i]->pcs_primary_function_name[0])==porosity_comp_name)
+			if (std::string(pcs_vector[tmp_i]->pcs_primary_function_name[0]) == porosity_comp_name)
 			{
 				tmp_index = pcs_vector[tmp_i]->GetNodeValueIndex(porosity_comp_name);
 				tmp_value = 0.;
 				for (int tmp_j = 0; tmp_j<pcs_vector[tmp_i]->m_msh->ele_vector[number]->GetNodesNumber(false); tmp_j++)
 				{
 					tmp_value += pcs_vector[tmp_i]->GetNodeValue(pcs_vector[tmp_i]->m_msh->ele_vector[number]->getNodeIndices()[tmp_j]
-					, tmp_index) / pcs_vector[tmp_i]->m_msh->ele_vector[number]->GetNodesNumber(false);
-				}				
+						, tmp_index) / pcs_vector[tmp_i]->m_msh->ele_vector[number]->GetNodesNumber(false);
+				}
 			}
 		}
 		porosity *= tmp_value;
