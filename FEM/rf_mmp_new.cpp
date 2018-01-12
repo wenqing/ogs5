@@ -552,7 +552,7 @@ std::ios::pos_type CMediumProperties::Read(std::ifstream* mmp_file)
 			{
 			case 1:       // k=const
 				in >> porosity_comp_name;
-				mmp_file->ignore(MAX_ZEILE,'\n');
+				//mmp_file->ignore(MAX_ZEILE,'\n');
 				break;
 			default:
 				std::cout << "Error in MMPRead: no valid porosity function component model" <<
