@@ -2175,6 +2175,21 @@ std::ios::pos_type CRFProcess::Read(std::ifstream* pcs_file)
 				std::cout << "-> CONSTAT is activated." << std::endl;
 			continue;
 		}
+
+		if (line_string.find("$MONITOR_DISPLACEMENT_Z") == 0)
+		{
+			std::string buffer;
+			std::getline(*pcs_file, buffer);
+			std::stringstream ss;
+			ss.str(buffer);
+			ss >> _veritcal_displacement_monitor.polyline_name;
+			ss >> _veritcal_displacement_monitor.maximum_uz;
+			ss >> _veritcal_displacement_monitor.original_mat_id;
+			ss >> _veritcal_displacement_monitor.new_mat_id;
+			ss.clear();
+			continue;
+		}
+
 		//....................................................................
 	}
 	//----------------------------------------------------------------------

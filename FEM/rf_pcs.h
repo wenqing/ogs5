@@ -176,6 +176,15 @@ typedef struct
 } bc_JFNK;
 #endif
 
+
+struct VerticalDisplacmentMonitor
+{
+	std::string polyline_name;
+	double maximum_uz;
+	int original_mat_id;
+	int new_mat_id;
+};
+
 // MB moved inside the Process object
 // extern vector<double*>nod_val_vector; //OK
 // extern vector<string>nod_val_name_vector; //OK
@@ -611,6 +620,8 @@ public:
 	//-----------------------------
 
 	std::vector<std::string> const& getElementValueNameVector() { return ele_val_name_vector; }
+
+	VerticalDisplacmentMonitor _veritcal_displacement_monitor;
 
 private:
 	// PCH
