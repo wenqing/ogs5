@@ -1284,10 +1284,17 @@ void CRFProcess::WriteSolution()
 		idx[j] = GetNodeValueIndex(pcs_primary_function_name[j]);
 		idx[j + pcs_number_of_primary_nvals] = idx[j] + 1;
 	}
+
+	const int temerature_var_id = GetNodeValueIndex("TEMPERATURE1");
+	const double unit_offset = (_temp_unit == FiniteElement::CELSIUS && temerature_var_id >= 0)
+		? PhysicalConstant::CelsiusZeroInKelvin : 0.0;
+
 	for (size_t i = 0; i < m_msh->GetNodesNumber(false); i++)
 	{
 		for (j = 0; j < 2 * pcs_number_of_primary_nvals; j++)
-			os << GetNodeValue(i, idx[j]) << "  ";
+		{
+			os << GetNodeValue(i, idx[j]) - unit_offset << "  ";
+		}
 		os << "\n";
 	}
 	os.close();
