@@ -155,7 +155,7 @@ private:
 	void Trace_Discontinuity();
 	long MarkBifurcatedNeighbor(const int PathIndex);
 
-	void SetVerticalDisplacmentMonitor() override;
+	void setVerticalDisplacmentMonitor() override;
 };
 } // end namespace
 
