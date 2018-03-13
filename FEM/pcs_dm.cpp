@@ -3530,7 +3530,7 @@ bool CRFProcessDeformation::isDynamic() const
 	return fem_dm->dynamic;
 }
 
-void CRFProcessDeformation::SetVerticalDisplacmentMonitor()
+void CRFProcessDeformation::setVerticalDisplacmentMonitor()
 {
 	if (_veritcal_displacement_monitor.x0.empty())
 		return;
@@ -3549,6 +3549,14 @@ void CRFProcessDeformation::SetVerticalDisplacmentMonitor()
 	m_msh->setMinEdgeLength(msh_min_edge_length);
 	m_msh->GetNODOnPLY(&polyline, _veritcal_displacement_monitor.indices_of_node_on_polyline);
 	m_msh->setMinEdgeLength(m_msh->getMinEdgeLength());
+#ifdef USE_PETSC
+	if (myrank ==0)
+#endif
+	{
+	    std::cout << "Number of nodes for monitoring the displacement: "
+		      <<  _veritcal_displacement_monitor.indices_of_node_on_polyline.size()
+		      << std::endl;
+	}
 
 	for (std::size_t i=0; i<points.size(); i++)
 	{

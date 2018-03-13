@@ -959,7 +959,7 @@ private:
 
 protected:
 	VerticalDisplacmentMonitor _veritcal_displacement_monitor;
-	virtual void SetVerticalDisplacmentMonitor() {}
+	virtual void setVerticalDisplacmentMonitor() {}
 };
 
 //========================================================================
