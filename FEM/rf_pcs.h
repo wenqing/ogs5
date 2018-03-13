@@ -179,8 +179,12 @@ typedef struct
 
 struct VerticalDisplacmentMonitor
 {
-	std::string polyline_name;
-	double maximum_uz;
+	int coordinate_id;
+	std::vector<double> x0;  // One end of the line.
+	std::vector<double> x1;  // Another end of the line.
+	std::vector<std::size_t> indices_of_node_on_polyline;
+	double maximum_u;
+	double tolerance;
 	int original_mat_id;
 	int new_mat_id;
 };
@@ -621,8 +625,6 @@ public:
 
 	std::vector<std::string> const& getElementValueNameVector() { return ele_val_name_vector; }
 
-	VerticalDisplacmentMonitor _veritcal_displacement_monitor;
-
 private:
 	// PCH
 	std::vector<std::string> ele_val_name_vector;
@@ -950,6 +952,10 @@ private:
 	int _pcs_constant_model;
 	double _pcs_constant_value;
 	int _pcs_constant_curve;
+
+protected:
+	VerticalDisplacmentMonitor _veritcal_displacement_monitor;
+	virtual void SetVerticalDisplacmentMonitor() {}
 };
 
 //========================================================================

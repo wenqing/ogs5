@@ -128,6 +128,8 @@ public:
 	// WX:10.2011
 	void UpdateIniStateValue();
 
+	void monitorVerticalDisplacment();
+
 private:
 	CFiniteElementVec* fem_dm;
 	void InitialMBuffer();
@@ -152,6 +154,8 @@ private:
 	// For strong discontinuity approach
 	void Trace_Discontinuity();
 	long MarkBifurcatedNeighbor(const int PathIndex);
+
+	void SetVerticalDisplacmentMonitor() override;
 };
 } // end namespace
 

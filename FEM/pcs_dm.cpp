@@ -43,6 +43,8 @@
 #include "rf_st_new.h"
 // GEOLib
 #include "geo_sfc.h"
+#include "Point.h"
+#include "Polyline.h"
 // MSHLib
 #include "msh_elem.h"
 // IC
@@ -3527,5 +3529,67 @@ bool CRFProcessDeformation::isDynamic() const
 {
 	return fem_dm->dynamic;
 }
+
+void CRFProcessDeformation::SetVerticalDisplacmentMonitor()
+{
+	if (_veritcal_displacement_monitor.x0.empty())
+		return;
+
+	std::vector<GEOLIB::Point*> points;
+	points.push_back(new GEOLIB::Point(_veritcal_displacement_monitor.x0[0],
+		_veritcal_displacement_monitor.x0[1], _veritcal_displacement_monitor.x0[2]));
+	points.push_back(new GEOLIB::Point(_veritcal_displacement_monitor.x1[0],
+		_veritcal_displacement_monitor.x1[1], _veritcal_displacement_monitor.x1[2]));
+
+	GEOLIB::Polyline polyline(points);
+	polyline.addPoint(0);
+	polyline.addPoint(1);
+
+	const double msh_min_edge_length = 1.e-3 * m_msh->getMinEdgeLength();
+	m_msh->setMinEdgeLength(msh_min_edge_length);
+	m_msh->GetNODOnPLY(&polyline, _veritcal_displacement_monitor.indices_of_node_on_polyline);
+	m_msh->setMinEdgeLength(m_msh->getMinEdgeLength());
+
+	for (std::size_t i=0; i<points.size(); i++)
+	{
+		delete points[i];
+	}
+}
+
+void CRFProcessDeformation::monitorVerticalDisplacment()
+{
+	if (_veritcal_displacement_monitor.x0.empty())
+		return;
+	int uz_id = -1;
+	if (_veritcal_displacement_monitor.coordinate_id == 0)
+		uz_id = GetNodeValueIndex("DISPLACEMENT_X1") + 1;
+	else if (_veritcal_displacement_monitor.coordinate_id == 1)
+		uz_id = GetNodeValueIndex("DISPLACEMENT_Y1") + 1;
+	else
+		uz_id = GetNodeValueIndex("DISPLACEMENT_Z1") + 1;
+
+	for (std::size_t i= 0;
+		i<_veritcal_displacement_monitor.indices_of_node_on_polyline.size(); i++)
+	{
+		if (std::fabs(
+			GetNodeValue(_veritcal_displacement_monitor.indices_of_node_on_polyline[i], uz_id)
+			- _veritcal_displacement_monitor.maximum_u) < _veritcal_displacement_monitor.tolerance)
+		{
+			delete mmp_vector[_veritcal_displacement_monitor.original_mat_id];
+			mmp_vector[_veritcal_displacement_monitor.original_mat_id] =
+				mmp_vector[_veritcal_displacement_monitor.new_mat_id];
+			delete msp_vector[_veritcal_displacement_monitor.original_mat_id];
+			msp_vector[_veritcal_displacement_monitor.original_mat_id] =
+				msp_vector[_veritcal_displacement_monitor.new_mat_id];
+
+			// Not be needed any more.
+			_veritcal_displacement_monitor.x0.clear();
+			_veritcal_displacement_monitor.indices_of_node_on_polyline.clear();
+
+			return;
+		}
+	}
+}
+
 
 } // end namespace

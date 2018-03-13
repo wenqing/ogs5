@@ -1765,6 +1765,31 @@ CRFProcess* CRFProcess::CopyPCStoDM_PCS()
 	}
 	dm_pcs->Neglect_H_ini = Neglect_H_ini; // WX:08.2011
 	dm_pcs->UpdateIniState = UpdateIniState; // WX:10.2011
+
+	if (!_veritcal_displacement_monitor.x0.empty())
+	{
+		dm_pcs->_veritcal_displacement_monitor.coordinate_id
+			= _veritcal_displacement_monitor.coordinate_id;
+		dm_pcs->_veritcal_displacement_monitor.maximum_u
+			= _veritcal_displacement_monitor.maximum_u;
+		dm_pcs->_veritcal_displacement_monitor.tolerance
+			= _veritcal_displacement_monitor.tolerance;
+		dm_pcs->_veritcal_displacement_monitor.new_mat_id
+			= _veritcal_displacement_monitor.new_mat_id;
+		dm_pcs->_veritcal_displacement_monitor.original_mat_id
+			= _veritcal_displacement_monitor.original_mat_id;
+		const std::size_t size_x = _veritcal_displacement_monitor.x0.size();
+		dm_pcs->_veritcal_displacement_monitor.x0.resize(size_x);
+		dm_pcs->_veritcal_displacement_monitor.x1.resize(size_x);
+		for (std::size_t ii=0; ii<size_x; ii++)
+		{
+			dm_pcs->_veritcal_displacement_monitor.x0[ii] =
+				_veritcal_displacement_monitor.x0[ii];
+			dm_pcs->_veritcal_displacement_monitor.x1[ii] =
+				_veritcal_displacement_monitor.x1[ii];
+		}
+	}
+
 	//
 	return dynamic_cast<CRFProcess*>(dm_pcs);
 }
@@ -2210,16 +2235,30 @@ std::ios::pos_type CRFProcess::Read(std::ifstream* pcs_file)
 			continue;
 		}
 
-		if (line_string.find("$MONITOR_DISPLACEMENT_Z") == 0)
+		if (line_string.find("$MONITOR_DISPLACEMENT") == 0)
 		{
 			std::string buffer;
 			std::getline(*pcs_file, buffer);
 			std::stringstream ss;
 			ss.str(buffer);
-			ss >> _veritcal_displacement_monitor.polyline_name;
-			ss >> _veritcal_displacement_monitor.maximum_uz;
+			std::string coord;
+			ss >> coord;
+			if (coord.compare("X") == 0)
+				_veritcal_displacement_monitor.coordinate_id = 0;
+			if (coord.compare("Y") == 0)
+				_veritcal_displacement_monitor.coordinate_id = 1;
+			if (coord.compare("Z") == 0)
+				_veritcal_displacement_monitor.coordinate_id = 2;
+			ss >> _veritcal_displacement_monitor.maximum_u;
+			ss >> _veritcal_displacement_monitor.tolerance;
 			ss >> _veritcal_displacement_monitor.original_mat_id;
 			ss >> _veritcal_displacement_monitor.new_mat_id;
+			_veritcal_displacement_monitor.x0.resize(3);
+			_veritcal_displacement_monitor.x1.resize(3);
+			for (int ii=0; ii<3; ii++)
+				ss >> _veritcal_displacement_monitor.x0[ii];
+			for (int ii=0; ii<3; ii++)
+				ss >> _veritcal_displacement_monitor.x1[ii];
 			ss.clear();
 			continue;
 		}
