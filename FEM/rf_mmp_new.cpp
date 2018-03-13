@@ -18,6 +18,8 @@
 // C++ STL
 //#include <iostream>
 #include <cfloat>
+#include <algorithm>
+
 #include "display.h"
 
 // FEMLib
@@ -5089,10 +5091,16 @@ double CMediumProperties::Density(long element, double* gp, double theta)
 **************************************************************************/
 void MMPDelete()
 {
-	long i;
-	int no_mmp = (int)mmp_vector.size();
-	for (i = 0; i < no_mmp; i++)
+	std::sort(mmp_vector.begin(), mmp_vector.end());
+	std::vector<CMediumProperties*>::iterator last =
+		std::unique(mmp_vector.begin(), mmp_vector.end());
+	mmp_vector.erase(last, mmp_vector.end());
+
+	for (std::size_t i = 0; i < mmp_vector.size(); i++)
+	{
 		delete mmp_vector[i];
+		mmp_vector[i] = NULL;
+	}
 	mmp_vector.clear();
 }
 

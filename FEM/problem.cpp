@@ -538,6 +538,7 @@ Problem::Problem (const char* filename) :
 		m_pcs = pcs_vector[i];
 		m_pcs->CalcSecondaryVariables(true); // WW
 		m_pcs->Extropolation_MatValue(); // WW
+		m_pcs->SetVerticalDisplacmentMonitor();
 	}
 	// Calculation of the initial stress and released load for excavation simulation
 	// 07.09.2007  WW
@@ -1689,6 +1690,7 @@ void Problem::PostCouplingLoop()
 			dm_pcs->ResetTimeStep();
 		dm_pcs->Extropolation_GaussValue();
 		dm_pcs->WriteGaussPointStress();
+		dm_pcs->monitorVerticalDisplacment();
 	}
 
 	// Reaction postprocessing

@@ -22,6 +22,7 @@
 //#include <iostream>
 //#include <sstream>
 #include <cfloat>
+#include <algorithm>
 
 #include "Eigen/Dense"
 
@@ -8411,10 +8412,16 @@ double DeviatoricStress(double* Stress)
 **************************************************************************/
 void MSPDelete()
 {
-	long i;
-	int no_msp = (int)msp_vector.size();
-	for (i = 0; i < no_msp; i++)
+	std::sort(msp_vector.begin(), msp_vector.end());
+	std::vector<SolidProp::CSolidProperties*>::iterator last =
+		std::unique(msp_vector.begin(), msp_vector.end());
+	msp_vector.erase(last, msp_vector.end());
+
+	for (std::size_t i = 0; i < msp_vector.size(); i++)
+	{
 		delete msp_vector[i];
+		msp_vector[i] = NULL;
+	}
 	msp_vector.clear();
 }
 
