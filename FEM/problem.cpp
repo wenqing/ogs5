@@ -4491,6 +4491,14 @@ void Problem::swapMaterialAtTime(const double current_time)
 			msp_vector[_material_swapper.new_mat_id];
 
 		_material_swapper.time = -1.0;
+#ifdef USE_PETSC
+		if (myrank ==0)
+#endif
+		{
+			std::cout << "Assign material group "
+				<< _material_swapper.new_mat_id
+				<< " to " << _material_swapper.original_mat_id << std::endl;
+		}
 	}
 }
 
