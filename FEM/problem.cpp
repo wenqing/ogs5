@@ -451,9 +451,8 @@ Problem::Problem (const char* filename) :
 	char line[MAX_ZEILE];
 	std::string line_string;
 	std::ios::pos_type position;
-	std::stringstream in_num;
 	// File handling
-	std::string num_file_name = FileName + NUM_FILE_EXTENSION;
+	const std::string num_file_name = FileName + NUM_FILE_EXTENSION;
 	std::ifstream num_file(num_file_name.data(), std::ios::in);
 	if (num_file.good())
 	{
@@ -466,6 +465,7 @@ Problem::Problem (const char* filename) :
 				break;
 			if (line_string.find("$OVERALL_COUPLING") != std::string::npos)
 			{
+				std::stringstream in_num;
 				in_num.str(GetLineFromFile1(&num_file));
 				// JT// in_num >> max_coupling_iterations >> coupling_tolerance;
 				// JT: coupling_tolerance is process dependent, cannot be here. See m_num->cpl_tolerance (with
@@ -476,6 +476,31 @@ Problem::Problem (const char* filename) :
 		}
 		num_file.close();
 	}
+
+	const std::string pcs_file_name = FileName + PCS_FILE_EXTENSION;
+	std::ifstream pcs_file(pcs_file_name.data(), std::ios::in);
+	_material_swapper.time = -1.0;
+	if (pcs_file.good())
+	{
+		pcs_file.seekg(0L, std::ios::beg);
+		while (!pcs_file.eof())
+		{
+			pcs_file.getline(line, MAX_ZEILE);
+			line_string = line;
+			if (line_string.find("#STOP") != std::string::npos)
+				break;
+			if (line_string.find("$MATERIAL_SWAPPER") != std::string::npos)
+			{
+				std::stringstream in_pcs;
+				in_pcs.str(GetLineFromFile1(&pcs_file));
+				in_pcs >> _material_swapper.time >> _material_swapper.original_mat_id
+						>> _material_swapper.new_mat_id;
+				break;
+			}
+		}
+		pcs_file.close();
+	}
+
 	//========================================================================
 	// For time stepping. WW
 	CTimeDiscretization* m_tim = NULL;
@@ -1218,6 +1243,9 @@ void Problem::Euler_TimeDiscretize()
 #endif
 				ScreenMessage("This step is accepted.\n");
 			PostCouplingLoop();
+
+			swapMaterialAtTime(current_time);
+
 			if (print_result)
 			{
 				if (current_time < end_time)
@@ -4443,6 +4471,24 @@ void Problem::createShapeFunctionPool()
 		}
 	}
 }
+
+void Problem::swapMaterialAtTime(const double current_time)
+{
+	if (_material_swapper.time < 0.0)
+		return;
+	if (current_time > _material_swapper.time)
+	{
+		delete mmp_vector[_material_swapper.original_mat_id];
+		mmp_vector[_material_swapper.original_mat_id] =
+			mmp_vector[_material_swapper.new_mat_id];
+		delete msp_vector[_material_swapper.original_mat_id];
+		msp_vector[_material_swapper.original_mat_id] =
+			msp_vector[_material_swapper.new_mat_id];
+
+		_material_swapper.time = -1.0;
+	}
+}
+
 
 #ifdef BRNS
 
