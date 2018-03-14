@@ -36,6 +36,14 @@ class Problem;
 typedef double (Problem::*ProblemMemFn)(void);
 #define Call_Member_FN(object, ptrToMember) ((object)->*(ptrToMember))
 //---------------------------------------------------------------------
+
+struct MaterialSwapper
+{
+	double time;
+	int original_mat_id;
+	int new_mat_id;
+};
+
 class Problem
 {
 public:
@@ -180,5 +188,9 @@ private:
 	int msize;
 
 	static const size_t max_processes = 16;
+
+	MaterialSwapper _material_swapper;
+
+	void swapMaterialAtTime(const double current_time);
 };
 #endif
