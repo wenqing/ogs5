@@ -2448,6 +2448,10 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
 				for (size_t i = 0; i < dim * dim; i++)
 					mat[i] = tensor[i];
 			}
+			else if (SolidProp->GetConductModel() == 8)
+			{
+				SolidProp->HeatConductivityTensor(dim, mat, MeshElement->GetPatchIndex());
+			}
 			else
 			{
 				tensor = MediaProp->HeatConductivityTensor(Index);

@@ -282,6 +282,10 @@ std::ios::pos_type CSolidProperties::Read(std::ifstream* msp_file)
 					// WW
 					conductivity_pcs_name_vector.push_back("TEMPERATURE1");
 					break;
+				// case 8 is for the case that the heat capacity properties (in constant) are input
+				//	from msp file only as the porous heat capacity  media properties.
+				//
+				case 8: //  = const
 				case 1: //  = const
 					data_Conductivity = new Matrix(1);
 					in_sd >> (*data_Conductivity)(0);
@@ -1493,6 +1497,7 @@ double CSolidProperties::Heat_Conductivity(double reference)
 		case 0:
 			val = CalulateValue(data_Conductivity, reference);
 			break;
+		case 8:
 		case 1:
 			val = (*data_Conductivity)(0);
 			break;
@@ -1571,6 +1576,7 @@ void CSolidProperties::HeatConductivityTensor(const int dim, double* tensor, int
 			// WW
 			base_thermal_conductivity = Heat_Conductivity(primary_variable[0]);
 			break;
+		case 8:
 		case 1:
 			// WW
 			base_thermal_conductivity = Heat_Conductivity(0);
