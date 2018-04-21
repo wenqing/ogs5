@@ -130,6 +130,8 @@ public:
 
 	void monitorVerticalDisplacment();
 
+	void resetDeactivatedElementsAfterMatertialSwap(const double time);
+
 private:
 	CFiniteElementVec* fem_dm;
 	void InitialMBuffer();
