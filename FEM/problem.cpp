@@ -1254,6 +1254,10 @@ void Problem::Euler_TimeDiscretize()
 			PostCouplingLoop();
 
 			swapMaterialAtTime(current_time);
+			for (std::size_t ipc = 0; ipc < pcs_vector.size(); ipc++)
+			{
+				pcs_vector[ipc]->resetDeactivatedElementsAfterMatertialSwap(_material_swapper.time);
+			}
 
 			if (print_result)
 			{

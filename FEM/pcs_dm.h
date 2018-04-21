@@ -130,6 +130,8 @@ public:
 
 	void monitorVerticalDisplacment();
 
+	void resetDeactivatedElementsAfterMatertialSwap(const double time);
+
 private:
 	CFiniteElementVec* fem_dm;
 	void InitialMBuffer();
@@ -155,7 +157,7 @@ private:
 	void Trace_Discontinuity();
 	long MarkBifurcatedNeighbor(const int PathIndex);
 
-	void setVerticalDisplacmentMonitor() override;
+	void setVerticalDisplacmentMonitor();
 };
 } // end namespace
 

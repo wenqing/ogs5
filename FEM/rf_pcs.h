@@ -960,6 +960,9 @@ private:
 protected:
 	VerticalDisplacmentMonitor _veritcal_displacement_monitor;
 	virtual void setVerticalDisplacmentMonitor() {}
+
+public:
+	virtual void resetDeactivatedElementsAfterMatertialSwap(const double /*time*/) {}
 };
 
 //========================================================================

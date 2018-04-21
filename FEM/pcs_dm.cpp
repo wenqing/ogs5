@@ -3599,5 +3599,21 @@ void CRFProcessDeformation::monitorVerticalDisplacment()
 	}
 }
 
+void CRFProcessDeformation::resetDeactivatedElementsAfterMatertialSwap(const double time)
+{
+	if (time < aktuelle_zeit)
+		return;
+    if (!Deactivated_SubDomain)
+		return;
+	delete[] Deactivated_SubDomain;
+	NumDeactivated_SubDomains = 5;
+	Deactivated_SubDomain = new int[NumDeactivated_SubDomains];
+    std::cout << "Reset deactivated elements for deformation process" <<std::endl;
+	Deactivated_SubDomain[0] = 1;
+	Deactivated_SubDomain[1] = 2;
+	Deactivated_SubDomain[2] = 3;
+	Deactivated_SubDomain[3] = 5;
+	Deactivated_SubDomain[4] = 7;
+}
 
 } // end namespace
