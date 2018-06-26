@@ -1779,11 +1779,11 @@ double COutput::NODWritePLYDataTEC(int number)
 			for (size_t i = 0; i < ns; i++)
 				ss[i] = dm_pcs->GetNodeValue(gnode, stress_i[i]);
 			tec_file << -StressTensorComputation::getDeviatoricStress(ss) / 3.0 << " ";
-			tec_file << sqrt(3.0 * StressTensorComputation::getSecondInvariant(ss, ss, m_msh->GetCoordinateFlag() / 10) / 2.0) << "  ";
+			tec_file << sqrt(3.0 * StressTensorComputation::getSecondInvariant(ss, m_msh->GetCoordinateFlag() / 10) / 2.0) << "  ";
 			for (size_t i = 0; i < ns; i++)
 				ss[i] = dm_pcs->GetNodeValue(gnode, strain_i[i]);
 			StressTensorComputation::getDeviatoricStress(ss);
-			tec_file << sqrt(3.0 * StressTensorComputation::getSecondInvariant(ss, ss, m_msh->GetCoordinateFlag() / 10) / 2.0);
+			tec_file << sqrt(3.0 * StressTensorComputation::getSecondInvariant(ss, m_msh->GetCoordinateFlag() / 10) / 2.0);
 		}
 
 		// MFP //OK4704
@@ -2071,11 +2071,11 @@ void COutput::NODWritePNTDataTEC(double time_current, int time_step_number)
 			for (size_t i = 0; i < ns; i++)
 				ss[i] = dm_pcs->GetNodeValue(msh_node_number, stress_i[i]);
 			tec_file << -StressTensorComputation::getDeviatoricStress(ss) / 3.0 << " ";
-			tec_file << sqrt(3.0 * StressTensorComputation::getSecondInvariant(ss, ss, m_msh->GetCoordinateFlag() / 10) / 2.0) << "  ";
+			tec_file << sqrt(3.0 * StressTensorComputation::getSecondInvariant(ss, m_msh->GetCoordinateFlag() / 10) / 2.0) << "  ";
 			for (size_t i = 0; i < ns; i++)
 				ss[i] = dm_pcs->GetNodeValue(msh_node_number, strain_i[i]);
 			StressTensorComputation::getDeviatoricStress(ss);
-			tec_file << sqrt(3.0 * StressTensorComputation::getSecondInvariant(ss, ss, m_msh->GetCoordinateFlag() / 10) / 2.0);
+			tec_file << sqrt(3.0 * StressTensorComputation::getSecondInvariant(ss, m_msh->GetCoordinateFlag() / 10) / 2.0);
 		}
 		// OK411
 		for (size_t k = 0; k < mfp_value_vector.size(); k++)

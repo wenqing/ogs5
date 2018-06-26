@@ -2921,7 +2921,7 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 	{
 		double NormS, c1, c2;
 		StressTensorComputation::getDeviatoricStress(pr_stress);
-		NormS = sqrt(StressTensorComputation::getSecondInvariant(pr_stress, pr_stress, ele_dim));
+		NormS = sqrt(StressTensorComputation::getSecondInvariant(pr_stress, ele_dim));
 		c1 = pr_stress[1] + Mat[2] * pr_stress[2] + 0.5 * (1.0 + Mat[2]) * (Mat[0] + Mat[1]) * NormS;
 		c2 = pr_stress[0] + Mat[2] * pr_stress[2] + 0.5 * (1.0 + Mat[2]) * (Mat[0] + Mat[1]) * NormS;
 
@@ -3004,7 +3004,7 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 				pr_stress_ang = ComputePrincipleStresses(dstress);
 				loc_ang = ComputeJumpDirectionAngle(Mat);
 
-				normXi = sqrt(StressTensorComputation::getSecondInvariant(pr_stress, pr_stress, ele_dim));
+				normXi = sqrt(StressTensorComputation::getSecondInvariant(pr_stress, ele_dim));
 
 				// Compute the localization condition
 				h_loc = pr_stress[2] / normXi + 0.5 * (smat->Al + smat->Xi)
@@ -3017,7 +3017,7 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 
 				// Compute the acoustic matrix
 				StressTensorComputation::getDeviatoricStress(dstress);
-				normXi = sqrt(StressTensorComputation::getSecondInvariant(dstress, dstress, ele_dim));
+				normXi = sqrt(StressTensorComputation::getSecondInvariant(dstress, ele_dim));
 				if (loc_ang > 0.0)
 				{
 					for (i = 0; i < ns; i++)
@@ -3452,7 +3452,7 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 				}
 				Ge->multi(zeta, dstrain, 1.0);
 				StressTensorComputation::getDeviatoricStress(dstrain);
-				(*eleV_DM->pStrain)(gp) += sqrt(2.0 * StressTensorComputation::getSecondInvariant(dstrain, dstrain, 2) / 3.0);
+				(*eleV_DM->pStrain)(gp) += sqrt(2.0 * StressTensorComputation::getSecondInvariant(dstrain, 2) / 3.0);
 			}
 			else
 			{

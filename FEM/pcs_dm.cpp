@@ -1946,7 +1946,7 @@ double CRFProcessDeformation::CaclMaxiumLoadRatio(void)
 				switch (PModel)
 				{
 					case 1: // Drucker-Prager model
-						EffS = sqrt(StressTensorComputation::getSecondInvariant(fem_dm->dstress, fem_dm->dstress, fem_dm->Dim()))
+						EffS = sqrt(StressTensorComputation::getSecondInvariant(fem_dm->dstress, fem_dm->Dim()))
 						       + 3.0 * SMat->Al * p0;
 
 						if (EffS > S0 && EffS > MaxS && fabs(S0) > MKleinsteZahl)
@@ -1958,8 +1958,8 @@ double CRFProcessDeformation::CaclMaxiumLoadRatio(void)
 
 					case 2: // Single yield surface
 						// Compute try stress, stress incremental:
-						II = StressTensorComputation::getSecondInvariant(fem_dm->dstress, fem_dm->dstress, fem_dm->Dim());
-						III = StressTensorComputation::getThirdInvariant(fem_dm->dstress, fem_dm->dstress, fem_dm->dstress, fem_dm->Dim());
+						II = StressTensorComputation::getSecondInvariant(fem_dm->dstress, fem_dm->Dim());
+						III = StressTensorComputation::getThirdInvariant(fem_dm->dstress, fem_dm->Dim());
 						p0 *= 3.0;
 						EffS
 						    = sqrt(II * pow(1.0 + (*Mat)(5) * III / pow(II, 1.5), (*Mat)(6)) + 0.5 * (*Mat)(0) * p0 * p0
@@ -1982,7 +1982,7 @@ double CRFProcessDeformation::CaclMaxiumLoadRatio(void)
 						break;
 
 					case 3: // Cam-Clay
-						II = 1.5 * StressTensorComputation::getSecondInvariant(fem_dm->dstress, fem_dm->dstress, fem_dm->Dim());
+						II = 1.5 * StressTensorComputation::getSecondInvariant(fem_dm->dstress, fem_dm->Dim());
 						if (S0 > 0.0)
 						{
 							EffS = II / (p0 * (*Mat)(0) * (*Mat)(0)) + p0;

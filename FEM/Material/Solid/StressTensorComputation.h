@@ -17,6 +17,6 @@ namespace StressTensorComputation
 /// \return The first stress invariant.
 double getDeviatoricStress(double* stress);
 double getNorm(const double* s, const int dim);
-double getSecondInvariant(const double* s1, const double* s2, const int dim);
-double getThirdInvariant(const double* s1, const double* s2, const double* s3, const int dim);
+double getSecondInvariant(double const* const s, const int dim);
+double getThirdInvariant(double const* const s, const int dim);
 }
