@@ -37,6 +37,7 @@
 #endif
 #include "fem_ele_vec.h"
 #include "rf_msp_new.h"
+#include "Material/Solid/StressTensorComputation.h"
 #include "rf_tim_new.h"
 // Excavation
 #include "rf_out_new.h"
@@ -1940,12 +1941,12 @@ double CRFProcessDeformation::CaclMaxiumLoadRatio(void)
 				// Compute try stress, stress incremental:
 				fem_dm->De->multi(dstrain, fem_dm->dstress);
 
-				p0 = DeviatoricStress(fem_dm->dstress) / 3.0;
+				p0 = StressTensorComputation::getDeviatoricStress(fem_dm->dstress) / 3.0;
 
 				switch (PModel)
 				{
 					case 1: // Drucker-Prager model
-						EffS = sqrt(TensorMutiplication2(fem_dm->dstress, fem_dm->dstress, fem_dm->Dim()))
+						EffS = sqrt(StressTensorComputation::getSecondInvariant(fem_dm->dstress, fem_dm->dstress, fem_dm->Dim()))
 						       + 3.0 * SMat->Al * p0;
 
 						if (EffS > S0 && EffS > MaxS && fabs(S0) > MKleinsteZahl)
@@ -1957,8 +1958,8 @@ double CRFProcessDeformation::CaclMaxiumLoadRatio(void)
 
 					case 2: // Single yield surface
 						// Compute try stress, stress incremental:
-						II = TensorMutiplication2(fem_dm->dstress, fem_dm->dstress, fem_dm->Dim());
-						III = TensorMutiplication3(fem_dm->dstress, fem_dm->dstress, fem_dm->dstress, fem_dm->Dim());
+						II = StressTensorComputation::getSecondInvariant(fem_dm->dstress, fem_dm->dstress, fem_dm->Dim());
+						III = StressTensorComputation::getThirdInvariant(fem_dm->dstress, fem_dm->dstress, fem_dm->dstress, fem_dm->Dim());
 						p0 *= 3.0;
 						EffS
 						    = sqrt(II * pow(1.0 + (*Mat)(5) * III / pow(II, 1.5), (*Mat)(6)) + 0.5 * (*Mat)(0) * p0 * p0
@@ -1981,7 +1982,7 @@ double CRFProcessDeformation::CaclMaxiumLoadRatio(void)
 						break;
 
 					case 3: // Cam-Clay
-						II = 1.5 * TensorMutiplication2(fem_dm->dstress, fem_dm->dstress, fem_dm->Dim());
+						II = 1.5 * StressTensorComputation::getSecondInvariant(fem_dm->dstress, fem_dm->dstress, fem_dm->Dim());
 						if (S0 > 0.0)
 						{
 							EffS = II / (p0 * (*Mat)(0) * (*Mat)(0)) + p0;

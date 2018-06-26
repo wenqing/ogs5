@@ -446,8 +446,4 @@ private:
 
 extern std::vector<SolidProp::CSolidProperties*> msp_vector;
 
-extern double StressNorm(const double* s, const int Dim);
-extern double TensorMutiplication2(const double* s1, const double* s2, const int Dim);
-extern double TensorMutiplication3(const double* s1, const double* s2, const double* s3, const int Dim);
-extern double DeviatoricStress(double* Stress);
 #endif

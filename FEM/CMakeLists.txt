@@ -143,6 +143,12 @@ if(OGS_CHEMSOLVER STREQUAL GEMS)
 	set( SOURCES ${SOURCES} rf_REACT_GEM.h rf_REACT_GEM.cpp )
 endif()
 
+file(GLOB SolidMSources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} Material/Solid/*.cpp)
+file(GLOB SolidMHeaders RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} Material/Solid/*.h)
+
+set( SOURCES ${SOURCES} ${SolidMSources})
+set( HEADERS ${HEADERS} ${SolidMHeaders})
+
 include_directories(
 	${CMAKE_SOURCE_DIR}/Base
 	${CMAKE_SOURCE_DIR}/FEM

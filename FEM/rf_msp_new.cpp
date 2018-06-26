@@ -44,6 +44,7 @@
 
 #include "minkley.h"
 #include "burgers.h"
+#include "Material/Solid/StressTensorComputation.h"
 
 std::vector<SolidProp::CSolidProperties*> msp_vector;
 std::vector<std::string> msp_key_word_vector; // OK
@@ -2612,9 +2613,9 @@ bool CSolidProperties::StressIntegrationDP(const int GPiGPj, const ElementValue_
 		devS[i] = TryStress[i];
 	}
 	// I_tr
-	I1 = DeviatoricStress(devS);
+	I1 = StressTensorComputation::getDeviatoricStress(devS);
 	// s_tr
-	sqrtJ2 = sqrt(TensorMutiplication2(devS, devS, Dim));
+	sqrtJ2 = sqrt(StressTensorComputation::getSecondInvariant(devS, devS, Dim));
 	//
 	normXi = sqrtJ2;
 	p3 = I1;
@@ -2623,7 +2624,7 @@ bool CSolidProperties::StressIntegrationDP(const int GPiGPj, const ElementValue_
 	F0 = sqrtJ2 + Al * I1;
 	F = F0 - BetaN * (Y0 + Hard * ep);
 	// if(pcs_deformation==1) F=-1.0;
-	// yl = sqrt(TensorMutiplication2(devS, dstrs, Dim))/sqrtJ2;
+	// yl = sqrt(StressTensorComputation::getSecondInvariant(devS, dstrs, Dim))/sqrtJ2;
 	// yl += (dstrs[0]+dstrs[1]+dstrs[2])*Al;
 	// if(yl<=0.0)
 	//   F = -1.0;
@@ -2775,14 +2776,14 @@ bool CSolidProperties::DirectStressIntegrationDP(const int GPiGPj,
 		devS[i] = TryStress[i] + dstrs[i];
 	}
 
-	I1 = DeviatoricStress(devS);
-	sqrtJ2 = sqrt(TensorMutiplication2(devS, devS, Dim));
+	I1 = StressTensorComputation::getDeviatoricStress(devS);
+	sqrtJ2 = sqrt(StressTensorComputation::getSecondInvariant(devS, devS, Dim));
 	//
 	sy = sqrtJ2 + Al * I1;
 	yy = BetaN * (Y0 + Hard * ep);
 	F = sy - yy;
 	sy0 = (*ele_val->y_surface)(GPiGPj);
-	// yl = sqrt(TensorMutiplication2(devS, dstrs, Dim))/sqrtJ2;
+	// yl = sqrt(StressTensorComputation::getSecondInvariant(devS, dstrs, Dim))/sqrtJ2;
 	// yl += (dstrs[0]+dstrs[1]+dstrs[2])*Al;
 	// if(yl<=0.0)
 	//  F = -1.0;
@@ -2807,8 +2808,8 @@ bool CSolidProperties::DirectStressIntegrationDP(const int GPiGPj,
 			A_H = BetaN * Hard * sqrt(1 + 3.0 * Xi * Xi); // Hard: if it is not constant....
 			for (i = 0; i < Size; i++)
 				devS[i] = TryStress[i];
-			I1 = DeviatoricStress(devS);
-			sqrtJ2 = sqrt(TensorMutiplication2(devS, devS, Dim));
+			I1 = StressTensorComputation::getDeviatoricStress(devS);
+			sqrtJ2 = sqrt(StressTensorComputation::getSecondInvariant(devS, devS, Dim));
 			for (i = 0; i < Size; i++)
 			{
 				devS[i] /= sqrtJ2;
@@ -2835,8 +2836,8 @@ bool CSolidProperties::DirectStressIntegrationDP(const int GPiGPj,
 		}
 		for (i = 0; i < Size; i++)
 			devS[i] = TryStress[i];
-		I1 = DeviatoricStress(devS);
-		sqrtJ2 = sqrt(TensorMutiplication2(devS, devS, Dim));
+		I1 = StressTensorComputation::getDeviatoricStress(devS);
+		sqrtJ2 = sqrt(StressTensorComputation::getSecondInvariant(devS, devS, Dim));
 		sy = sqrtJ2 + Al * I1;
 		yy = BetaN * (Y0 + Hard * ep);
 		R = 1.0;
@@ -2899,8 +2900,8 @@ int CSolidProperties::DirectStressIntegrationDPwithTension(const int GPiGPj, Mat
 		tmpvalue += fabs(dstrs[i]);
 	}
 
-	I1 = DeviatoricStress(devS);
-	sqrtJ2 = sqrt(TensorMutiplication2(devS, devS, Dim));
+	I1 = StressTensorComputation::getDeviatoricStress(devS);
+	sqrtJ2 = sqrt(StressTensorComputation::getSecondInvariant(devS, devS, Dim));
 	Hard = 0; // WX:20.09.2010. no hardning in this model
 
 	//
@@ -2990,8 +2991,8 @@ int CSolidProperties::DirectStressIntegrationDPwithTension(const int GPiGPj, Mat
 			for (i = 0; i < Size; i++)
 				devS[i] = TryStress[i];
 
-			I1 = DeviatoricStress(devS);
-			sqrtJ2 = sqrt(TensorMutiplication2(devS, devS, Dim));
+			I1 = StressTensorComputation::getDeviatoricStress(devS);
+			sqrtJ2 = sqrt(StressTensorComputation::getSecondInvariant(devS, devS, Dim));
 
 			if (sqrtJ2 <= sqrtJ2I1)
 			{
@@ -3017,7 +3018,7 @@ int CSolidProperties::DirectStressIntegrationDPwithTension(const int GPiGPj, Mat
 				}
 				// cout<<"sigmaB_End"<<"\n";
 
-				I1 = DeviatoricStress(devS);
+				I1 = StressTensorComputation::getDeviatoricStress(devS);
 
 				for (i = 0; i < Size; i++)
 				{
@@ -3058,8 +3059,8 @@ int CSolidProperties::DirectStressIntegrationDPwithTension(const int GPiGPj, Mat
 				//  cout<<"delta sigmaP__SigmaB__End"<<"\n";
 
 				double dI1;
-				I1 = DeviatoricStress(TryStress);
-				dI1 = DeviatoricStress(dTempStr);
+				I1 = StressTensorComputation::getDeviatoricStress(TryStress);
+				dI1 = StressTensorComputation::getDeviatoricStress(dTempStr);
 
 				A = 0.;
 				for (i = 0; i < Size; i++)
@@ -3111,7 +3112,7 @@ int CSolidProperties::DirectStressIntegrationDPwithTension(const int GPiGPj, Mat
 						tmpStr[i] = TryStress[i] - tmpvalue * dTempStr[i];
 				}
 				double tmpI1 = 0.;
-				tmpI1 = DeviatoricStress(tmpStr);
+				tmpI1 = StressTensorComputation::getDeviatoricStress(tmpStr);
 
 				for (i = 0; i < Size; i++)
 				{
@@ -3137,9 +3138,9 @@ int CSolidProperties::DirectStressIntegrationDPwithTension(const int GPiGPj, Mat
 						dTempStr2[i] = TmpStress0[i] + dstrs[i]; // stress0+dstrs
 						//  cout<<devS[i]<<"\n";
 					}
-					I1 = DeviatoricStress(TmpStress0);
-					dI1 = DeviatoricStress(dTempStr);
-					dI2 = DeviatoricStress(dTempStr2);
+					I1 = StressTensorComputation::getDeviatoricStress(TmpStress0);
+					dI1 = StressTensorComputation::getDeviatoricStress(dTempStr);
+					dI2 = StressTensorComputation::getDeviatoricStress(dTempStr2);
 
 					if (tmpI1 > 3 * tension)
 						n1 = (tmpI1 - 3 * tension)
@@ -3284,7 +3285,7 @@ int CSolidProperties::DirectStressIntegrationDPwithTension(const int GPiGPj, Mat
 
 		invDe->multi(dTempStr, dStrainP);
 
-		ep += sqrt(TensorMutiplication2(dStrainP, dStrainP, Dim)) * sqrt(2.0 / 3.0);
+		ep += sqrt(StressTensorComputation::getSecondInvariant(dStrainP, dStrainP, Dim)) * sqrt(2.0 / 3.0);
 		delete invDe;
 	}
 	// Save the current stresses
@@ -3356,7 +3357,7 @@ void CSolidProperties::TangentialDP2(Matrix* Dep)
 	int Dim = 2;
 	if (Size > 4)
 		Dim = 3;
-	sqrtJ2 = sqrt(TensorMutiplication2(devS, devS, Dim));
+	sqrtJ2 = sqrt(StressTensorComputation::getSecondInvariant(devS, devS, Dim));
 
 	for (i = 0; i < Size; i++)
 	{
@@ -3542,9 +3543,9 @@ int CSolidProperties::StressIntegrationMOHR_Aniso(const int GPiGPj, const Elemen
 	I1 = TmpStress[0] + TmpStress[1] + TmpStress[2];
 	for (i = 0; i < Size; i++)
 		devStr[i] = TmpStress[i] - I1 / 3.0 * Kronecker[i];
-	J2 = 0.5 * TensorMutiplication2(devStr, devStr, Dim);
+	J2 = 0.5 * StressTensorComputation::getSecondInvariant(devStr, devStr, Dim);
 	sqrtJ2 = sqrt(J2);
-	J3 = TensorMutiplication3(devStr, devStr, devStr, Dim);
+	J3 = StressTensorComputation::getThirdInvariant(devStr, devStr, devStr, Dim);
 
 	if (J2 == 0)
 	{
@@ -3806,9 +3807,9 @@ int CSolidProperties::StressIntegrationMOHR_Aniso(const int GPiGPj, const Elemen
 				I1 = TmpStress[0] + TmpStress[1] + TmpStress[2];
 				for (i = 0; i < Size; i++)
 					devStr[i] = TmpStress[i] - I1 / 3.0 * Kronecker[i];
-				J2 = 0.5 * TensorMutiplication2(devStr, devStr, Dim);
+				J2 = 0.5 * StressTensorComputation::getSecondInvariant(devStr, devStr, Dim);
 				sqrtJ2 = sqrt(J2);
-				J3 = TensorMutiplication3(devStr, devStr, devStr, Dim);
+				J3 = StressTensorComputation::getThirdInvariant(devStr, devStr, devStr, Dim);
 
 				if (J2 == 0)
 				{
@@ -4106,9 +4107,9 @@ int CSolidProperties::StressIntegrationMOHR_Aniso(const int GPiGPj, const Elemen
 				I1 = TmpStress[0] + TmpStress[1] + TmpStress[2];
 				for (i = 0; i < Size; i++)
 					devStr[i] = TmpStress[i] - I1 / 3.0 * Kronecker[i];
-				J2 = 0.5 * TensorMutiplication2(devStr, devStr, Dim);
+				J2 = 0.5 * StressTensorComputation::getSecondInvariant(devStr, devStr, Dim);
 				sqrtJ2 = sqrt(J2);
-				J3 = TensorMutiplication3(devStr, devStr, devStr, Dim);
+				J3 = StressTensorComputation::getThirdInvariant(devStr, devStr, devStr, Dim);
 
 				if (J2 == 0)
 				{
@@ -4197,7 +4198,7 @@ int CSolidProperties::StressIntegrationMOHR_Aniso(const int GPiGPj, const Elemen
 		for (i = 0; i < Size; i++)
 			dstressP[i] = TryStress[i] - TryStress_0[i];
 		Inv_De->multi(dstressP, dstrainP);
-		ep += sqrt(2.0 / 3.0 * (TensorMutiplication2(dstrainP, dstrainP, Dim)));
+		ep += sqrt(2.0 / 3.0 * (StressTensorComputation::getSecondInvariant(dstrainP, dstrainP, Dim)));
 		(*ele_val->pStrain)(GPiGPj) = ep;
 	}
 	return yield;
@@ -4869,7 +4870,7 @@ int CSolidProperties::DirectStressIntegrationMOHR(const int GPiGPj, ElementValue
 		for (i = 0; i < Size; i++)
 			for (j = 0; j < Size; j++)
 				(*ConstitutiveMatrix)(i, j) = mm * (*Dep)(i, j) + (1 - mm) * (*ConstitutiveMatrix)(i, j);
-		ep += sqrt(2.0 / 3.0 * (TensorMutiplication2(dStrainP, dStrainP, Dim))); // updated eff plas strain
+		ep += sqrt(2.0 / 3.0 * (StressTensorComputation::getSecondInvariant(dStrainP, dStrainP, Dim))); // updated eff plas strain
 		// ConstitutiveMatrix->Write();
 		// TransMatrixA->Write();
 		// TransMatrixA_T->Write();
@@ -5559,7 +5560,7 @@ int CSolidProperties::CalStress_and_TangentialMatrix_SYS(const int GPiGPj, const
 		nStress[i] = Stress_n1[i];
 	}
 
-	I_n1 = DeviatoricStress(nStress);
+	I_n1 = StressTensorComputation::getDeviatoricStress(nStress);
 	for (i = 0; i < LengthStrs; i++)
 	{
 		nStress[i] -= I_n1 * xi_n[i] / 3.0;
@@ -5569,8 +5570,8 @@ int CSolidProperties::CalStress_and_TangentialMatrix_SYS(const int GPiGPj, const
 	for (i = 0; i < LengthMat; i++)
 		Mat_n1[i] = Mat_n[i];
 
-	Stress_Inv[1] = 0.5 * TensorMutiplication2(nStress, nStress, dim);
-	Stress_Inv[2] = TensorMutiplication3(nStress, nStress, nStress, dim);
+	Stress_Inv[1] = 0.5 * StressTensorComputation::getSecondInvariant(nStress, nStress, dim);
+	Stress_Inv[2] = StressTensorComputation::getThirdInvariant(nStress, nStress, nStress, dim);
 
 	I_p2 = I_n1 * I_n1;
 	I_p4 = I_p2 * I_p2;
@@ -5597,14 +5598,14 @@ int CSolidProperties::CalStress_and_TangentialMatrix_SYS(const int GPiGPj, const
 		subPLASTIC = 0;
 
 		/* Compute the ratio of elastic increment */
-		I_n = DeviatoricStress(Stress_n);
+		I_n = StressTensorComputation::getDeviatoricStress(Stress_n);
 		for (i = 0; i < LengthStrs; i++)
 			Stress_n[i] -= I_n * xi_n[i] / 3.0;
 
 		/* Compute the number of sub step */
-		Co = sqrt(2.0 * Stress_Inv[1] * TensorMutiplication2(Stress_n, Stress_n, dim));
+		Co = sqrt(2.0 * Stress_Inv[1] * StressTensorComputation::getSecondInvariant(Stress_n, Stress_n, dim));
 		if (Co > 0.0)
-			preSub = 1 + (int)(acos(TensorMutiplication2(Stress_n, nStress, dim) / Co) / den);
+			preSub = 1 + (int)(acos(StressTensorComputation::getSecondInvariant(Stress_n, nStress, dim) / Co) / den);
 		else
 			preSub = minSub;
 		if (preSub > maxSub)
@@ -5636,13 +5637,13 @@ int CSolidProperties::CalStress_and_TangentialMatrix_SYS(const int GPiGPj, const
 				xi_n1[i] = xi_n[i];
 				nStress[i] = Stress_n1[i];
 			}
-			I_n1 = DeviatoricStress(nStress);
+			I_n1 = StressTensorComputation::getDeviatoricStress(nStress);
 			for (i = 0; i < LengthStrs; i++)
 				nStress[i] -= I_n1 * xi_n1[i] / 3.0;
 
 			Stress_Inv[0] = I_n1;
-			Stress_Inv[1] = 0.5 * TensorMutiplication2(nStress, nStress, dim);
-			Stress_Inv[2] = TensorMutiplication3(nStress, nStress, nStress, dim);
+			Stress_Inv[1] = 0.5 * StressTensorComputation::getSecondInvariant(nStress, nStress, dim);
+			Stress_Inv[2] = StressTensorComputation::getThirdInvariant(nStress, nStress, nStress, dim);
 
 			I_p2 = I_n1 * I_n1;
 			I_p4 = I_p2 * I_p2;
@@ -5686,7 +5687,7 @@ int CSolidProperties::CalStress_and_TangentialMatrix_SYS(const int GPiGPj, const
 				nStress[i] = Stress_n1[i];
 			}
 
-			I_n1 = DeviatoricStress(nStress);
+			I_n1 = StressTensorComputation::getDeviatoricStress(nStress);
 			for (i = 0; i < LengthStrs; i++)
 				nStress[i] -= I_n1 * xi_n1[i] / 3.0;
 
@@ -5708,8 +5709,8 @@ int CSolidProperties::CalStress_and_TangentialMatrix_SYS(const int GPiGPj, const
 				NPStep++;
 
 				Stress_Inv[0] = I_n1;
-				Stress_Inv[1] = 0.5 * TensorMutiplication2(nStress, nStress, dim);
-				Stress_Inv[2] = TensorMutiplication3(nStress, nStress, nStress, dim);
+				Stress_Inv[1] = 0.5 * StressTensorComputation::getSecondInvariant(nStress, nStress, dim);
+				Stress_Inv[2] = StressTensorComputation::getThirdInvariant(nStress, nStress, nStress, dim);
 
 				I_p2 = I_n1 * I_n1;
 				I_p4 = I_p2 * I_p2;
@@ -6121,7 +6122,7 @@ int CSolidProperties::CalStress_and_TangentialMatrix_SYS(const int GPiGPj, const
 						else if (i > 2)
 							xi_n1[i] -= x_l[i - 1 + LengthStrs];
 					}
-					I_n1 = DeviatoricStress(nStress);
+					I_n1 = StressTensorComputation::getDeviatoricStress(nStress);
 					xi_n1[2] = -xi_n1[0] - xi_n1[1];
 
 					for (i = 0; i < LengthStrs; i++)
@@ -6143,7 +6144,7 @@ int CSolidProperties::CalStress_and_TangentialMatrix_SYS(const int GPiGPj, const
 
 			// Accumulated plastic strain
 			if (subPLASTIC > 0)
-				ep += dlmd * sqrt(2.0 * TensorMutiplication2(dG_dS, dG_dS, dim) / 3.0);
+				ep += dlmd * sqrt(2.0 * StressTensorComputation::getSecondInvariant(dG_dS, dG_dS, dim) / 3.0);
 
 			//-------  Compute the consistent tangential matrix
 			if (Update <= 0 && subPLASTIC > 0)
@@ -7012,9 +7013,9 @@ void CSolidProperties::CalStress_and_TangentialMatrix_CC(const int GPiGPj, const
 		DevStress[i] = TryStress[i];
 	}
 
-	p_tr = -DeviatoricStress(DevStress) / 3.0;
+	p_tr = -StressTensorComputation::getDeviatoricStress(DevStress) / 3.0;
 
-	q_tr = sqrt(1.5 * TensorMutiplication2(DevStress, DevStress, dim));
+	q_tr = sqrt(1.5 * StressTensorComputation::getSecondInvariant(DevStress, DevStress, dim));
 
 	// If yield, integrate the stress
 	F = q_tr * q_tr / M2 + p_tr * (p_tr - p_cn);
@@ -7529,12 +7530,12 @@ void CSolidProperties::CalStress_and_TangentialMatrix_CC_SubStep(const int GPiGP
 			// DevStress as temporary buffer
 			DevStress[i] = dStress0[i] - dStress1[i];
 		}
-		double norms = StressNorm(TryStress, dim);
+		double norms = StressTensorComputation::getNorm(TryStress, dim);
 		double q_f = 1.0;
 		double R_n = 1.0;
 		if (norms > DBL_EPSILON)
 		{
-			R_n = 0.5 * StressNorm(DevStress, dim) / norms;
+			R_n = 0.5 * StressTensorComputation::getNorm(DevStress, dim) / norms;
 			if (R_n > DBL_EPSILON)
 				q_f = 0.95 * sqrt(s_tol / R_n);
 		}
@@ -7561,9 +7562,9 @@ void CSolidProperties::CalStress_and_TangentialMatrix_CC_SubStep(const int GPiGP
 		for (i = 0; i < ns; i++)
 			DevStress[i] = TryStress[i];
 
-		p_tr = -DeviatoricStress(DevStress) / 3.0;
+		p_tr = -StressTensorComputation::getDeviatoricStress(DevStress) / 3.0;
 
-		q_tr = sqrt(1.5 * TensorMutiplication2(DevStress, DevStress, dim));
+		q_tr = sqrt(1.5 * StressTensorComputation::getSecondInvariant(DevStress, DevStress, dim));
 
 		// If yield, integrate the stress
 		F = q_tr * q_tr / M2 + p_tr * (p_tr - p_cn);
@@ -7817,11 +7818,11 @@ void CSolidProperties::AddStain_by_Creep(const int ns, double* stress_n, double*
 {
 	int i, dim;
 	double norn_S, fac = 0.0;
-	DeviatoricStress(stress_n);
+	StressTensorComputation::getDeviatoricStress(stress_n);
 	dim = 2;
 	if (ns > 4)
 		dim = 3;
-	norn_S = sqrt(3.0 * TensorMutiplication2(stress_n, stress_n, dim) / 2.0);
+	norn_S = sqrt(3.0 * StressTensorComputation::getSecondInvariant(stress_n, stress_n, dim) / 2.0);
 	if (norn_S < DBL_MIN)
 		return;
 	switch (Creep_mode)
@@ -7913,8 +7914,8 @@ void CSolidProperties::AddStain_by_HL_ODS(const ElementValue_DM* ele_val, double
 	dim = 2;
 	if (ns > 4)
 		dim = 3;
-	DeviatoricStress(stress_n);
-	norn_S = sqrt(1.5 * TensorMutiplication2(stress_n, stress_n, dim));
+	StressTensorComputation::getDeviatoricStress(stress_n);
+	norn_S = sqrt(1.5 * StressTensorComputation::getSecondInvariant(stress_n, stress_n, dim));
 	// WX:12.2012 threshold dev str for lubby2
 	if (norn_S <= threshold_dev_str)
 		return;
@@ -7922,7 +7923,7 @@ void CSolidProperties::AddStain_by_HL_ODS(const ElementValue_DM* ele_val, double
 	for (i = 0; i < ns; i++)
 		epsilon_tr[i] = (*ele_val->xi)(i);
 	//
-	norm_str = sqrt(2.0 * TensorMutiplication2(epsilon_tr, epsilon_tr, dim) / 3.0);
+	norm_str = sqrt(2.0 * StressTensorComputation::getSecondInvariant(epsilon_tr, epsilon_tr, dim) / 3.0);
 	double max_etr = norn_S / ((*data_Creep)(6, 0) * exp((*data_Creep)(4, 0) * norn_S)); // WX:12.2012 bug fixed
 	double eta_k = (*data_Creep)(3, 0) * exp((*data_Creep)(5, 0) * norn_S);
 	double eta_m
@@ -8256,140 +8257,6 @@ bool MSPRead(const std::string& given_file_base_name)
 	} // eof
 	return true;
 	//========================================================================
-}
-
-/**************************************************************************
-   ROCKFLOW - Funktion: TensorMutiplication2
-
-   Aufgabe:
-   Calculate tensor mutiplication: a_{ij}b_{ij}
-
-   Formalparameter: (E: Eingabe; R: Rueckgabe; X: Beides)
-   E
-   const double *s1: Stress tensor in an array (s1_11, s1_22, s1_12, s1_33)
-   const double *s2: Stress tensor in an array (s2_11, s2_22, s2_12, s2_33)
-
-   Ergebnis:
-   - double - The value of third stress invariant
-
-   Programmaenderungen:
-   04/2003   WW  Erste Version
-
-**************************************************************************/
-double TensorMutiplication2(const double* s1, const double* s2, const int Dim)
-{
-	switch (Dim)
-	{
-		case 2:
-			return s1[0] * s2[0] + s1[1] * s2[1] + s1[2] * s2[2] + 2.0 * s1[3] * s2[3];
-			break;
-		case 3:
-			return s1[0] * s2[0] + s1[1] * s2[1] + s1[2] * s2[2] + 2.0 * s1[3] * s2[3] + 2.0 * s1[4] * s2[4]
-			       + 2.0 * s1[5] * s2[5];
-			break;
-	}
-	return 0.0; // To avoid warnings
-}
-
-/**************************************************************************
-   GeoSys: Norm of stress
-   06/2008   WW  Programming
-
-**************************************************************************/
-double StressNorm(const double* s, const int Dim)
-{
-	double val = 0.0;
-	double mean_s = (s[0] + s[1] + s[2]) / 3.0;
-	double s1 = s[0] - mean_s;
-	double s2 = s[1] - mean_s;
-	double s3 = s[2] - mean_s;
-	val = s1 * s1 + s2 * s2 + s3 * s3 + 2.0 * s[3] * s[3];
-	if (Dim == 3)
-		val += +2.0 * s[4] * s[4] + 2.0 * s[5] * s[5];
-	return val;
-}
-
-/**************************************************************************
-   ROCKFLOW - Funktion: TensorMutiplication3
-
-   Aufgabe:
-   Calculate tensor mutiplication: a_{ij}b_{jk}c_{ki} for plane strain problem
-
-   Formalparameter: (E: Eingabe; R: Rueckgabe; X: Beides)
-   E
-   const double *s1: Stress tensor in an array (s1_11, s1_22, s1_12, s1_33)
-   const double *s2: Stress tensor in an array (s2_11, s2_22, s2_12, s2_33)
-   const double *s3: Stress tensor in an array (s3_11, s3_22, s3_12, s3_33)
-
-   Ergebnis:
-   - double - The value of third stress invariant
-
-   Programmaenderungen:
-   04/2003   WW  Erste Version
-
-**************************************************************************/
-double TensorMutiplication3(const double* s1, const double* s2, const double* s3, const int Dim)
-{
-	switch (Dim)
-	{
-		case 2:
-			return (s1[0] * (s2[0] * s3[0] + s2[3] * s3[3]) // s1_11*(s2_11*s3_11+s2_12*s3_21)
-			        + s1[3] * (s2[0] * s3[3] + s2[3] * s3[1]) // s1_12*(s2_11*s3_12+s2_12*s3_22)
-			        + s1[3] * (s2[3] * s3[0] + s2[1] * s3[3]) // s1_21*(s2_21*s3_11+s2_22*s3_21)
-			        + s1[1] * (s2[3] * s3[3] + s2[1] * s3[1]) // s1_22*(s2_21*s3_12+s2_22*s3_22)
-			        + s1[2] * s2[2] * s3[2])
-			       / 3.0; // s33*s33*s33
-			break;
-		case 3:
-			return (
-			           // s1_11*(s2_11*s3_11+s2_12*s3_21+s2_13*s3_31)
-			           s1[0] * (s2[0] * s3[0] + s2[3] * s3[3] + s2[4] * s3[4])
-			           // s1_12*(s2_11*s3_12+s2_12*s3_22+s2_13*s3_32)
-			           + s1[3] * (s2[0] * s3[3] + s2[3] * s3[1] + s2[4] * s3[5])
-			           // s1_13*(s2_11*s3_13+s2_12*s3_23+s2_13*s3_33)
-			           + s1[4] * (s2[0] * s3[4] + s2[3] * s3[5] + s2[4] * s3[2])
-			           // s1_21*(s2_21*s3_11+s2_22*s3_21+s2_23*s3_31)
-			           + s1[3] * (s2[3] * s3[0] + s2[1] * s3[3] + s2[5] * s3[4])
-			           // s1_22*(s2_21*s3_12+s2_22*s3_22+s2_23*s3_32)
-			           + s1[1] * (s2[3] * s3[3] + s2[1] * s3[1] + s2[5] * s3[5])
-			           // s1_23*(s2_21*s3_13+s2_22*s3_23+s2_23*s3_33)
-			           + s1[5] * (s2[3] * s3[4] + s2[1] * s3[5] + s2[5] * s3[2])
-			           // s1_31*(s2_31*s3_11+s2_32*s3_21+s2_33*s3_31)
-			           + s1[4] * (s2[4] * s3[0] + s2[5] * s3[3] + s2[2] * s3[4]) // WX:bug fixed s3_31 is s3[4]
-			           // s1_32*(s2_31*s3_12+s2_32*s3_22+s2_33*s3_32)
-			           + s1[5] * (s2[4] * s3[3] + s2[5] * s3[1] + s2[2] * s3[5])
-			           // s1_33*(s2_31*s3_13+s2_32*s3_23+s2_33*s3_33)
-			           + s1[2] * (s2[4] * s3[4] + s2[5] * s3[5] + s2[2] * s3[2]))
-			       / 3.0;
-			break;
-	}
-	return 0.0; // To avoid warnings
-}
-
-/**************************************************************************
-   ROCKFLOW - Funktion: DeviatoricStress
-
-   Aufgabe:
-   Computing the deviatoric stresses
-   Formalparameter: (E: Eingabe; R: Rueckgabe; X: Beides)
-   E :
-     double *Stress                   :   Stresses
-
-   Ergebnis:
-   - double* - The first stress invariant
-
-   Programmaenderungen:
-   08/2003   WW  Erste Version (for 2D)
-
-**************************************************************************/
-double DeviatoricStress(double* Stress)
-{
-	int i;
-	double I1 = Stress[0] + Stress[1] + Stress[2];
-	for (i = 0; i < 3; i++)
-		Stress[i] -= I1 / 3.0;
-
-	return I1;
 }
 
 /**************************************************************************

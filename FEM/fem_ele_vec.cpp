@@ -23,6 +23,8 @@
 #include "pcs_dm.h"
 #include "rf_mfp_new.h"
 #include "rf_msp_new.h"
+#include "Material/Solid/StressTensorComputation.h"
+
 #include "tools.h" //12.2009. WW
 // Equation
 #if defined(NEW_EQS)
@@ -2918,8 +2920,8 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 	double CFiniteElementVec::ComputeJumpDirectionAngle(const double* Mat)
 	{
 		double NormS, c1, c2;
-		DeviatoricStress(pr_stress);
-		NormS = sqrt(TensorMutiplication2(pr_stress, pr_stress, ele_dim));
+		StressTensorComputation::getDeviatoricStress(pr_stress);
+		NormS = sqrt(StressTensorComputation::getSecondInvariant(pr_stress, pr_stress, ele_dim));
 		c1 = pr_stress[1] + Mat[2] * pr_stress[2] + 0.5 * (1.0 + Mat[2]) * (Mat[0] + Mat[1]) * NormS;
 		c2 = pr_stress[0] + Mat[2] * pr_stress[2] + 0.5 * (1.0 + Mat[2]) * (Mat[0] + Mat[1]) * NormS;
 
@@ -3002,7 +3004,7 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 				pr_stress_ang = ComputePrincipleStresses(dstress);
 				loc_ang = ComputeJumpDirectionAngle(Mat);
 
-				normXi = sqrt(TensorMutiplication2(pr_stress, pr_stress, ele_dim));
+				normXi = sqrt(StressTensorComputation::getSecondInvariant(pr_stress, pr_stress, ele_dim));
 
 				// Compute the localization condition
 				h_loc = pr_stress[2] / normXi + 0.5 * (smat->Al + smat->Xi)
@@ -3014,8 +3016,8 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 				OriJ[1] = pr_stress_ang + loc_ang + 0.5 * pai;
 
 				// Compute the acoustic matrix
-				DeviatoricStress(dstress);
-				normXi = sqrt(TensorMutiplication2(dstress, dstress, ele_dim));
+				StressTensorComputation::getDeviatoricStress(dstress);
+				normXi = sqrt(StressTensorComputation::getSecondInvariant(dstress, dstress, ele_dim));
 				if (loc_ang > 0.0)
 				{
 					for (i = 0; i < ns; i++)
@@ -3449,8 +3451,8 @@ void CFiniteElementVec::GlobalAssembly_RHS()
 					dstrain[i] = 0.0;
 				}
 				Ge->multi(zeta, dstrain, 1.0);
-				DeviatoricStress(dstrain);
-				(*eleV_DM->pStrain)(gp) += sqrt(2.0 * TensorMutiplication2(dstrain, dstrain, 2) / 3.0);
+				StressTensorComputation::getDeviatoricStress(dstrain);
+				(*eleV_DM->pStrain)(gp) += sqrt(2.0 * StressTensorComputation::getSecondInvariant(dstrain, dstrain, 2) / 3.0);
 			}
 			else
 			{
