@@ -139,13 +139,14 @@ public:
     }
 
     // vec_result = This*vec. vec_result must be initialized.
-    virtual void multi(const double* vec, double* vec_result, double fac = 1.0);
+    virtual void multi(const double* vec, double* vec_result,
+                       double fac = 1.0) const;
     // m_result = this*m. m_result must be initialized.
     virtual void multi(const MatrixBase& m, MatrixBase& m_result,
-                       double fac = 1.0);
+                       double fac = 1.0) const;
     // m_result = this*m1*m2. m_result must be initialized.To be removed
     virtual void multi(const MatrixBase& m1, const MatrixBase& m2,
-                       MatrixBase& m_result);
+                       MatrixBase& m_result) const;
 
     // Print
     void Write(std::ostream& os = std::cout);
@@ -231,11 +232,14 @@ public:
     void GetTranspose(Matrix& m);
 
     // vec_result = This*vec. vec_result must be initialized.
-    virtual void multi(const double* vec, double* vec_result, double fac = 1.0);
+    virtual void multi(const double* vec, double* vec_result,
+                       double fac = 1.0) const;
     // m_result = this*m. m_result must be initialized.
-    virtual void multi(const Matrix& m, Matrix& m_result, double fac = 1.0);
+    virtual void multi(const Matrix& m, Matrix& m_result,
+                       double fac = 1.0) const;
     // m_result = this*m1*m2. m_result must be initialized.To be removed
-    virtual void multi(const Matrix& m1, const Matrix& m2, Matrix& m_result);
+    virtual void multi(const Matrix& m1, const Matrix& m2,
+                       Matrix& m_result) const;
 
     // Access to members
     virtual double& operator()(const size_t i, const size_t j = 0) const;
@@ -310,13 +314,16 @@ public:
     void LimitSize(size_t dim);
 
     // vec_result = This*vec. vec_result must be initialized
-    virtual void multi(const double* vec, double* vec_result, double fac = 1.0);
+    virtual void multi(const double* vec, double* vec_result,
+                       double fac = 1.0) const;
     // m_result = this*m. m_result must be initialized. m_result must be a full
     // stored matrix
-    virtual void multi(const SymMatrix& m, Matrix& m_result, double fac = 1.0);
+    virtual void multi(const SymMatrix& m, Matrix& m_result,
+                       double fac = 1.0) const;
     // m_result = this*m1*m2. m_result must be initialized.  m_result must be a
     // full stored matrix
-    virtual void multi(const SymMatrix& m1, const Matrix& m2, Matrix& m_result);
+    virtual void multi(const SymMatrix& m1, const Matrix& m2,
+                       Matrix& m_result) const;
 
     inline size_t getArrayIndex(const size_t i, const size_t j) const
     {

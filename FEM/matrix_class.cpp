@@ -72,7 +72,8 @@ void MatrixBase::ReleaseMemory()
 }
 
 // m_results = this*m. m_results must be initialized
-void MatrixBase::multi(const MatrixBase& m, MatrixBase& m_result, double fac)
+void MatrixBase::multi(const MatrixBase& m, MatrixBase& m_result,
+                       double fac) const
 {
 #ifdef gDEBUG
     if (ncols != m.Rows() && nrows != m_result.Rows() &&
@@ -96,7 +97,7 @@ void MatrixBase::multi(const MatrixBase& m, MatrixBase& m_result, double fac)
 //
 // m_results = this*m1*m2. m_results must be  initialized
 void MatrixBase::multi(const MatrixBase& m1, const MatrixBase& m2,
-                       MatrixBase& m_result)
+                       MatrixBase& m_result) const
 {
 #ifdef gDEBUG
     if (ncols != m1.Rows() && m1.Cols() != m2.Rows() &&
@@ -119,7 +120,7 @@ void MatrixBase::multi(const MatrixBase& m1, const MatrixBase& m2,
         }
 }
 // vec_result = This*vec. vec_result must be  initialized
-void MatrixBase::multi(const double* vec, double* vec_result, double fac)
+void MatrixBase::multi(const double* vec, double* vec_result, double fac) const
 {
     for (int i = 0; (size_t)i < nrows; i++)
         for (int j = 0; (size_t)j < ncols; j++)
@@ -176,9 +177,13 @@ Matrix::Matrix(size_t rows, size_t cols) : MatrixBase(rows, cols, rows * cols)
 {
 }
 
-Matrix::Matrix() : MatrixBase(0, 0, 0) {}
+Matrix::Matrix() : MatrixBase(0, 0, 0)
+{
+}
 
-Matrix::Matrix(const Matrix& m) : MatrixBase(m) {}
+Matrix::Matrix(const Matrix& m) : MatrixBase(m)
+{
+}
 
 void Matrix::resize(size_t rows, size_t cols)
 {
@@ -198,7 +203,9 @@ void Matrix::resize(size_t rows, size_t cols)
         data[i] = 0.0;
 }
 
-Matrix::~Matrix() {}
+Matrix::~Matrix()
+{
+}
 
 //
 void Matrix::GetTranspose(Matrix& m)
@@ -226,7 +233,7 @@ void Matrix::GetTranspose(Matrix& m)
 }
 
 // m_results = this*m. m_results must be initialized
-void Matrix::multi(const Matrix& m, Matrix& m_result, double fac)
+void Matrix::multi(const Matrix& m, Matrix& m_result, double fac) const
 {
 #ifdef gDEBUG
     if (ncols != m.Rows() && nrows != m_result.Rows() &&
@@ -262,7 +269,7 @@ void Matrix::multi(const Matrix& m, Matrix& m_result, double fac)
 
 //
 // m_results = this*m1*m2. m_results must be  initialized
-void Matrix::multi(const Matrix& m1, const Matrix& m2, Matrix& m_result)
+void Matrix::multi(const Matrix& m1, const Matrix& m2, Matrix& m_result) const
 {
 #ifdef gDEBUG
     if (ncols != m1.Rows() && m1.Cols() != m2.Rows() &&
@@ -285,7 +292,7 @@ void Matrix::multi(const Matrix& m1, const Matrix& m2, Matrix& m_result)
         }
 }
 // vec_result = This*vec. vec_result must be  initialized
-void Matrix::multi(const double* vec, double* vec_result, double fac)
+void Matrix::multi(const double* vec, double* vec_result, double fac) const
 {
     for (size_t i = 0; i < nrows; i++)
     {
@@ -333,8 +340,12 @@ SymMatrix::SymMatrix(size_t dim)
 {
 }
 
-SymMatrix::SymMatrix() : MatrixBase(0, 0, 0) {}
-SymMatrix::SymMatrix(const SymMatrix& m) : MatrixBase(m) {}
+SymMatrix::SymMatrix() : MatrixBase(0, 0, 0)
+{
+}
+SymMatrix::SymMatrix(const SymMatrix& m) : MatrixBase(m)
+{
+}
 
 void SymMatrix::resize(size_t dim)
 {
@@ -368,7 +379,7 @@ void SymMatrix::LimitSize(size_t dim)
 }
 
 // m_results = this*m. m_results must be initialized
-void SymMatrix::multi(const SymMatrix& m, Matrix& m_result, double fac)
+void SymMatrix::multi(const SymMatrix& m, Matrix& m_result, double fac) const
 {
 #ifdef gDEBUG
     if (ncols != m.Rows() && nrows != m_result.Rows() &&
@@ -407,7 +418,8 @@ void SymMatrix::multi(const SymMatrix& m, Matrix& m_result, double fac)
 
 //
 // m_results = this*m1*m2. m_results must be  initialized
-void SymMatrix::multi(const SymMatrix& m1, const Matrix& m2, Matrix& m_result)
+void SymMatrix::multi(const SymMatrix& m1, const Matrix& m2,
+                      Matrix& m_result) const
 {
 #ifdef gDEBUG
     if (ncols != m1.Rows() && m1.Cols() != m2.Rows() &&
@@ -440,7 +452,7 @@ void SymMatrix::multi(const SymMatrix& m1, const Matrix& m2, Matrix& m_result)
     }
 }
 // vec_result = This*vec. vec_result must be  initialized
-void SymMatrix::multi(const double* vec, double* vec_result, double fac)
+void SymMatrix::multi(const double* vec, double* vec_result, double fac) const
 {
     for (size_t i = 0; i < nrows; i++)
     {
@@ -1129,8 +1141,8 @@ CSparseMatrix::CSparseMatrix(const SparseTable& sparse_table, const int dof)
                         // I = ii * rows + i; // row in global matrix
                         // column in global matrix
                         const int J = jj * rows + entry_column[counter];
-                        const int K = (ii * DOF + jj) *
-                                          size_entry_column + counter;
+                        const int K =
+                            (ii * DOF + jj) * size_entry_column + counter;
 
                         // Store column index for CRS
                         col_idx[counter_col_idx] = J;
