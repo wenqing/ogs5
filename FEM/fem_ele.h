@@ -206,6 +206,9 @@ public:
         PT_Flag = idx;
     }
 
+    // extrapolates integration point values to vertices.
+    double* extrapolate(const double integration_point_values[]);
+
 protected:
     CElem* MeshElement;
 #if !defined(USE_PETSC)  // && !defined(other parallel libs)//03.3012. WW

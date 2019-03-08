@@ -18,6 +18,11 @@
 
 #include "MSHEnums.h"
 
+namespace Math_Group
+{
+class Matrix;
+}  // namespace Math_Group
+
 namespace FiniteElement
 {
 class CElement;
@@ -32,7 +37,7 @@ public:
     */
     ShapeFunctionPool(const std::vector<MshElemType::type>& elem_types,
                       CElement& quadrature, const int num_sample_gs_pnts);
-    ~ShapeFunctionPool() {}
+    ~ShapeFunctionPool();
 
     /// Get shape function values of an element type
     const double* getShapeFunctionValues(
@@ -53,6 +58,9 @@ public:
     const double* getGradShapeFunctionCenterValues(
         const MshElemType::type elem_type) const;
 
+    const Math_Group::Matrix* getInverseExtrapolationMatrix(
+        const MshElemType::type elem_type) const;
+
 private:
     /// Results of shape functions of all integration points.
     std::vector<std::vector<double> > _shape_function;
@@ -69,12 +77,20 @@ private:
     /// element centroid.
     std::vector<std::vector<double> > _grad_shape_function_center;
 
+    /// Results of inverse extrapolation matrices.
+    std::vector<Math_Group::Matrix*> _inverse_extrapolation_matrices;
+
     void computeQuadratures(
         const std::vector<MshElemType::type>& elem_types,
         const int num_elem_nodes[2][MshElemType::NUM_ELEM_TYPES],
         const int dim_elem[],
         CElement& quadrature,
         const int num_sample_gs_pnts);
+
+    void computeInverseExtrapolationMatrices(
+        const std::vector<MshElemType::type>& elem_types,
+        const int num_elem_nodes[2][MshElemType::NUM_ELEM_TYPES],
+        CElement& quadrature, const int num_sample_gs_pnts);
 };
 }  // namespace FiniteElement
 

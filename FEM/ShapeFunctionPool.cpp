@@ -15,7 +15,12 @@
 #include "ShapeFunctionPool.h"
 
 #include <cassert> /* assert */
+
+#include "display.h"
 #include "fem_ele.h"
+#include "matrix_class.h"
+
+#include "LinAlg/GaussAlgorithm.h"
 
 namespace FiniteElement
 {
@@ -72,11 +77,12 @@ ShapeFunctionPool::ShapeFunctionPool(
     _shape_function_center.resize(n_ele_types);
     _grad_shape_function.resize(n_ele_types);
     _grad_shape_function_center.resize(n_ele_types);
-    for (std::size_t i = 0; i < elem_types.size(); i++)
+    for (std::size_t i = 0; i < n_ele_types; i++)
     {
         const MshElemType::type e_type = elem_types[i];
         if (e_type == MshElemType::INVALID)
             continue;
+
         // Set number of integration points.
         quadrature.SetGaussPointNumber(num_sample_gs_pnts);
         quadrature.SetIntegrationPointNumber(e_type);
@@ -104,6 +110,17 @@ ShapeFunctionPool::ShapeFunctionPool(
 
     computeQuadratures(elem_types, num_elem_nodes, dim_elem, quadrature,
                        num_sample_gs_pnts);
+    computeInverseExtrapolationMatrices(elem_types, num_elem_nodes, quadrature,
+                       num_sample_gs_pnts);
+}
+
+ShapeFunctionPool::~ShapeFunctionPool()
+{
+    for (std::size_t i = 0; i < _inverse_extrapolation_matrices.size(); i++)
+    {
+        if (_inverse_extrapolation_matrices[i])
+            delete _inverse_extrapolation_matrices[i];
+    }
 }
 
 void ShapeFunctionPool::computeQuadratures(
@@ -155,6 +172,85 @@ void ShapeFunctionPool::computeQuadratures(
     }
 }
 
+void ShapeFunctionPool::computeInverseExtrapolationMatrices(
+    const std::vector<MshElemType::type>& elem_types,
+    const int num_elem_nodes[2][MshElemType::NUM_ELEM_TYPES],
+    CElement& quadrature, const int num_sample_gs_pnts)
+{
+    _inverse_extrapolation_matrices.resize(elem_types.size());
+    for (std::size_t i = 0; i < elem_types.size(); i++)
+        _inverse_extrapolation_matrices[i] = NULL;
+
+    for (std::size_t i = 0; i < elem_types.size(); i++)
+    {
+        const MshElemType::type e_type = elem_types[i];
+        const int type_id = static_cast<int>(e_type) - 1;
+        if (e_type == MshElemType::INVALID)
+        {
+            continue;
+        }
+
+        const int nnodes = num_elem_nodes[0][type_id];
+
+        double const* const shape_function_at_ips =
+            getShapeFunctionValues(e_type);
+
+        // Set number of integration points.
+        quadrature.SetGaussPointNumber(num_sample_gs_pnts);
+        quadrature.SetIntegrationPointNumber(e_type);
+
+        if (quadrature.GetNumGaussPoints() < nnodes)
+        {
+            Display::ScreenMessage(
+                "Number of integrations points is smaller than the number of "
+                "element nodes");
+            abort();
+        }
+
+        Math_Group::Matrix A(nnodes, nnodes);
+
+        // Loop over integration points to a limited number of nnodes
+        for (int i = 0; i < nnodes; i++)
+        {
+            double const* const shapefct_at_ip =
+                &shape_function_at_ips[nnodes * i];
+            for (int j = 0; j < nnodes; j++)
+                A(i, j) = shapefct_at_ip[j];
+        }
+
+        MathLib::GaussAlgorithm<Math_Group::Matrix> linear_solver(
+            A, static_cast<std::size_t>(nnodes));
+
+        Math_Group::Matrix* inverse_extrapolation_matrix =
+            new Math_Group::Matrix(nnodes, nnodes);
+
+        _inverse_extrapolation_matrices[type_id] = inverse_extrapolation_matrix;
+
+        double b[20];
+        for (int i = 0; i < nnodes; i++)
+        {
+            b[i] = 0.0;
+        }
+        b[0] = 1.0;
+
+        // Compute first column, and get the LU decomposition
+        linear_solver.execute(b);
+        for (int i = 0; i < nnodes; i++)
+            (*inverse_extrapolation_matrix)(i, 0) = b[i];
+
+        for (int j = 1; j < nnodes; j++)
+        {
+            for (int i = 0; i < nnodes; i++)
+            {
+                b[i] = (i == j) ? 1.0 : 0.0;
+            }
+            linear_solver.executeWithExistedElimination(b);
+            for (int i = 0; i < nnodes; i++)
+                (*inverse_extrapolation_matrix)(i, j) = b[i];
+        }
+    }
+}
+
 const double* ShapeFunctionPool::getShapeFunctionValues(
     const MshElemType::type elem_type) const
 {
@@ -183,6 +279,12 @@ const double* ShapeFunctionPool::getGradShapeFunctionCenterValues(
     const MshElemType::type elem_type) const
 {
     return _grad_shape_function_center[static_cast<int>(elem_type) - 1].data();
+}
+
+const Math_Group::Matrix* ShapeFunctionPool::getInverseExtrapolationMatrix(
+    const MshElemType::type elem_type) const
+{
+    return _inverse_extrapolation_matrices[static_cast<int>(elem_type) - 1];
 }
 
 }  // namespace FiniteElement

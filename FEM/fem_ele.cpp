@@ -1682,7 +1682,7 @@ void CElement::FaceNormalFluxIntegration(long /*element_index*/,
             for (int i = 0; i < nNodes; i++)
             {  // Integration
 #ifdef USE_TRANSPORT_FLUX
-               // Fick or Fourier diffusion
+                // Fick or Fourier diffusion
                 for (int l = 0; l < 3; l++)
                     flux[l] = gp_ele->TransportFlux(l, gp);
 #endif
@@ -1701,6 +1701,28 @@ void CElement::FaceNormalFluxIntegration(long /*element_index*/,
         NodeVal[i] = dbuff[i];
         NodeVal_adv[i] = dbuff_adv[i];
     }
+}
+
+double* CElement::extrapolate(const double integration_point_values[])
+{
+    static double nodal_values[20];
+
+    const MshElemType::type elem_type = MeshElement->GetElementType();
+    SetIntegrationPointNumber(elem_type);
+
+    const int nnodes = MeshElement->GetNodesNumber(false);
+    assert(nGaussPoints >= nnodes);
+
+    Math_Group::Matrix const& inverseM = *(
+        _shape_function_pool_ptr[0]->getInverseExtrapolationMatrix(elem_type));
+
+    for (int i = 0; i < nnodes; i++)
+    {
+        nodal_values[i] = 0.0;
+    }
+    inverseM.multi(integration_point_values, nodal_values);
+
+    return nodal_values;
 }
 
 }  // end namespace FiniteElement
