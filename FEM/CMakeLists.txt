@@ -57,6 +57,7 @@ set( HEADERS
 	Material/Fluid/Density/WaterDensityIAPWSIF97Region1.h
 	Material/Fluid/Viscosity/WaterViscosityIAPWS.h
 	Material/Solid/BGRaCreep.h
+	Material/DistributedData/ElementWiseDistributedData.h
 )
 
 set( SOURCES
@@ -117,6 +118,7 @@ set( SOURCES
 	Material/Fluid/GibbsFreeEnergy/DimensionLessGibbsFreeEnergyRegion1.cpp
 	Material/Fluid/Viscosity/WaterViscosityIAPWS.cpp
 	Material/Solid/BGRaCreep.cpp
+	Material/DistributedData/ElementWiseDistributedData.cpp
 )
 
 if(NOT OGS_LSOLVER STREQUAL PETSC)
