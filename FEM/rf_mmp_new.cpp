@@ -43,6 +43,7 @@ extern double gravity_constant;
 #include "fem_ele_vec.h"
 // MSHLib
 //#include "msh_lib.h"
+#include "Material/DistributedData/ElementWiseDistributedData.h"
 #include "pcs_dm.h"  //WX
 
 #include "Material/PorousMedium/DamageZonePermeability.h"
@@ -76,7 +77,10 @@ CMediumProperties::CMediumProperties()
     : geo_dimension(0),
       _mesh(NULL),
       _geo_type(GEOLIB::GEODOMAIN),
-      _damage_zone_permeability(NULL)
+      _damage_zone_permeability(NULL),
+      _element_porosity(NULL),
+      _element_permeability(NULL),
+      _element_thermal_conductivity(NULL)
 {
     name = "DEFAULT";
     mode = 0;
@@ -166,10 +170,18 @@ CMediumProperties::~CMediumProperties(void)
 {
     if (c_coefficient)
         delete[] c_coefficient;  // WW
+    geo_name_vector.clear();
 
     if (_damage_zone_permeability)
         delete _damage_zone_permeability;
-    geo_name_vector.clear();
+    if (_element_thermal_conductivity)
+        delete _element_thermal_conductivity;
+
+    if (_element_porosity)
+        delete _element_porosity;
+
+    if (_element_permeability)
+        delete _element_permeability;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -189,7 +201,6 @@ bool MMPRead(std::string base_file_name)
     // OK  MMPDelete();
     //----------------------------------------------------------------------
     ScreenMessage("MMPRead ... ");
-    ;
     CMediumProperties* m_mat_mp = NULL;
     char line[MAX_ZEILE];
     std::string sub_line;
@@ -525,6 +536,16 @@ std::ios::pos_type CMediumProperties::Read(std::ifstream* mmp_file)
                                                      // BRNS calculation
                     break;
 #endif
+                case 9999:  // element wise distributed porosity
+                {
+                    std::string file_name;
+                    in >> file_name;
+                    _element_porosity =
+                        new MaterialLib::ElementWiseDistributedData(FilePath +
+                                                                    file_name);
+
+                    break;
+                }
                 default:
                     std::cerr << "Error in MMPRead: no valid porosity model"
                               << "\n";
@@ -936,6 +957,18 @@ std::ios::pos_type CMediumProperties::Read(std::ifstream* mmp_file)
                     permeability_model = 2;  // OK
                     in >> permeability_file;
                     break;
+                case 'E':  // element wise data
+                {
+                    std::string file_name;
+                    in >> file_name;
+                    double anisotropic_factor[3];
+                    for (int i = 0; i < 3; i++)
+                        in >> anisotropic_factor[i];
+                    _element_permeability =
+                        new MaterialLib::ElementWiseDistributedData(
+                            FilePath + file_name, anisotropic_factor);
+                    break;
+                }
                 default:
                     std::cout
                         << "Error in MMPRead: no valid permeability tensor type"
@@ -965,6 +998,23 @@ std::ios::pos_type CMediumProperties::Read(std::ifstream* mmp_file)
                 new PorousMediumProperty::DamageZonePermeability(a, b);
             in.clear();
             ScreenMessage("DAMAGE_ZONE_PERMEABILITY is used.\n");
+            continue;
+        }
+        if (line_string.find("$DISTRIBUTED_THERMAL_CONDUCTIVITY") !=
+            std::string::npos)
+        {
+            in.str(GetLineFromFile1(mmp_file));
+            std::string file_name;
+            in >> file_name;
+
+            double anisotropic_factor[3];
+            for (int i = 0; i < 3; i++)
+                in >> anisotropic_factor[i];
+            _element_thermal_conductivity =
+                new MaterialLib::ElementWiseDistributedData(
+                    FilePath + file_name, anisotropic_factor);
+
+            in.clear();
             continue;
         }
         //------------------------------------------------------------------------
@@ -1714,7 +1764,7 @@ std::ios::pos_type CMediumProperties::Read(std::ifstream* mmp_file)
                     in >> capillary_pressure_values[2];
                     if (capillary_pressure_values[2] >= 0.0)
                     {  // Then a constant saturation value has been entered.
-                        // This is model #2.
+                       // This is model #2.
                         ScreenMessage(
                             "WARNING in MMPRead. Capillary pressure model 1 "
                             "used for a constant saturation. THIS IS "
@@ -2863,6 +2913,19 @@ double CMediumProperties::HeatCapacity(long number, double theta,
 **************************************************************************/
 double* CMediumProperties::HeatConductivityTensor(int number)
 {
+    const int dimen = m_pcs->m_msh->GetCoordinateFlag() / 10;
+    for (int i = 0; i < dimen * dimen; i++)
+        heat_conductivity_tensor[i] = 0.0;
+    if (_element_thermal_conductivity)
+    {
+        const double kT =
+            _element_thermal_conductivity->getParameterAtElement(number);
+        for (int i = 0; i < dimen; i++)
+            heat_conductivity_tensor[i * dimen + i] =
+                kT * _element_thermal_conductivity->getAnisotropicFactor(i);
+        return heat_conductivity_tensor;
+    }
+
     const int group = m_pcs->m_msh->ele_vector[number]->GetPatchIndex();
     SolidProp::CSolidProperties* const m_msp = msp_vector[group];
 
@@ -2932,10 +2995,6 @@ double* CMediumProperties::HeatConductivityTensor(int number)
             }
         }
     }
-
-    const int dimen = m_pcs->m_msh->GetCoordinateFlag() / 10;
-    for (int i = 0; i < dimen * dimen; i++)  // MX
-        heat_conductivity_tensor[i] = 0.0;
 
     m_msp->HeatConductivityTensor(dimen, heat_conductivity_tensor,
                                   group);  // MX
@@ -4219,6 +4278,8 @@ double CMediumProperties::Porosity(long number, double theta)
                 }
             break;
 #endif
+        case 9999:
+            return _element_porosity->getParameterAtElement(number);
         default:
             cout << "Unknown porosity model!"
                  << "\n";
@@ -4547,6 +4608,19 @@ CMediumProperties::PorosityEffectiveConstrainedSwellingConstantIonicStrength(
 double* CMediumProperties::PermeabilityTensor(const long index, const int gp)
 {
     static double tensor[9];
+
+    if (_element_permeability)
+    {
+        const int dimen = m_pcs->m_msh->GetCoordinateFlag() / 10;
+        for (int i = 0; i < dimen * dimen; i++)
+            tensor[i] = 0.0;
+        const double kT = _element_permeability->getParameterAtElement(number);
+        for (int i = 0; i < dimen; i++)
+            tensor[i * dimen + i] =
+                kT * _element_permeability->getAnisotropicFactor(i);
+        return tensor;
+    }
+
     int perm_index = 0;
 
     int idx_k, idx_n;

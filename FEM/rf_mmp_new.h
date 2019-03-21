@@ -31,12 +31,13 @@
 #include "PhysicalConstant.h"
 
 // PCSLib
-#include "rf_pcs.h"
+#include "Material/DistributedData/ElementWiseDistributedData.h"
 #include "Material/PorousMedium/DamageZonePermeability.h"
+#include "rf_pcs.h"
 
-namespace FiniteElement
+namespace MaterialLib
 {
-class CFiniteElementStd;
+class ElementWiseDistributedData;
 }
 
 namespace PorousMediumProperty
@@ -44,6 +45,10 @@ namespace PorousMediumProperty
 class DamageZonePermeability;
 }
 
+namespace FiniteElement
+{
+class CFiniteElementStd;
+}
 class CMediumProperties
 {
 public:
@@ -359,6 +364,9 @@ private:
     FiniteElement::FrictionPhase _fric_phase;
 
     PorousMediumProperty::DamageZonePermeability* _damage_zone_permeability;
+    MaterialLib::ElementWiseDistributedData* _element_porosity;
+    MaterialLib::ElementWiseDistributedData* _element_permeability;
+    MaterialLib::ElementWiseDistributedData* _element_thermal_conductivity;
 };
 
 class CMediumPropertiesGroup  // YD
