@@ -56,6 +56,8 @@ set( HEADERS
 	Material/Fluid/GibbsFreeEnergy/DimensionLessGibbsFreeEnergyRegion1.h
 	Material/Fluid/Density/WaterDensityIAPWSIF97Region1.h
 	Material/Fluid/Viscosity/WaterViscosityIAPWS.h
+	Material/Solid/BGRaCreep.h
+	Material/DistributedData/ElementWiseDistributedData.h
 )
 
 set( SOURCES
@@ -115,6 +117,8 @@ set( SOURCES
 	ShapeFunctionPool.cpp
 	Material/Fluid/GibbsFreeEnergy/DimensionLessGibbsFreeEnergyRegion1.cpp
 	Material/Fluid/Viscosity/WaterViscosityIAPWS.cpp
+	Material/Solid/BGRaCreep.cpp
+	Material/DistributedData/ElementWiseDistributedData.cpp
 )
 
 # Get all files in the sub-directory
