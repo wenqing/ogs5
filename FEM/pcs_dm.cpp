@@ -185,8 +185,17 @@ void CRFProcessDeformation::Initialization()
     // Initialize material transform tensor for tansverse isotropic elasticity
     // UJG/WW. 25.11.2009
     for (i = 0; i < (int)msp_vector.size(); i++)
-        msp_vector[i]->CalculateTransformMatrixFromNormalVector(
-            problem_dimension_dm);
+    {
+        SolidProp::CSolidProperties* smat = msp_vector[i];
+
+        smat->CalculateTransformMatrixFromNormalVector(problem_dimension_dm);
+
+        if (smat->Time_Dependent_E_nv_mode == 2)
+            continue;
+        if (smat->hasElementWiseYoungsModuli())
+            continue;
+        smat->ElasticConstitutiveTransverseIsotropic(0, problem_dimension_dm);
+    }
 
     if (!msp_vector.size())
     {
@@ -414,13 +423,11 @@ void CRFProcessDeformation::InitialMBuffer()
  **************************************************************************/
 double CRFProcessDeformation::Execute(int loop_process_number)
 {
-    ScreenMessage(
-        "      ================================================\n");
+    ScreenMessage("      ================================================\n");
     ScreenMessage("      ->Process %d: %s\n",
-                           loop_process_number,
-                           convertProcessTypeToString(getProcessType()).data());
-    ScreenMessage(
-        "      ================================================\n");
+                  loop_process_number,
+                  convertProcessTypeToString(getProcessType()).data());
+    ScreenMessage("      ================================================\n");
 
     clock_t dm_time;
 
@@ -633,7 +640,7 @@ double CRFProcessDeformation::Execute(int loop_process_number)
             NormU = 1.0e+8;
 
             ScreenMessage("      Starting loading step %d/%d\n", l,
-                                   number_of_load_steps);
+                          number_of_load_steps);
             ScreenMessage("      Load factor: %g\n", LoadFactor);
         }
         ite_steps = 0;
@@ -878,9 +885,8 @@ double CRFProcessDeformation::Execute(int loop_process_number)
     dm_time += clock();
 
     ScreenMessage("      CPU time elapsed in deformation: %g s\n",
-                           (double)dm_time / CLOCKS_PER_SEC);
-    ScreenMessage(
-        "      ------------------------------------------------\n");
+                  (double)dm_time / CLOCKS_PER_SEC);
+    ScreenMessage("      ------------------------------------------------\n");
 
     // Recovery the old solution.  Temp --> u_n	for flow process
     if (m_num->nls_method != 2)
@@ -1915,7 +1921,7 @@ double CRFProcessDeformation::CaclMaxiumLoadRatio(void)
                     SMat->Calculate_Lame_Constant(elem);
 #endif
 #ifndef RFW_FRACTURE
-                    SMat->Calculate_Lame_Constant();
+                    SMat->Calculate_Lame_Constant(i);
 #endif
                     SMat->ElasticConsitutive(fem_dm->Dim(), fem_dm->De);
                     SMat->CalulateCoefficent_DP();
@@ -1926,7 +1932,7 @@ double CRFProcessDeformation::CaclMaxiumLoadRatio(void)
                     SMat->Calculate_Lame_Constant(elem);
 #endif
 #ifndef RFW_FRACTURE
-                    SMat->Calculate_Lame_Constant();
+                    SMat->Calculate_Lame_Constant(i);
 #endif
                     SMat->ElasticConsitutive(fem_dm->Dim(), fem_dm->De);
                     Mat = eleV_DM->MatP;
