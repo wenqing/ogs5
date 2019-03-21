@@ -44,6 +44,7 @@
 #include "tools.h"   // GetLineFromFile
 #include "PhysicalConstant.h"
 
+#include "Material/DistributedData/ElementWiseDistributedData.h"
 #include "Material/Solid/BGRaCreep.h"
 #include "minkley.h"
 #include "burgers.h"
@@ -457,6 +458,8 @@ std::ios::pos_type CSolidProperties::Read(std::ifstream* msp_file)
             int type = Youngs_mode;
             if (type > 9 && type < 14)
                 type = 1000;
+            if (type > 29 && type < 24)
+                type = 2000;
             switch (type)  // 15.03.2008 WW
             {
                 case 0:  //  = f(x)
@@ -504,6 +507,46 @@ std::ios::pos_type CSolidProperties::Read(std::ifstream* msp_file)
                         (*data_Youngs)(6);
                     in_sd.clear();
                     break;
+                case 2000:  // case 20-23: transverse isotropic linear
+                            // elasticity (UJG 24.11.2009). The same to 10-13
+                    // except the Youngs modulus data are element wise.
+                    // data_Youngs transverse isotropic linear elasticity
+                    {
+                        std::string file_name;
+                        in_sd >> file_name;
+                        double anisotropic_factor[3];
+                        for (int i = 0; i < 2; i++)
+                            in_sd >> anisotropic_factor[i];
+                        anisotropic_factor[2] = 1.0;
+                        _element_youngs_moduli =
+                            new MaterialLib::ElementWiseDistributedData(
+                                FilePath + file_name, anisotropic_factor);
+
+                        // data_Youngs:
+                        // 0: nu_{ia} (Poisson's ratio w.r.t. the
+                        //  anisotropy direction)
+                        // 1: n_x (x-coefficient of  the local axis of
+                        // anisotropy (2D case: -\sin\phi))
+                        // 2: n_y (y-coefficient of the local axis of anisotropy
+                        // (2D case: \cos\phi))
+                        // 3: n_z (z-coefficient of the local axis of anisotropy
+                        // (2D case: 0))
+                        data_Youngs = new Matrix(4);
+                        in_sd >> (*data_Youngs)(0) >> (*data_Youngs)(1) >>
+                            (*data_Youngs)(2) >> (*data_Youngs)(3);
+                        in_sd.clear();
+                    }
+                    break;
+                case 9999:  // element wise distributed.
+                {
+                    std::string file_name;
+                    in_sd >> file_name;
+                    _element_youngs_moduli =
+                        new MaterialLib::ElementWiseDistributedData(FilePath +
+                                                                    file_name);
+                    in_sd.clear();
+                    break;
+                }
             }
         }
         //....................................................................
@@ -583,8 +626,8 @@ std::ios::pos_type CSolidProperties::Read(std::ifstream* msp_file)
                 Creep_mode = 21;
                 in_sd.str(GetLineFromFile1(msp_file));
                 double A, n, sigma_f, Q, refT, tolerance, max_iterations;
-                in_sd >> A >> n >> sigma_f >> Q >> refT >> tolerance
-                      >> max_iterations;
+                in_sd >> A >> n >> sigma_f >> Q >> refT >> tolerance >>
+                    max_iterations;
                 in_sd.clear();
                 _bgra_creep = new BGRaCreep(A, n, sigma_f, Q, refT, tolerance,
                                             max_iterations);
@@ -1049,9 +1092,8 @@ std::ios::pos_type CSolidProperties::Read(std::ifstream* msp_file)
    FEMLib-Method:
    Task: Set values for solid reactive system
 **************************************************************************/
-void CSolidProperties::
-    SetSolidReactiveSystemProperties()  // Definition auch in
-                                        // conversion_rate::conversion_rate
+void CSolidProperties::SetSolidReactiveSystemProperties()  // Definition auch in
+// conversion_rate::conversion_rate
 {
     if (reaction_system.compare("CaOH2") == 0)
     {
@@ -1114,7 +1156,8 @@ CSolidProperties::CSolidProperties()
       data_Conductivity(NULL),
       data_Plasticity(NULL),
       data_Creep(NULL),
-      _bgra_creep(NULL)
+      _bgra_creep(NULL),
+      _element_youngs_moduli(NULL)
 {
     PoissonRatio = 0.2;
     ThermalExpansion = 0.0;
@@ -1351,8 +1394,10 @@ CSolidProperties::~CSolidProperties()
     material_burgers = NULL;
     smath = NULL;
 
-    if(_bgra_creep)
+    if (_bgra_creep)
         delete _bgra_creep;
+    if (_element_youngs_moduli)
+        delete _element_youngs_moduli;
 }
 //----------------------------------------------------------------------------
 
@@ -1780,28 +1825,31 @@ void CSolidProperties::HeatConductivityTensor(const int dim, double* tensor,
         tensor[i] *= base_thermal_conductivity;
 }
 
-double CSolidProperties::getShearModulus(const double reference) const
+double CSolidProperties::getShearModulus(const long element_id,
+                                         const double reference) const
 {
-    return 0.5 * getYoungsModulus(reference) / (1. + Poisson_Ratio());
+    return 0.5 * getYoungsModulus(element_id, reference) /
+           (1. + Poisson_Ratio());
 }
 
 /**************************************************************************
    FEMLib-Method: CSolidProperties::Youngs_Modulus(const double reference = 0.0)
 const Task: Get density Programing: 08/2004 WW Implementation
 **************************************************************************/
-double CSolidProperties::getYoungsModulus(const double reference) const
+double CSolidProperties::getYoungsModulus(const long element_id,
+                                          const double reference) const
 {
-    double val = 0.0;
     switch (Youngs_mode)
     {
         case 0:
-            val = CalulateValue(data_Youngs, reference);
-            break;
+            return CalulateValue(data_Youngs, reference);
         case 1:
-            val = (*data_Youngs)(0);
-            break;
+            return (*data_Youngs)(0);
+        case 999:
+            assert(_element_youngs_moduli);
+            return _element_youngs_moduli->getParameterAtElement(element_id);
     }
-    return val;
+    return 0.0;
 }
 
 //-------------------------------------------------------------------------
@@ -2021,8 +2069,9 @@ void CSolidProperties::LocalNewtonMinkley(
     // Calculate effective stress and update material properties
     sig_eff = SolidMath::CalEffectiveStress(sigd_j);
     material_minkley->UpdateMinkleyProperties(sig_eff, e_pl_eff, Temperature);
-    sig_j = sigd_j + material_minkley->KM / material_minkley->GM *
-                         (e_i - e_pl_v) * SolidMath::ivec;
+    sig_j = sigd_j +
+            material_minkley->KM / material_minkley->GM * (e_i - e_pl_v) *
+                SolidMath::ivec;
     // std::cout << "Stress guesstimate_zz " << sig_j(2)*material_minkley->GM0
     // << std::endl;
 
@@ -2163,10 +2212,10 @@ void CSolidProperties::LocalNewtonMinkley(
    Programing:
    08/2004 WW Implementation
 **************************************************************************/
-void CSolidProperties::Calculate_Lame_Constant()
+void CSolidProperties::Calculate_Lame_Constant(const long element_id)
 {
     double nv = Poisson_Ratio();
-    E = getYoungsModulus();  // Constant at present
+    E = getYoungsModulus(element_id);  // Constant at present
     // WX:1.2013. time dependet
     if (Time_Dependent_E_nv_mode > 0)
     {
@@ -2260,15 +2309,31 @@ void CSolidProperties::ElasticConsitutive(const int Dimension,
 
 *************************************************************************/
 void CSolidProperties::ElasticConstitutiveTransverseIsotropic(
-    const int Dimension)
+    const long element_id, const int Dimension)
 {
     double aii, aai, bii, bai, cii, cai;
 
     double ni = Poisson_Ratio();
-    double Ei = (*data_Youngs)(0);
-    double Ea = (*data_Youngs)(1);
-    double nia = (*data_Youngs)(2);
-    double Ga = (*data_Youngs)(3);
+
+    double Ei = 0.;
+    double nia = 0.;
+    double Ea = 0.;
+    double Ga = 0.;
+
+    if (!_element_youngs_moduli)
+    {
+        Ei = (*data_Youngs)(0);
+        Ea = (*data_Youngs)(1);
+        nia = (*data_Youngs)(2);
+        Ga = (*data_Youngs)(3);
+    }
+    else
+    {
+        Ei = _element_youngs_moduli->getParameterAtElement(element_id);
+        Ea = Ei * _element_youngs_moduli->getAnisotropicFactor(1);
+        nia = (*data_Youngs)(0);
+        Ga = 0.5 * Ea / (1. + nia);
+    }
 
     // WX:01.2013, time dependet
     if (Time_Dependent_E_nv_mode > 0)
@@ -2462,20 +2527,19 @@ vector
 void CSolidProperties::CalculateTransformMatrixFromNormalVector(
     const int Dimension)
 {
-    if (!(Youngs_mode > 9 && Youngs_mode < 14))  // WW
+    if (!((Youngs_mode > 9 && Youngs_mode < 14) ||
+          _element_youngs_moduli))  // WW
         return;
 
-    if (Youngs_mode != 10)
-    {
-        ElasticConstitutiveTransverseIsotropic(Dimension);
+    if (!(Youngs_mode == 10 || Youngs_mode == 20))
         return;
-    }
 
     double e1[3] = {0.0}, e2[3] = {0.0}, e3[3] = {0.0};
 
-    double nx = (*data_Youngs)(4);
-    double ny = (*data_Youngs)(5);
-    double nz = (*data_Youngs)(6);
+    const int start_id = (_element_youngs_moduli) ? 1 : 4;
+    double nx = (*data_Youngs)(start_id);
+    double ny = (*data_Youngs)(start_id + 1);
+    double nz = (*data_Youngs)(start_id + 2);
     double Disk(1.0), t1(0.0), t2(0.0), t3(0.0), ax(1.0), ay(0.0), az(0.0);
 
     // rotation matrix for vectors: UJG 25.11.2009
@@ -2661,8 +2725,6 @@ void CSolidProperties::CalculateTransformMatrixFromNormalVector(
     }
     delete Crotv;
     Crotv = NULL;
-
-    ElasticConstitutiveTransverseIsotropic(Dimension);
 }
 //
 // WW. 09/02. Compute dilatancy for yield function
@@ -3879,36 +3941,32 @@ int CSolidProperties::StressIntegrationMOHR_Aniso(
                 else
                 {
                     dlode_dsig[0] =
-                        sqrt3 /
-                        (2. * MathLib::fastpow(sqrtJ2, 3) *
-                         cos(3. * LodeAngle)) *
+                        sqrt3 / (2. * MathLib::fastpow(sqrtJ2, 3) *
+                                 cos(3. * LodeAngle)) *
                         (3. * J3 / 2. / J2 * devStr[0] -
                          (devStr[0] * devStr[0] + devStr[3] * devStr[3] +
                           devStr[4] * devStr[4]) +
                          2. * J2 * Kronecker[0] / 3.0);
 
                     dlode_dsig[1] =
-                        sqrt3 /
-                        (2. * MathLib::fastpow(sqrtJ2, 3) *
-                         cos(3. * LodeAngle)) *
+                        sqrt3 / (2. * MathLib::fastpow(sqrtJ2, 3) *
+                                 cos(3. * LodeAngle)) *
                         (3. * J3 / 2. / J2 * devStr[1] -
                          (devStr[3] * devStr[3] + devStr[1] * devStr[1] +
                           devStr[5] * devStr[5]) +
                          2. * J2 * Kronecker[1] / 3.0);
 
                     dlode_dsig[2] =
-                        sqrt3 /
-                        (2. * MathLib::fastpow(sqrtJ2, 3) *
-                         cos(3. * LodeAngle)) *
+                        sqrt3 / (2. * MathLib::fastpow(sqrtJ2, 3) *
+                                 cos(3. * LodeAngle)) *
                         (3. * J3 / 2. / J2 * devStr[2] -
                          (devStr[4] * devStr[4] + devStr[5] * devStr[5] +
                           devStr[2] * devStr[2]) +
                          2. * J2 * Kronecker[2] / 3.0);
 
                     dlode_dsig[3] =
-                        sqrt3 /
-                        (2. * MathLib::fastpow(sqrtJ2, 3) *
-                         cos(3. * LodeAngle)) *
+                        sqrt3 / (2. * MathLib::fastpow(sqrtJ2, 3) *
+                                 cos(3. * LodeAngle)) *
                         (3. * J3 / 2. / J2 * devStr[3] -
                          (devStr[0] * devStr[3] + devStr[3] * devStr[1] +
                           devStr[4] * devStr[5]) +
@@ -3917,18 +3975,16 @@ int CSolidProperties::StressIntegrationMOHR_Aniso(
                     if (Dim == 3)
                     {
                         dlode_dsig[4] =
-                            sqrt3 /
-                            (2. * MathLib::fastpow(sqrtJ2, 3) *
-                             cos(3. * LodeAngle)) *
+                            sqrt3 / (2. * MathLib::fastpow(sqrtJ2, 3) *
+                                     cos(3. * LodeAngle)) *
                             (3. * J3 / 2. / J2 * devStr[4] -
                              (devStr[0] * devStr[4] + devStr[3] * devStr[5] +
                               devStr[4] * devStr[2]) +
                              2. * J2 * Kronecker[4] / 3.0);
 
                         dlode_dsig[5] =
-                            sqrt3 /
-                            (2. * MathLib::fastpow(sqrtJ2, 3) *
-                             cos(3. * LodeAngle)) *
+                            sqrt3 / (2. * MathLib::fastpow(sqrtJ2, 3) *
+                                     cos(3. * LodeAngle)) *
                             (3. * J3 / 2. / J2 * devStr[5] -
                              (devStr[3] * devStr[4] + devStr[1] * devStr[5] +
                               devStr[5] * devStr[2]) +
@@ -3987,9 +4043,8 @@ int CSolidProperties::StressIntegrationMOHR_Aniso(
                     }
                     for (i = 0; i < Size; i++)
                         dAniso_dsig_tens[i] =
-                            2 *
-                            (a_ki_sig_kj[i] * sig_pq_sig_pq -
-                             a_pk_sig_pq_sig_kq * TmpStrTens[i]) /
+                            2 * (a_ki_sig_kj[i] * sig_pq_sig_pq -
+                                 a_pk_sig_pq_sig_kq * TmpStrTens[i]) /
                             (sig_pq_sig_pq *
                              sig_pq_sig_pq);  // instead TmpStress[i] with
                                               // TmpStrTens
@@ -4168,14 +4223,16 @@ int CSolidProperties::StressIntegrationMOHR_Aniso(
                     }
                 }
                 shearsurf =
-                    Ntheta * (I1 / 3 + 2 / sqrt3 * sqrtJ2 *
-                                           sin(LodeAngle + 2 / 3. * PI)) -
+                    Ntheta *
+                        (I1 / 3 +
+                         2 / sqrt3 * sqrtJ2 * sin(LodeAngle + 2 / 3. * PI)) -
                     (I1 / 3. +
                      2 / sqrt3 * sqrtJ2 * sin(LodeAngle - 2 / 3. * PI)) -
                     csn;
-                tensionsurf_k1 = (I1 / 3. + 2 / sqrt3 * sqrtJ2 *
-                                                sin(LodeAngle + 2 / 3. * PI)) -
-                                 tension;
+                tensionsurf_k1 =
+                    (I1 / 3. +
+                     2 / sqrt3 * sqrtJ2 * sin(LodeAngle + 2 / 3. * PI)) -
+                    tension;
             }  // end while for dlamda
             // calculate Dep
             // dsig_dlamda = -De dG/dstr
@@ -4239,36 +4296,32 @@ int CSolidProperties::StressIntegrationMOHR_Aniso(
                 else
                 {
                     dlode_dsig[0] =
-                        sqrt3 /
-                        (2. * MathLib::fastpow(sqrtJ2, 3) *
-                         cos(3. * LodeAngle)) *
+                        sqrt3 / (2. * MathLib::fastpow(sqrtJ2, 3) *
+                                 cos(3. * LodeAngle)) *
                         (3. * J3 / 2. / J2 * devStr[0] -
                          (devStr[0] * devStr[0] + devStr[3] * devStr[3] +
                           devStr[4] * devStr[4]) +
                          2. * J2 * Kronecker[0] / 3.0);
 
                     dlode_dsig[1] =
-                        sqrt3 /
-                        (2. * MathLib::fastpow(sqrtJ2, 3) *
-                         cos(3. * LodeAngle)) *
+                        sqrt3 / (2. * MathLib::fastpow(sqrtJ2, 3) *
+                                 cos(3. * LodeAngle)) *
                         (3. * J3 / 2. / J2 * devStr[1] -
                          (devStr[3] * devStr[3] + devStr[1] * devStr[1] +
                           devStr[5] * devStr[5]) +
                          2. * J2 * Kronecker[1] / 3.0);
 
                     dlode_dsig[2] =
-                        sqrt3 /
-                        (2. * MathLib::fastpow(sqrtJ2, 3) *
-                         cos(3. * LodeAngle)) *
+                        sqrt3 / (2. * MathLib::fastpow(sqrtJ2, 3) *
+                                 cos(3. * LodeAngle)) *
                         (3. * J3 / 2. / J2 * devStr[2] -
                          (devStr[4] * devStr[4] + devStr[5] * devStr[5] +
                           devStr[2] * devStr[2]) +
                          2. * J2 * Kronecker[2] / 3.0);
 
                     dlode_dsig[3] =
-                        sqrt3 /
-                        (2. * MathLib::fastpow(sqrtJ2, 3) *
-                         cos(3. * LodeAngle)) *
+                        sqrt3 / (2. * MathLib::fastpow(sqrtJ2, 3) *
+                                 cos(3. * LodeAngle)) *
                         (3. * J3 / 2. / J2 * devStr[3] -
                          (devStr[0] * devStr[3] + devStr[3] * devStr[1] +
                           devStr[4] * devStr[5]) +
@@ -4277,18 +4330,16 @@ int CSolidProperties::StressIntegrationMOHR_Aniso(
                     if (Dim == 3)
                     {
                         dlode_dsig[4] =
-                            sqrt3 /
-                            (2. * MathLib::fastpow(sqrtJ2, 3) *
-                             cos(3. * LodeAngle)) *
+                            sqrt3 / (2. * MathLib::fastpow(sqrtJ2, 3) *
+                                     cos(3. * LodeAngle)) *
                             (3. * J3 / 2. / J2 * devStr[4] -
                              (devStr[0] * devStr[4] + devStr[3] * devStr[5] +
                               devStr[4] * devStr[2]) +
                              2. * J2 * Kronecker[4] / 3.0);
 
                         dlode_dsig[5] =
-                            sqrt3 /
-                            (2. * MathLib::fastpow(sqrtJ2, 3) *
-                             cos(3. * LodeAngle)) *
+                            sqrt3 / (2. * MathLib::fastpow(sqrtJ2, 3) *
+                                     cos(3. * LodeAngle)) *
                             (3. * J3 / 2. / J2 * devStr[5] -
                              (devStr[3] * devStr[4] + devStr[1] * devStr[5] +
                               devStr[5] * devStr[2]) +
@@ -4347,9 +4398,8 @@ int CSolidProperties::StressIntegrationMOHR_Aniso(
                     }
                     for (i = 0; i < Size; i++)
                         dAniso_dsig_comp[i] =
-                            2 *
-                            (a_ki_sig_kj[i] * sig_pq_sig_pq -
-                             a_pk_sig_pq_sig_kq * TmpStrComp[i]) /
+                            2 * (a_ki_sig_kj[i] * sig_pq_sig_pq -
+                                 a_pk_sig_pq_sig_kq * TmpStrComp[i]) /
                             (sig_pq_sig_pq *
                              sig_pq_sig_pq);  // instead TmpStress with
                                               // TmpStrComp
@@ -4371,9 +4421,8 @@ int CSolidProperties::StressIntegrationMOHR_Aniso(
                     {
                         dfs_dsig[i] =
                             (Ntheta - 1) / 3. * Kronecker[i] +
-                            2 / sqrt3 *
-                                (Ntheta * sin(LodeAngle + 2 / 3. * PI) -
-                                 sin(LodeAngle - 2 / 3. * PI)) *
+                            2 / sqrt3 * (Ntheta * sin(LodeAngle + 2 / 3. * PI) -
+                                         sin(LodeAngle - 2 / 3. * PI)) *
                                 dsqrtJ2_dsig[i] +
                             2 / sqrt3 * sqrtJ2 * dlode_dsig[i] *
                                 (Ntheta * cos(LodeAngle + 2 / 3. * PI) -
@@ -4546,14 +4595,16 @@ int CSolidProperties::StressIntegrationMOHR_Aniso(
                 // shearsurf=Ntheta*(I1/3+2/sqrt3*sqrtJ2*sin(LodeAngle+2/3.*PI))
                 //	-(I1/3.+2/sqrt3*sqrtJ2*sin(LodeAngle-2/3.*PI))-csn;
                 shearsurf_k1 =
-                    Ntheta * (I1 / 3 + 2 / sqrt3 * sqrtJ2 *
-                                           sin(LodeAngle + 2 / 3. * PI)) -
+                    Ntheta *
+                        (I1 / 3 +
+                         2 / sqrt3 * sqrtJ2 * sin(LodeAngle + 2 / 3. * PI)) -
                     (I1 / 3. +
                      2 / sqrt3 * sqrtJ2 * sin(LodeAngle - 2 / 3. * PI)) -
                     csn;
-                tensionsurf = (I1 / 3. + 2 / sqrt3 * sqrtJ2 *
-                                             sin(LodeAngle + 2 / 3. * PI)) -
-                              tension;
+                tensionsurf =
+                    (I1 / 3. +
+                     2 / sqrt3 * sqrtJ2 * sin(LodeAngle + 2 / 3. * PI)) -
+                    tension;
             }  // end while for dlamda
             // calculate Dep
             // dsig_dlamda = -De dG/dstr
@@ -4713,7 +4764,7 @@ int CSolidProperties::DirectStressIntegrationMOHR(const int GPiGPj,
        devS[4]=TmpStress[4]=-2.8646737121460246e-007;
        devS[5]=TmpStress[5]=7.9612875121132550e-007;
 
-     */ ///////////
+     */  ///////////
     // test
     CalPrinStrDir(devS, prin_str, prin_dir, Dim);
 
@@ -4746,7 +4797,7 @@ int CSolidProperties::DirectStressIntegrationMOHR(const int GPiGPj,
        TransMatrixA_T->multi(prin_str, tmpresult);
        for(i=0; i<Size; i++)
         cout<<tmpresult[i]<<endl;
-     */ /////////
+     */  /////////
 
     // if(m_pcs->GetIteSteps()==1)
 
@@ -5735,9 +5786,9 @@ void CSolidProperties::ConsistentTangentialDP(Matrix* Dep, const double dPhi,
     {
         c1 = Xi * BetaN * Hard * (dPhi + dl2);
         c3 = K * c1 /
-             (c1 + 3.0 * Al * K *
-                       sqrt(dPhi * dPhi +
-                            3.0 * Xi * Xi * (dPhi + dl2) * (dPhi + dl2)));
+             (c1 +
+              3.0 * Al * K * sqrt(dPhi * dPhi +
+                                  3.0 * Xi * Xi * (dPhi + dl2) * (dPhi + dl2)));
         c2 = 0.5 * c3 / (Xi * G * (dPhi + dl2));
         (*Dep) = 0.0;
         //
@@ -6640,7 +6691,7 @@ int CSolidProperties::CalStress_and_TangentialMatrix_SYS(
                     //----- Update the Newton-Raphson step
                     for (i = 0; i < LocDim; i++)
                     {
-                        x_l[i] =  rhs_l[i] * damping;
+                        x_l[i] = rhs_l[i] * damping;
                     }
 
                     for (i = 0; i < LengthStrs; i++)
@@ -7077,17 +7128,15 @@ void CSolidProperties::dG__dNStress_dNStress(const double* DevS,
             delta_ij_kl = Kronecker(ii, jj) * Kronecker(kk, ll);
             // dG_dSdS[i*LengthStrs+j] =
             (*d2G_dSdS)(i, j) =
-                0.5 *
-                    ((Kronecker(ii, kk) * Kronecker(jj, ll) -
-                      delta_ij_kl / 3.0) /
-                         psi1 +
-                     (MatN1[0] + 12.0 * MatN1[2] * MatN1[2] * I_p2) *
-                         delta_ij_kl) /
+                0.5 * ((Kronecker(ii, kk) * Kronecker(jj, ll) -
+                        delta_ij_kl / 3.0) /
+                           psi1 +
+                       (MatN1[0] + 12.0 * MatN1[2] * MatN1[2] * I_p2) *
+                           delta_ij_kl) /
                     PSI -
-                0.25 *
-                    (DevS[i] / psi1 +
-                     (MatN1[0] * In1 + 4.0 * MatN1[2] * MatN1[2] * I_p3) *
-                         Kronecker(ii, jj)) *
+                0.25 * (DevS[i] / psi1 +
+                        (MatN1[0] * In1 + 4.0 * MatN1[2] * MatN1[2] * I_p3) *
+                            Kronecker(ii, jj)) *
                     (DevS[j] / psi1 +
                      (MatN1[0] * In1 + 4.0 * MatN1[2] * MatN1[2] * I_p3) *
                          Kronecker(kk, ll)) /
@@ -7160,10 +7209,9 @@ void CSolidProperties::dG__dStress_dStress(const double* DevS,
             (*d2G_dSdS)(i, j) -=
                 0.5 * (MatN1[0] + 12.0 * MatN1[2] * MatN1[2] * I_p2) *
                     Kronecker(ii, jj) * RotV[j] / PSI -
-                0.25 *
-                    (DevS[i] / psi1 +
-                     (MatN1[0] * In1 + 4.0 * MatN1[2] * MatN1[2] * I_p3) *
-                         Kronecker(ii, jj)) *
+                0.25 * (DevS[i] / psi1 +
+                        (MatN1[0] * In1 + 4.0 * MatN1[2] * MatN1[2] * I_p3) *
+                            Kronecker(ii, jj)) *
                     (MatN1[0] * In1 + 4.0 * MatN1[2] * MatN1[2] * I_p3) *
                     RotV[j] / PSI_p3 +
                 2.0 * MatN1[3] * Kronecker(ii, jj) * RotV[j];
@@ -7241,10 +7289,9 @@ void CSolidProperties::dG_dSTress_dMat(const double* DevS,
         // dG_dSdM[i*LengthStrs]   //dG_dS_dAlpha
         (*d2G_dSdM)(i, 0)  // dG_dS_dAlpha
             = 0.5 * In1 * delta_ij / PSI -
-              0.125 *
-                  (DevS[i] / psi1 +
-                   (MatN1[0] * In1 + 4.0 * MatN1[2] * MatN1[2] * I_p3) *
-                       delta_ij) *
+              0.125 * (DevS[i] / psi1 +
+                       (MatN1[0] * In1 + 4.0 * MatN1[2] * MatN1[2] * I_p3) *
+                           delta_ij) *
                   I_p2 / PSI_p3;
         // dG_dSdM[i*LengthStrs+1]   //dG_dS_dBeta
         (*d2G_dSdM)(i, 1)  // dG_dS_dBeta
@@ -7252,10 +7299,9 @@ void CSolidProperties::dG_dSTress_dMat(const double* DevS,
         // dG_dSdM[i*LengthStrs+2]   // dG_dS_dDelta
         (*d2G_dSdM)(i, 2)  // dG_dS_dDelta
             = 4.0 * MatN1[2] * I_p3 * delta_ij / PSI -
-              0.5 *
-                  (DevS[i] / psi1 +
-                   (MatN1[0] * In1 + 4.0 * MatN1[2] * MatN1[2] * I_p3) *
-                       delta_ij) *
+              0.5 * (DevS[i] / psi1 +
+                     (MatN1[0] * In1 + 4.0 * MatN1[2] * MatN1[2] * I_p3) *
+                         delta_ij) *
                   MatN1[2] * I_p4 / PSI_p3;
         // dG_dSdM[i*LengthStrs+3]   // dG_dS_dEpsilon
         (*d2G_dSdM)(i, 3)  // dG_dS_dEpsilon
@@ -7362,10 +7408,9 @@ void CSolidProperties::dfun2(const double* DevS, const double* RotV,
                        (MatN1[0] * In1 + 4.0 * MatN1[2] * MatN1[2] * I_p3) *
                            Kronecker(kk, ll)) /
                       PSI_p3 +
-                  var *
-                      (RotV[i] * Kronecker(kk, ll) -
-                       mr * (Kronecker(ii, kk) * Kronecker(jj, ll) -
-                             Kronecker(ii, jj) * Kronecker(kk, ll) / 3.0)) /
+                  var * (RotV[i] * Kronecker(kk, ll) -
+                         mr * (Kronecker(ii, kk) * Kronecker(jj, ll) -
+                               Kronecker(ii, jj) * Kronecker(kk, ll) / 3.0)) /
                       PSI);
 
             (*d2G_dSdS)(l, j) /= In1;
@@ -7582,7 +7627,7 @@ void CSolidProperties::CalStress_and_TangentialMatrix_CC(
             K = q = q_tr / (1.0 + 6.0 * G * vep / M2);
         }
 #else  // ifdef New
-       // Associative flow rule
+        // Associative flow rule
         while (isLoop)  // Newton step for the plastic multiplier
         {
             NPStep++;
@@ -7663,9 +7708,10 @@ void CSolidProperties::CalStress_and_TangentialMatrix_CC(
             dfdp = 2.0 * p - p_c;
             dfdq = 2.0 * q / M2;
             Jac = -K * dfdp  // dF/dp *  dp/dv
-                  - dfdq * q_tr * (K + 0.5 * p_c * vartheta * var1) /
-                        (p_tr - 0.5 * p_c)  // dF/dq  * dq/dv
-                  - p * vartheta * p_c;     // df/dp_c  * dp_c/dv
+                  -
+                  dfdq * q_tr * (K + 0.5 * p_c * vartheta * var1) /
+                      (p_tr - 0.5 * p_c)  // dF/dq  * dq/dv
+                  - p * vartheta * p_c;   // df/dp_c  * dp_c/dv
 
             // Update
             dampFac = 1.0;
@@ -8827,9 +8873,8 @@ bool MSPRead(const std::string& given_file_base_name)
         line_string = line;
         if (line_string.find("#STOP") != string::npos)
         {
-            ScreenMessage(
-                "done, read %d sets of solid properties terms\n",
-                msp_vector.size());
+            ScreenMessage("done, read %d sets of solid properties terms\n",
+                          msp_vector.size());
             return true;
         }
         //----------------------------------------------------------------------
@@ -8936,7 +8981,8 @@ double TensorMutiplication3(const double* s1, const double* s2,
                     +
                     s1[1] * (s2[3] * s3[3] +
                              s2[1] * s3[1])  // s1_22*(s2_21*s3_12+s2_22*s3_22)
-                    + s1[2] * s2[2] * s3[2]) /
+                    +
+                    s1[2] * s2[2] * s3[2]) /
                    3.0;  // s33*s33*s33
             break;
         case 3:
@@ -8944,23 +8990,31 @@ double TensorMutiplication3(const double* s1, const double* s2,
                        // s1_11*(s2_11*s3_11+s2_12*s3_21+s2_13*s3_31)
                        s1[0] * (s2[0] * s3[0] + s2[3] * s3[3] + s2[4] * s3[4])
                        // s1_12*(s2_11*s3_12+s2_12*s3_22+s2_13*s3_32)
-                       + s1[3] * (s2[0] * s3[3] + s2[3] * s3[1] + s2[4] * s3[5])
+                       +
+                       s1[3] * (s2[0] * s3[3] + s2[3] * s3[1] + s2[4] * s3[5])
                        // s1_13*(s2_11*s3_13+s2_12*s3_23+s2_13*s3_33)
-                       + s1[4] * (s2[0] * s3[4] + s2[3] * s3[5] + s2[4] * s3[2])
+                       +
+                       s1[4] * (s2[0] * s3[4] + s2[3] * s3[5] + s2[4] * s3[2])
                        // s1_21*(s2_21*s3_11+s2_22*s3_21+s2_23*s3_31)
-                       + s1[3] * (s2[3] * s3[0] + s2[1] * s3[3] + s2[5] * s3[4])
+                       +
+                       s1[3] * (s2[3] * s3[0] + s2[1] * s3[3] + s2[5] * s3[4])
                        // s1_22*(s2_21*s3_12+s2_22*s3_22+s2_23*s3_32)
-                       + s1[1] * (s2[3] * s3[3] + s2[1] * s3[1] + s2[5] * s3[5])
+                       +
+                       s1[1] * (s2[3] * s3[3] + s2[1] * s3[1] + s2[5] * s3[5])
                        // s1_23*(s2_21*s3_13+s2_22*s3_23+s2_23*s3_33)
-                       + s1[5] * (s2[3] * s3[4] + s2[1] * s3[5] + s2[5] * s3[2])
+                       +
+                       s1[5] * (s2[3] * s3[4] + s2[1] * s3[5] + s2[5] * s3[2])
                        // s1_31*(s2_31*s3_11+s2_32*s3_21+s2_33*s3_31)
-                       + s1[4] * (s2[4] * s3[0] + s2[5] * s3[3] +
-                                  s2[2] * s3[4])  // WX:bug fixed s3_31 is s3[4]
+                       +
+                       s1[4] * (s2[4] * s3[0] + s2[5] * s3[3] +
+                                s2[2] * s3[4])  // WX:bug fixed s3_31 is s3[4]
                        // s1_32*(s2_31*s3_12+s2_32*s3_22+s2_33*s3_32)
-                       + s1[5] * (s2[4] * s3[3] + s2[5] * s3[1] + s2[2] * s3[5])
+                       +
+                       s1[5] * (s2[4] * s3[3] + s2[5] * s3[1] + s2[2] * s3[5])
                        // s1_33*(s2_31*s3_13+s2_32*s3_23+s2_33*s3_33)
-                       + s1[2] *
-                             (s2[4] * s3[4] + s2[5] * s3[5] + s2[2] * s3[2])) /
+                       +
+                       s1[2] *
+                           (s2[4] * s3[4] + s2[5] * s3[5] + s2[2] * s3[2])) /
                    3.0;
             break;
     }

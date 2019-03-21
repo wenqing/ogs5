@@ -50,7 +50,8 @@ double getCreepConstantCoefficient(const double A, const double n,
     return A * std::pow(1.5, 0.5 * (1 + n)) / std::pow(sigma0, n);
 }
 
-void BGRaCreep::integrateStress(const double dt, const double T,
+void BGRaCreep::integrateStress(const long element_id, const double dt,
+                                const double T,
                                 const CSolidProperties& solid_properties,
                                 const Math_Group::Matrix& De,
                                 Math_Group::Matrix& Dec,
@@ -74,7 +75,7 @@ void BGRaCreep::integrateStress(const double dt, const double T,
 
     // In case |s_{try}| is zero and _n < 3 (rare case).
     if (norm_s < std::numeric_limits<double>::epsilon() *
-                     solid_properties.getYoungsModulus())
+                     solid_properties.getYoungsModulus(element_id))
     {
         if (update_s > 0)
         {
@@ -93,7 +94,7 @@ void BGRaCreep::integrateStress(const double dt, const double T,
 
     const double b = dt * getCreepConstantCoefficient(_a, _n, _sigma_f) *
                      std::exp(-_q / (PhysicalConstant::IdealGasConstant * T));
-    const double G = solid_properties.getShearModulus();
+    const double G = solid_properties.getShearModulus(element_id);
 
     double solution[6];
     for (int i = 0; i < nstress_components; i++)
@@ -168,7 +169,7 @@ void BGRaCreep::integrateStress(const double dt, const double T,
             "number of iterations. Iteration: %d, residual norm: "
             "%g",
             it, norm_r);
-		abort();
+        abort();
     }
 
     for (int i = 0; i < nstress_components; i++)
