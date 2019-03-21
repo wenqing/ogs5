@@ -30,6 +30,11 @@ extern bool MSPRead(const std::string& given_file_base_name);
 extern void MSPWrite(const std::string& base_file_name);
 extern void MSPDelete();
 
+namespace MaterialLib
+{
+class ElementWiseDistributedData;
+}
+
 namespace FiniteElement
 {
 class element;
@@ -97,7 +102,7 @@ public:
     double Thermal_Expansion() const { return ThermalExpansion; }
     double Poisson_Ratio() const { return PoissonRatio; }
     // Elasticity
-    void Calculate_Lame_Constant();
+    void Calculate_Lame_Constant(const long element_id);
 
     // For thermal elastic model
     void ElasticConsitutive(const int Dimension, Math_Group::Matrix* D_e) const;
@@ -189,8 +194,10 @@ public:
                             Math_Group::Matrix& Consistent_Tangent,
                             double Temperature, double& local_res);
 
-    double getShearModulus(const double refence = 0.0) const;
-    double getYoungsModulus(const double refence = 0.0) const;
+    double getShearModulus(const long element_id,
+                           const double refence = 0.0) const;
+    double getYoungsModulus(const long element_id,
+                            const double refence = 0.0) const;
     double getBulkModulus() const;
     double getBiotsConstant() const { return biot_const; }
     MohrCoulombFailureCriterion* getMohrCoulombFailureCriterion() const
@@ -395,11 +402,13 @@ private:
     void CalcYoungs_SVV(const double strain_v);
 
     // For transverse isotropic linear elasticity: UJG 24.11.2009
-    void ElasticConstitutiveTransverseIsotropic(const int Dimension);
+    void ElasticConstitutiveTransverseIsotropic(const long element_id,
+                                                const int Dimension);
     void CalculateTransformMatrixFromNormalVector(const int Dimension);
     double E_Function(int dim, const FiniteElement::ElementValue_DM* ele_val,
                       int ngp);  // WX:06.2012
 
+    bool hasElementWiseYoungsModuli() const { return _element_youngs_moduli; }
     // Plasticity
     // Drucker-Prager
     double GetAngleCoefficent_DP(const double Angle);
@@ -496,6 +505,7 @@ private:
 
     BGRaCreep* _bgra_creep;
     MohrCoulombFailureCriterion* _mohrCoulomb_failure_criterion;
+    MaterialLib::ElementWiseDistributedData* _element_youngs_moduli;
 
     // Friends that can access to this data explicitly
     friend bool ::MSPRead(const std::string& given_file_base_name);

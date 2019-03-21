@@ -961,7 +961,7 @@ void CFiniteElementStd::SetMaterial(int /*phase*/)
     }
 
     if (MediaProp->storage_model == 7)  // 29.11.2011. WW
-        SolidProp->Calculate_Lame_Constant();
+        SolidProp->Calculate_Lame_Constant(MeshElement->GetIndex());
 
     //----------------------------------------------------------------------
     // MSP

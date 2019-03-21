@@ -39,7 +39,7 @@ public:
           _n(n),
           _sigma_f(sigma_f),
           _q(Q),
-		  _reference_temperture(reference_temperture),
+          _reference_temperture(reference_temperture),
           _tolerance(tolerance),
           _max_iterations(max_iterations),
           _jacobian(Math_Group::Matrix(6, 6))
@@ -49,8 +49,9 @@ public:
     ~BGRaCreep() {}
     /**
      *
-     * @param dt        Time increment.
-     * @param T         Temperature.
+     * @param element_id Element index.
+     * @param dt         Time increment.
+     * @param T          Temperature.
      * @param solid_properties The solid properties, which contains G and mu.
      * @param De        The elastic tensor.
      * @param Dec       The elastic creep tensor to be calculated. Assuming that
@@ -60,14 +61,13 @@ public:
      * @param update_s  An indicator to indicate whether the stress integration
      *                  is for the updating of stress.
      */
-    void integrateStress(const double dt, const double T,
+    void integrateStress(const long element_id, const double dt, const double T,
                          const CSolidProperties& solid_properties,
                          const Math_Group::Matrix& De, Math_Group::Matrix& Dec,
                          double const* const stress, double* dstress,
                          const int update_s);
 
     double getReferenceTemterature() const { return _reference_temperture; }
-
 private:
     const double _a;        /// A parameter determined by experiment.
     const double _n;        /// Creep rate exponent n.

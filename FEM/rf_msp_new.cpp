@@ -45,6 +45,7 @@
 #include "PhysicalConstant.h"
 
 #include "Material/Solid/BGRaCreep.h"
+#include "Material/DistributedData/ElementWiseDistributedData.h"
 #include "Material/Solid/MohrCoulombFailureCriterion.h"
 #include "minkley.h"
 #include "burgers.h"
@@ -468,6 +469,8 @@ std::ios::pos_type CSolidProperties::Read(std::ifstream* msp_file)
             int type = Youngs_mode;
             if (type > 9 && type < 14)
                 type = 1000;
+            if (type > 29 && type < 24)
+                type = 2000;
             switch (type)  // 15.03.2008 WW
             {
                 case 0:  //  = f(x)
@@ -515,6 +518,46 @@ std::ios::pos_type CSolidProperties::Read(std::ifstream* msp_file)
                         (*data_Youngs)(6);
                     in_sd.clear();
                     break;
+                case 2000:  // case 20-23: transverse isotropic linear
+                            // elasticity (UJG 24.11.2009). The same to 10-13
+                    // except the Youngs modulus data are element wise.
+                    // data_Youngs transverse isotropic linear elasticity
+                    {
+                        std::string file_name;
+                        in_sd >> file_name;
+                        double anisotropic_factor[3];
+                        for (int i = 0; i < 2; i++)
+                            in_sd >> anisotropic_factor[i];
+                        anisotropic_factor[2] = 1.0;
+                        _element_youngs_moduli =
+                            new MaterialLib::ElementWiseDistributedData(
+                                FilePath + file_name, anisotropic_factor);
+
+                        // data_Youngs:
+                        // 0: nu_{ia} (Poisson's ratio w.r.t. the
+                        //  anisotropy direction)
+                        // 1: n_x (x-coefficient of  the local axis of
+                        // anisotropy (2D case: -\sin\phi))
+                        // 2: n_y (y-coefficient of the local axis of anisotropy
+                        // (2D case: \cos\phi))
+                        // 3: n_z (z-coefficient of the local axis of anisotropy
+                        // (2D case: 0))
+                        data_Youngs = new Matrix(4);
+                        in_sd >> (*data_Youngs)(0) >> (*data_Youngs)(1) >>
+                            (*data_Youngs)(2) >> (*data_Youngs)(3);
+                        in_sd.clear();
+                    }
+                    break;
+                case 9999:  // element wise distributed.
+                {
+                    std::string file_name;
+                    in_sd >> file_name;
+                    _element_youngs_moduli =
+                        new MaterialLib::ElementWiseDistributedData(FilePath +
+                                                                    file_name);
+                    in_sd.clear();
+                    break;
+                }
             }
         }
         //....................................................................
@@ -1190,7 +1233,9 @@ CSolidProperties::CSolidProperties()
       data_Conductivity(NULL),
       data_Plasticity(NULL),
       data_Creep(NULL),
-      _bgra_creep(NULL), _mohrCoulomb_failure_criterion(NULL)
+      _bgra_creep(NULL),
+      _mohrCoulomb_failure_criterion(NULL),
+      _element_youngs_moduli(NULL)
 {
     PoissonRatio = 0.2;
     ThermalExpansion = 0.0;
@@ -1431,10 +1476,12 @@ CSolidProperties::~CSolidProperties()
     material_burgers = NULL;
     smath = NULL;
 
-    if(_bgra_creep)
+    if (_bgra_creep)
         delete _bgra_creep;
     if(_mohrCoulomb_failure_criterion)
         delete _mohrCoulomb_failure_criterion;
+    if (_element_youngs_moduli)
+        delete _element_youngs_moduli;
 }
 //----------------------------------------------------------------------------
 
@@ -1870,28 +1917,31 @@ void CSolidProperties::HeatConductivityTensor(const int dim, double* tensor,
         tensor[i] *= base_thermal_conductivity;
 }
 
-double CSolidProperties::getShearModulus(const double reference) const
+double CSolidProperties::getShearModulus(const long element_id,
+                                         const double reference) const
 {
-    return 0.5 * getYoungsModulus(reference) / (1. + Poisson_Ratio());
+    return 0.5 * getYoungsModulus(element_id, reference) /
+           (1. + Poisson_Ratio());
 }
 
 /**************************************************************************
    FEMLib-Method: CSolidProperties::Youngs_Modulus(const double reference = 0.0)
 const Task: Get density Programing: 08/2004 WW Implementation
 **************************************************************************/
-double CSolidProperties::getYoungsModulus(const double reference) const
+double CSolidProperties::getYoungsModulus(const long element_id,
+                                          const double reference) const
 {
-    double val = 0.0;
     switch (Youngs_mode)
     {
         case 0:
-            val = CalulateValue(data_Youngs, reference);
-            break;
+            return CalulateValue(data_Youngs, reference);
         case 1:
-            val = (*data_Youngs)(0);
-            break;
+            return (*data_Youngs)(0);
+        case 999:
+            assert(_element_youngs_moduli);
+            return _element_youngs_moduli->getParameterAtElement(element_id);
     }
-    return val;
+    return 0.0;
 }
 
 //-------------------------------------------------------------------------
@@ -2253,10 +2303,10 @@ void CSolidProperties::LocalNewtonMinkley(
    Programing:
    08/2004 WW Implementation
 **************************************************************************/
-void CSolidProperties::Calculate_Lame_Constant()
+void CSolidProperties::Calculate_Lame_Constant(const long element_id)
 {
     double nv = Poisson_Ratio();
-    E = getYoungsModulus();  // Constant at present
+    E = getYoungsModulus(element_id);  // Constant at present
     // WX:1.2013. time dependet
     if (Time_Dependent_E_nv_mode > 0)
     {
@@ -2350,15 +2400,31 @@ void CSolidProperties::ElasticConsitutive(const int Dimension,
 
 *************************************************************************/
 void CSolidProperties::ElasticConstitutiveTransverseIsotropic(
-    const int Dimension)
+    const long element_id, const int Dimension)
 {
     double aii, aai, bii, bai, cii, cai;
 
     double ni = Poisson_Ratio();
-    double Ei = (*data_Youngs)(0);
-    double Ea = (*data_Youngs)(1);
-    double nia = (*data_Youngs)(2);
-    double Ga = (*data_Youngs)(3);
+
+    double Ei = 0.;
+    double nia = 0.;
+    double Ea = 0.;
+    double Ga = 0.;
+
+    if (!_element_youngs_moduli)
+    {
+        Ei = (*data_Youngs)(0);
+        Ea = (*data_Youngs)(1);
+        nia = (*data_Youngs)(2);
+        Ga = (*data_Youngs)(3);
+    }
+    else
+    {
+        Ei = _element_youngs_moduli->getParameterAtElement(element_id);
+        Ea = Ei * _element_youngs_moduli->getAnisotropicFactor(1);
+        nia = (*data_Youngs)(0);
+        Ga = 0.5 * Ea / (1. + nia);
+    }
 
     // WX:01.2013, time dependet
     if (Time_Dependent_E_nv_mode > 0)
@@ -2552,20 +2618,19 @@ vector
 void CSolidProperties::CalculateTransformMatrixFromNormalVector(
     const int Dimension)
 {
-    if (!(Youngs_mode > 9 && Youngs_mode < 14))  // WW
+    if (!((Youngs_mode > 9 && Youngs_mode < 14) ||
+          _element_youngs_moduli))  // WW
         return;
 
-    if (Youngs_mode != 10)
-    {
-        ElasticConstitutiveTransverseIsotropic(Dimension);
+    if (!(Youngs_mode == 10 || Youngs_mode == 20))
         return;
-    }
 
     double e1[3] = {0.0}, e2[3] = {0.0}, e3[3] = {0.0};
 
-    double nx = (*data_Youngs)(4);
-    double ny = (*data_Youngs)(5);
-    double nz = (*data_Youngs)(6);
+    const int start_id = (_element_youngs_moduli) ? 1 : 4;
+    double nx = (*data_Youngs)(start_id);
+    double ny = (*data_Youngs)(start_id + 1);
+    double nz = (*data_Youngs)(start_id + 2);
     double Disk(1.0), t1(0.0), t2(0.0), t3(0.0), ax(1.0), ay(0.0), az(0.0);
 
     // rotation matrix for vectors: UJG 25.11.2009
@@ -2751,8 +2816,6 @@ void CSolidProperties::CalculateTransformMatrixFromNormalVector(
     }
     delete Crotv;
     Crotv = NULL;
-
-    ElasticConstitutiveTransverseIsotropic(Dimension);
 }
 //
 // WW. 09/02. Compute dilatancy for yield function
