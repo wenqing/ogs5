@@ -32,6 +32,13 @@
 
 // PCSLib
 #include "rf_pcs.h"
+#include "Material/DistributedData/ElementWiseDistributedData.h"
+
+
+namespace MaterialLib
+{
+class ElementWiseDistributedData;
+}
 
 namespace FiniteElement
 {
@@ -88,6 +95,10 @@ private:
     // CMCD 9/2004 GeoSys 4
     double PermeabilityPressureFunctionMethod4(long, double, double);
     friend class CMediumPropertiesGroup;
+
+    MaterialLib::ElementWiseDistributedData* _element_porosity;
+    MaterialLib::ElementWiseDistributedData* _element_permeability;
+    MaterialLib::ElementWiseDistributedData* _element_thermal_conductivity;
 
 public:
     //-------------------------------------------
