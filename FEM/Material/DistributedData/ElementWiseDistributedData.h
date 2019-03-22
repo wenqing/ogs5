@@ -13,9 +13,11 @@
 
 #pragma once
 
-#include <algorithm>
+#include <map>
 #include <string>
 #include <vector>
+
+#include "FEMEnums.h"
 
 namespace MaterialLib
 {
@@ -52,5 +54,9 @@ private:
     double _anisotropic_factor[3];
     std::vector<double> const& _data;
 };
-void readData(const std::string& file_name, std::vector<double>& data);
+void readData(const std::string& file_name,
+              const std::size_t number_of_elements,
+              MaterialParameter::Name const parameter_name,
+              std::map<MaterialParameter::Name, std::vector<double> >&
+                  heterogeneous_material_data);
 }  // end of namespace

@@ -543,25 +543,18 @@ std::ios::pos_type CMediumProperties::Read(
 #endif
                 case 9999:  // element wise distributed porosity
                 {
-                    if (heterogeneous_material_data.find(
-                            MaterialParameter::POROSITY) ==
-                        heterogeneous_material_data.end())
-                    {
-                        heterogeneous_material_data
-                            [MaterialParameter::POROSITY] =
-                                std::vector<double>(number_of_elements);
-                    }
-
                     std::string file_name;
                     in >> file_name;
-                    std::vector<double>& data_vector =
-                        heterogeneous_material_data
-                            [MaterialParameter::POROSITY];
-                    MaterialLib::readData(FilePath + file_name, data_vector);
+
+                    MaterialLib::readData(FilePath + file_name,
+                                          number_of_elements,
+                                          MaterialParameter::POROSITY,
+                                          heterogeneous_material_data);
 
                     _element_porosity =
                         new MaterialLib::ElementWiseDistributedData(
-                            data_vector);
+                            heterogeneous_material_data
+                                [MaterialParameter::POROSITY]);
 
                     break;
                 }
@@ -978,28 +971,22 @@ std::ios::pos_type CMediumProperties::Read(
                     break;
                 case 'E':  // element wise data
                 {
-                    if (heterogeneous_material_data.find(
-                            MaterialParameter::PERMEABILITY) ==
-                        heterogeneous_material_data.end())
-                    {
-                        heterogeneous_material_data
-                            [MaterialParameter::PERMEABILITY] =
-                                std::vector<double>(number_of_elements);
-                    }
-
                     std::string file_name;
                     in >> file_name;
-                    std::vector<double>& data_vector =
-                        heterogeneous_material_data
-                            [MaterialParameter::PERMEABILITY];
-                    MaterialLib::readData(FilePath + file_name, data_vector);
+
+                    MaterialLib::readData(FilePath + file_name,
+                                          number_of_elements,
+                                          MaterialParameter::PERMEABILITY,
+                                          heterogeneous_material_data);
 
                     double anisotropic_factor[3];
                     for (int i = 0; i < 3; i++)
                         in >> anisotropic_factor[i];
                     _element_permeability =
                         new MaterialLib::ElementWiseDistributedData(
-                            data_vector, anisotropic_factor);
+                            heterogeneous_material_data
+                                [MaterialParameter::PERMEABILITY],
+                            anisotropic_factor);
                     break;
                 }
                 default:
@@ -1017,28 +1004,21 @@ std::ios::pos_type CMediumProperties::Read(
         {
             in.str(GetLineFromFile1(mmp_file));
 
-            if (heterogeneous_material_data.find(
-                    MaterialParameter::THERMAL_CONDUCTIVITY) ==
-                heterogeneous_material_data.end())
-            {
-                heterogeneous_material_data
-                    [MaterialParameter::THERMAL_CONDUCTIVITY] =
-                        std::vector<double>(number_of_elements);
-            }
-
             std::string file_name;
             in >> file_name;
 
-            std::vector<double>& data_vector = heterogeneous_material_data
-                [MaterialParameter::THERMAL_CONDUCTIVITY];
-            MaterialLib::readData(FilePath + file_name, data_vector);
+            MaterialLib::readData(FilePath + file_name, number_of_elements,
+                                  MaterialParameter::THERMAL_CONDUCTIVITY,
+                                  heterogeneous_material_data);
 
             double anisotropic_factor[3];
             for (int i = 0; i < 3; i++)
                 in >> anisotropic_factor[i];
             _element_thermal_conductivity =
-                new MaterialLib::ElementWiseDistributedData(data_vector,
-                                                            anisotropic_factor);
+                new MaterialLib::ElementWiseDistributedData(
+                    heterogeneous_material_data
+                        [MaterialParameter::THERMAL_CONDUCTIVITY],
+                    anisotropic_factor);
 
             in.clear();
             continue;

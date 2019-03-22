@@ -240,7 +240,6 @@ int ReadData(const char* dateiname,
     CPRead(dateiname);  // SB:GS4
     BCRead(dateiname, geo_obj, unique_name);
     STRead(dateiname, geo_obj, unique_name);
-    ICRead(dateiname, geo_obj, unique_name);
     OUTRead(dateiname, geo_obj, unique_name);
     TIMRead(dateiname);
 
@@ -259,6 +258,9 @@ int ReadData(const char* dateiname,
         dateiname, mesh_vec[0]->ele_vector.size(), heterogeneous_material_data);
     MMPRead(
         dateiname, mesh_vec[0]->ele_vector.size(), heterogeneous_material_data);
+
+    ICRead(dateiname, geo_obj, unique_name);
+
     REACINTRead(dateiname);  // CB new reaction interface
     RCRead(dateiname);
     REACT_CAP_Read(dateiname,
