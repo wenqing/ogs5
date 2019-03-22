@@ -44,9 +44,6 @@
 /*------------------------------------------------------------------------*/
 // Data file
 // OK411
-extern int ReadData(const char*,
-                    GEOLIB::GEOObjects& geo_obj,
-                    std::string& unique_name);
 /* PCS */
 #include "pcs_dm.h"
 #include "rf_pcs.h"
@@ -101,6 +98,12 @@ extern int ReadData(const char*,
 #include "PETSC/PETScLinearSolver.h"
 #endif
 
+extern int ReadData(const char*,
+                    GEOLIB::GEOObjects& geo_obj,
+                    std::string& unique_name,
+                    std::map<MaterialParameter::Name, std::vector<double> >&
+                        heterogeneous_material_data);
+
 using namespace Display;
 
 namespace process
@@ -130,7 +133,7 @@ Problem::Problem(const char* filename)
     if (filename != NULL)
     {
         // read data
-        ReadData(filename, *_geo_obj, _geo_name);
+        ReadData(filename, *_geo_obj, _geo_name, _heterogeneous_material_data);
 #if !defined(USE_PETSC)  // &&  !defined(other parallel libs)//03~04.3012. WW
         DOMRead(filename);
 #endif
@@ -314,7 +317,7 @@ Problem::Problem(const char* filename)
         pos = 0;
         npos = (int)path.size();
 
-        // Get path
+// Get path
 #ifdef _WIN32
         pos = (int)path.rfind("\\");  // HS keep this on windows
 #else
@@ -465,7 +468,7 @@ Problem::Problem(const char* filename)
 #endif
     }
 #endif  //#if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
-        // WW
+    // WW
     //----------------------------------------------------------------------
     PCSRestart();  // SB
     OUTCheck();    // new SB
@@ -1216,15 +1219,16 @@ void Problem::Euler_TimeDiscretize()
             "\n\n#################################################"
             "############\n");
 
-        ScreenMessage("Time step: %d"
-                               "|  Time: %g"
-                               "|  Time step size: %g\n",
-                               aktueller_zeitschritt, current_time, dt);
+        ScreenMessage(
+            "Time step: %d"
+            "|  Time: %g"
+            "|  Time step size: %g\n",
+            aktueller_zeitschritt, current_time, dt);
         if (dt_rec > dt)
         {
             ScreenMessage(
                 "This time step size was modified to match a "
-                         "critical time!\n");
+                "critical time!\n");
         }
 
         if (CouplingLoop())
@@ -1325,8 +1329,7 @@ void Problem::Euler_TimeDiscretize()
         //		current_time = end_time;
     }
 
-    ScreenMessage(
-            "\n----------------------------------------------------\n");
+    ScreenMessage("\n----------------------------------------------------\n");
     for (i = 0; i < (int)active_process_index.size(); i++)  // JT2012
     {
         m_tim = total_processes[active_process_index[i]]->Tim;
@@ -1334,33 +1337,31 @@ void Problem::Euler_TimeDiscretize()
         ScreenMessage(
             "\nFor process: %s\n",
             convertProcessTypeToString(
-                total_processes[active_process_index[i]]
-                    ->getProcessType()).data());
+                total_processes[active_process_index[i]]->getProcessType())
+                .data());
         if (m_tim->time_control_type == TimeControlType::FIXED_STEPS)
         {
-             ScreenMessage("No time control for this process.\n");
+            ScreenMessage("No time control for this process.\n");
         }
         else
         {
             ScreenMessage("Accepted time steps: %d\n",
-                                   m_tim->accepted_step_count);
+                          m_tim->accepted_step_count);
             ScreenMessage("Rejected time steps: %d\n",
-                                   m_tim->rejected_step_count);
+                          m_tim->rejected_step_count);
         }
         if (total_processes[active_process_index[i]]
                 ->m_num->nls_max_iterations > 1)
         {
             ScreenMessage(
                 "Number of non-converged iterations: %d\n",
-                total_processes[active_process_index[i]]
-                             ->num_notsatisfied);
+                total_processes[active_process_index[i]]->num_notsatisfied);
             ScreenMessage(
                 "Number of stagnated iterations: %d\n",
                 total_processes[active_process_index[i]]->num_diverged);
         }
     }
-    ScreenMessage(
-        "----------------------------------------------------\n");
+    ScreenMessage("----------------------------------------------------\n");
 
 #if defined(USE_PETSC)  // 05.2014. WW
     if (mrank == 0)
@@ -1545,11 +1546,10 @@ bool Problem::CouplingLoop()
                             MMax(max_outer_error, max_inner_error);
                     //
                     ScreenMessage(
-                    "\n==========================================="
-                     "===========\n");
-                    ScreenMessage(
-                        "Inner coupling loop %d/%d complete.\n",
-                        inner_index + 1, inner_max);
+                        "\n==========================================="
+                        "===========\n");
+                    ScreenMessage("Inner coupling loop %d/%d complete.\n",
+                                  inner_index + 1, inner_max);
                     ScreenMessage(
                         "Max coupling error (relative to tolerance): %0.3e\n",
                         max_inner_error);
@@ -1644,11 +1644,10 @@ if(has_constrained_bc > 0)
             ScreenMessage(
                 "\n======================================================\n");
             ScreenMessage("Outer coupling loop %d/%d complete.\n",
-                                   outer_index + 1,
-                                   cpl_overall_max_iterations);
-             ScreenMessage(
-                 "Max coupling error (relative to tolerance): %0.3e\n",
-                 max_outer_error);
+                          outer_index + 1,
+                          cpl_overall_max_iterations);
+            ScreenMessage("Max coupling error (relative to tolerance): %0.3e\n",
+                          max_outer_error);
             ScreenMessage(
                 "======================================================\n");
 
@@ -1805,11 +1804,11 @@ void Problem::PostCouplingLoop()
 #ifdef GEM_REACT
             if (i ==
                 0)  // for GEM_REACT we also need information on porosity (node
-                    // porosity internally stored in Gems process)!....do it
-                    // only once and it does not matter for which process !
-                    // ....we assume that the first pcs process is the flow
-                    // process...if reload not defined for every process,
-                    // restarting with gems will not work in any case
+                // porosity internally stored in Gems process)!....do it
+                // only once and it does not matter for which process !
+                // ....we assume that the first pcs process is the flow
+                // process...if reload not defined for every process,
+                // restarting with gems will not work in any case
 
                 if ((m_pcs->GetRestartFlag() == FiniteElement::WRITE ||
                      m_pcs->GetRestartFlag() == FiniteElement::READ_WRITE) &&
@@ -1833,7 +1832,7 @@ void Problem::PostCouplingLoop()
         // //MB
         if (force_post_node_copy)
         {  // JT: safety valve. Set this value to true (in Problem()) and values
-           // will be copied here.
+            // will be copied here.
             m_pcs->CopyTimestepNODValues();
             m_pcs->CopyTimestepELEValues();
         }
@@ -2258,10 +2257,10 @@ void Problem::TestOutputDuMux(CRFProcess* m_pcs)
 
         mass_CO2_gas =
             mass_CO2_gas + node_volume * saturation_CO2 * density_CO2;
-        mass_CO2_water = mass_CO2_water + node_volume * saturation_water *
-                                              concentration_CO2_water *
-                                              m_pcs->DuMuxData->Molweight_CO2 *
-                                              0.001;
+        mass_CO2_water = mass_CO2_water +
+                         node_volume * saturation_water *
+                             concentration_CO2_water *
+                             m_pcs->DuMuxData->Molweight_CO2 * 0.001;
         // cout << " Node: " << i << " saturation: " << saturation_water << "
         // Density_CO2: " << density_CO2 << " node_volume: " << node_volume <<
         // "\n";
@@ -2384,10 +2383,10 @@ void Problem::TestOutputDuMux(CRFProcess* m_pcs)
 
         mass_CO2_gas =
             mass_CO2_gas + node_volume * saturation_CO2 * density_CO2;
-        mass_CO2_water = mass_CO2_water + node_volume * saturation_water *
-                                              concentration_CO2_water *
-                                              m_pcs->DuMuxData->Molweight_CO2 *
-                                              0.001;
+        mass_CO2_water = mass_CO2_water +
+                         node_volume * saturation_water *
+                             concentration_CO2_water *
+                             m_pcs->DuMuxData->Molweight_CO2 * 0.001;
     }
     mass_CO2 = mass_CO2_gas + mass_CO2_water;
     // calculating time
@@ -2535,10 +2534,10 @@ void Problem::TestOutputEclipse(CRFProcess* m_pcs)
 
         mass_CO2_gas =
             mass_CO2_gas + node_volume * saturation_CO2 * density_CO2;
-        mass_CO2_water =
-            mass_CO2_water + node_volume * saturation_water *
-                                 concentration_CO2_water *
-                                 m_pcs->EclipseData->Molweight_CO2 * 0.001;
+        mass_CO2_water = mass_CO2_water +
+                         node_volume * saturation_water *
+                             concentration_CO2_water *
+                             m_pcs->EclipseData->Molweight_CO2 * 0.001;
         // cout << " Node: " << i << " saturation: " << saturation_water << "
         // Density_CO2: " << density_CO2 << " node_volume: " << node_volume <<
         // "\n";
@@ -2644,8 +2643,9 @@ void Problem::TestOutputEclipse(CRFProcess* m_pcs)
         element_volume = m_ele->GetVolume() * porosity;
         if (m_pcs->EclipseData->E100 == true)
             saturation_water =
-                1 - m_pcs->EclipseData
-                        ->Data[i][m_pcs->EclipseData->GetVariableIndex("SGAS")];
+                1 -
+                m_pcs->EclipseData
+                    ->Data[i][m_pcs->EclipseData->GetVariableIndex("SGAS")];
         else
             saturation_water =
                 m_pcs->EclipseData
@@ -2666,10 +2666,10 @@ void Problem::TestOutputEclipse(CRFProcess* m_pcs)
 
         mass_CO2_gas =
             mass_CO2_gas + element_volume * saturation_CO2 * density_CO2;
-        mass_CO2_water =
-            mass_CO2_water + element_volume * saturation_water *
-                                 concentration_CO2_water *
-                                 m_pcs->EclipseData->Molweight_CO2 * 0.001;
+        mass_CO2_water = mass_CO2_water +
+                         element_volume * saturation_water *
+                             concentration_CO2_water *
+                             m_pcs->EclipseData->Molweight_CO2 * 0.001;
     }
     mass_CO2 = mass_CO2_gas + mass_CO2_water;
     // calculating time
@@ -2850,13 +2850,13 @@ void Problem::OutputMassOfGasInModel(CRFProcess* m_pcs)
             porosity = m_mat_mp->Porosity(m_ele->GetIndex(), 1);
             // node_volume = node_volume + m_ele->GetVolume() / 8 * porosity;
             if (m_ele->GetElementType() == 2)
-                node_volume = node_volume + m_ele->GetVolume() /
-                                                m_ele->GetNodesNumber(true) *
-                                                porosity;
+                node_volume =
+                    node_volume +
+                    m_ele->GetVolume() / m_ele->GetNodesNumber(true) * porosity;
             else
-                node_volume = node_volume + m_ele->GetVolume() /
-                                                m_ele->GetNodesNumber(false) *
-                                                porosity;
+                node_volume = node_volume +
+                              m_ele->GetVolume() /
+                                  m_ele->GetNodesNumber(false) * porosity;
         }
 
         V_model = V_model + node_volume;
@@ -2874,9 +2874,10 @@ void Problem::OutputMassOfGasInModel(CRFProcess* m_pcs)
             concentration_Gas_water =
                 pcs_vector[ProcessIndex_GasInLiquid]->GetNodeValue(
                     i, indexConcentration_Gas);
-            mass_Gas_water = mass_Gas_water + node_volume * saturation_water *
-                                                  concentration_Gas_water *
-                                                  Molweight_Gas * 0.001;
+            mass_Gas_water = mass_Gas_water +
+                             node_volume * saturation_water *
+                                 concentration_Gas_water * Molweight_Gas *
+                                 0.001;
         }
         else
             mass_Gas_water = 0;
@@ -3072,9 +3073,9 @@ void Problem::OutputMassOfComponentInModel(std::vector<CRFProcess*> flow_pcs,
             porosity = m_mat_mp->Porosity(
                 m_ele->GetIndex(),
                 1);  // CB Now provides also heterogeneous porosity, model 11
-            node_volume = node_volume + porosity * m_ele->GetVolume() *
-                                            m_ele->GetFluxArea() /
-                                            m_ele->GetNodesNumber(false);
+            node_volume = node_volume +
+                          porosity * m_ele->GetVolume() * m_ele->GetFluxArea() /
+                              m_ele->GetNodesNumber(false);
             // cout << m_ele->GetNodesNumber(false) << " " << "\n";
         }
 
@@ -3575,7 +3576,7 @@ inline double Problem::MassTrasport()
 #ifdef REACTION_ELEMENT
             REACT_vec[0]->ExecuteReactionsPHREEQC0();
 #else
-            // REACT_vec[0]->ExecuteReactions();
+// REACT_vec[0]->ExecuteReactions();
 
 #ifdef OGS_FEM_IPQC
             REACT_vec[0]->ExecutePQCString();
@@ -4299,54 +4300,54 @@ inline void Problem::LOPExecuteRegionalRichardsFlow(CRFProcess* m_pcs_global,
                     // idxp
                     for (l = 0; l < no_local_nodes; l++)
                         values[l] = m_pcs_local->GetNodeValue(l, idxp);
-                    MPI_Bcast(
-                        (void*)values, no_local_nodes, MPI_DOUBLE, k, comm_DDC);
+                    MPI_Bcast((void*)values, no_local_nodes, MPI_DOUBLE, k,
+                              comm_DDC);
                     for (l = 0; l < no_local_nodes; l++)
-                        m_pcs_global->SetNodeValue(
-                            l + rp * no_local_nodes, idxp, values[l]);
+                        m_pcs_global->SetNodeValue(l + rp * no_local_nodes,
+                                                   idxp, values[l]);
                     // idxcp
                     for (l = 0; l < no_local_nodes; l++)
                         values[l] = m_pcs_local->GetNodeValue(l, idxcp);
-                    MPI_Bcast(
-                        (void*)values, no_local_nodes, MPI_DOUBLE, k, comm_DDC);
+                    MPI_Bcast((void*)values, no_local_nodes, MPI_DOUBLE, k,
+                              comm_DDC);
                     for (l = 0; l < no_local_nodes; l++)
-                        m_pcs_global->SetNodeValue(
-                            l + rp * no_local_nodes, idxcp, values[l]);
+                        m_pcs_global->SetNodeValue(l + rp * no_local_nodes,
+                                                   idxcp, values[l]);
                     // idxS
                     for (l = 0; l < no_local_nodes; l++)
                         values[l] = m_pcs_local->GetNodeValue(l, idxS);
-                    MPI_Bcast(
-                        (void*)values, no_local_nodes, MPI_DOUBLE, k, comm_DDC);
+                    MPI_Bcast((void*)values, no_local_nodes, MPI_DOUBLE, k,
+                              comm_DDC);
                     for (l = 0; l < no_local_nodes; l++)
-                        m_pcs_global->SetNodeValue(
-                            l + rp * no_local_nodes, idxS, values[l]);
+                        m_pcs_global->SetNodeValue(l + rp * no_local_nodes,
+                                                   idxS, values[l]);
                 }
                 else
                 {
                     // idxp
-                    MPI_Bcast(
-                        (void*)values, no_local_nodes, MPI_DOUBLE, k, comm_DDC);
+                    MPI_Bcast((void*)values, no_local_nodes, MPI_DOUBLE, k,
+                              comm_DDC);
                     for (l = 0; l < no_local_nodes; l++)
-                        m_pcs_global->SetNodeValue(
-                            l + rp * no_local_nodes, idxp, values[l]);
+                        m_pcs_global->SetNodeValue(l + rp * no_local_nodes,
+                                                   idxp, values[l]);
                     // idxcp
-                    MPI_Bcast(
-                        (void*)values, no_local_nodes, MPI_DOUBLE, k, comm_DDC);
+                    MPI_Bcast((void*)values, no_local_nodes, MPI_DOUBLE, k,
+                              comm_DDC);
                     for (l = 0; l < no_local_nodes; l++)
-                        m_pcs_global->SetNodeValue(
-                            l + rp * no_local_nodes, idxcp, values[l]);
+                        m_pcs_global->SetNodeValue(l + rp * no_local_nodes,
+                                                   idxcp, values[l]);
                     // idxS
-                    MPI_Bcast(
-                        (void*)values, no_local_nodes, MPI_DOUBLE, k, comm_DDC);
+                    MPI_Bcast((void*)values, no_local_nodes, MPI_DOUBLE, k,
+                              comm_DDC);
                     for (l = 0; l < no_local_nodes; l++)
-                        m_pcs_global->SetNodeValue(
-                            l + rp * no_local_nodes, idxS, values[l]);
+                        m_pcs_global->SetNodeValue(l + rp * no_local_nodes,
+                                                   idxS, values[l]);
                 }
             }
         }
     }
 #endif
-    //----------------------------------------------------------------------
+//----------------------------------------------------------------------
 
 #if defined(USE_MPI_REGSOIL)
     delete[] values;
