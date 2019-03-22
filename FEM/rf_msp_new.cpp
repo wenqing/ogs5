@@ -462,7 +462,7 @@ std::ios::pos_type CSolidProperties::Read(
             int type = Youngs_mode;
             if (type > 9 && type < 14)
                 type = 1000;
-            if (type > 29 && type < 24)
+            if (type > 19 && type < 24)
                 type = 2000;
             switch (type)  // 15.03.2008 WW
             {
@@ -516,23 +516,13 @@ std::ios::pos_type CSolidProperties::Read(
                     // except the Youngs modulus data are element wise.
                     // data_Youngs transverse isotropic linear elasticity
                     {
-                        if (heterogeneous_material_data.find(
-                                MaterialParameter::YOUNGS_MODULUS) ==
-                            heterogeneous_material_data.end())
-                        {
-                            heterogeneous_material_data
-                                [MaterialParameter::YOUNGS_MODULUS] =
-                                    std::vector<double>(number_of_elements);
-                        }
-
                         std::string file_name;
                         in_sd >> file_name;
 
-                        std::vector<double>& data_vector =
-                            heterogeneous_material_data
-                                [MaterialParameter::YOUNGS_MODULUS];
                         MaterialLib::readData(FilePath + file_name,
-                                              data_vector);
+                                              number_of_elements,
+                                              MaterialParameter::YOUNGS_MODULUS,
+                                              heterogeneous_material_data);
 
                         double anisotropic_factor[3];
                         for (int i = 0; i < 2; i++)
@@ -540,7 +530,9 @@ std::ios::pos_type CSolidProperties::Read(
                         anisotropic_factor[2] = 1.0;
                         _element_youngs_moduli =
                             new MaterialLib::ElementWiseDistributedData(
-                                data_vector, anisotropic_factor);
+                                heterogeneous_material_data
+                                    [MaterialParameter::YOUNGS_MODULUS],
+                                anisotropic_factor);
 
                         // data_Youngs:
                         // 0: nu_{ia} (Poisson's ratio w.r.t. the
@@ -559,26 +551,18 @@ std::ios::pos_type CSolidProperties::Read(
                     break;
                 case 9999:  // element wise distributed.
                 {
-                    if (heterogeneous_material_data.find(
-                            MaterialParameter::YOUNGS_MODULUS) ==
-                        heterogeneous_material_data.end())
-                    {
-                        heterogeneous_material_data
-                            [MaterialParameter::YOUNGS_MODULUS] =
-                                std::vector<double>(number_of_elements);
-                    }
-
                     std::string file_name;
                     in_sd >> file_name;
 
-                    std::vector<double>& data_vector =
-                        heterogeneous_material_data
-                            [MaterialParameter::YOUNGS_MODULUS];
-                    MaterialLib::readData(FilePath + file_name, data_vector);
+                    MaterialLib::readData(FilePath + file_name,
+                                          number_of_elements,
+                                          MaterialParameter::YOUNGS_MODULUS,
+                                          heterogeneous_material_data);
 
                     _element_youngs_moduli =
                         new MaterialLib::ElementWiseDistributedData(
-                            data_vector);
+                            heterogeneous_material_data
+                                [MaterialParameter::YOUNGS_MODULUS]);
                     in_sd.clear();
                     break;
                 }
