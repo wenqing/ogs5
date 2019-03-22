@@ -22,21 +22,20 @@ namespace MaterialLib
 class ElementWiseDistributedData
 {
 public:
-    explicit ElementWiseDistributedData(const std::string& file_name)
+    explicit ElementWiseDistributedData(std::vector<double> const& data)
+        : _data(data)
     {
         _anisotropic_factor[0] = 1.0;
         _anisotropic_factor[1] = 1.0;
         _anisotropic_factor[2] = 1.0;
-
-        readData(file_name);
     }
-    ElementWiseDistributedData(const std::string& file_name,
+    ElementWiseDistributedData(std::vector<double> const& data,
                                const double anisotropic_factor[3])
+        : _data(data)
     {
         _anisotropic_factor[0] = anisotropic_factor[0];
         _anisotropic_factor[1] = anisotropic_factor[1];
         _anisotropic_factor[2] = anisotropic_factor[2];
-        readData(file_name);
     }
 
     double getParameterAtElement(const std::size_t element_id) const
@@ -51,8 +50,7 @@ public:
 
 private:
     double _anisotropic_factor[3];
-    std::vector<double> _data;
-
-    void readData(const std::string& file_name);
+    std::vector<double> const& _data;
 };
+void readData(const std::string& file_name, std::vector<double>& data);
 }  // end of namespace

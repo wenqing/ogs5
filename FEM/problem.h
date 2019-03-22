@@ -15,10 +15,12 @@
 #define problem_INC
 
 #include <vector>
+#include <map>
 class CRFProcess;
 
 // GEOLIB
 #include "GEOObjects.h"
+#include "FEMEnums.h"
 
 namespace FiniteElement
 {
@@ -36,6 +38,7 @@ class Problem;
 typedef double (Problem::*ProblemMemFn)(void);
 #define Call_Member_FN(object, ptrToMember) ((object)->*(ptrToMember))
 //---------------------------------------------------------------------
+
 class Problem
 {
 public:
@@ -60,7 +63,6 @@ public:
             return buffer_array;
     }
     int GetCPLMaxIterations() { return cpl_overall_max_iterations; }
-
     /**
      * get the geometric objects stored in GEOLIB::GEOObjects
      * @return a pointer to an instance of class GEOLIB::GEOObjects
@@ -182,5 +184,8 @@ private:
     int msize;
 
     static const size_t max_processes = 16;
+
+    std::map<MaterialParameter::Name, std::vector<double> >
+        _heterogeneous_material_data;
 };
 #endif

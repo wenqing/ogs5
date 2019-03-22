@@ -18,15 +18,19 @@ last modified:
 #define rf_msp_new_INC
 
 // C++ STL
-//#include <fstream>
-//#include <string>
-//#include <vector>
+#include <vector>
+#include <map>
+
+#include "FEMEnums.h"
 
 #include "invariants.h"
 
 #define MSP_FILE_EXTENSION ".msp"
 
-extern bool MSPRead(const std::string& given_file_base_name);
+extern bool MSPRead(const std::string& given_file_base_name,
+                    const std::size_t number_of_elements,
+                    std::map<MaterialParameter::Name, std::vector<double> >&
+                        heterogeneous_material_data);
 extern void MSPWrite(const std::string& base_file_name);
 extern void MSPDelete();
 
@@ -77,7 +81,10 @@ public:
     CSolidProperties();
     ~CSolidProperties();
 
-    std::ios::pos_type Read(std::ifstream*);
+    std::ios::pos_type Read(
+        std::ifstream* msp_file, const std::size_t number_of_elements,
+        std::map<MaterialParameter::Name, std::vector<double> >&
+            heterogeneous_material_data);
 
     // Output
     void Write(std::fstream*);
@@ -486,7 +493,11 @@ private:
     MaterialLib::ElementWiseDistributedData* _element_youngs_moduli;
 
     // Friends that can access to this data explicitly
-    friend bool ::MSPRead(const std::string& given_file_base_name);
+    friend bool ::MSPRead(
+        const std::string& given_file_base_name,
+        const std::size_t number_of_elements,
+        std::map<MaterialParameter::Name, std::vector<double> >&
+            heterogeneous_material_data);
     friend void MSPWrite(const std::string& base_file_name);
 
     friend class FiniteElement::CFiniteElementVec;

@@ -77,7 +77,11 @@ double TemperatureUnitOffset()
    08/2004 WW Modification for solid properties
    12/2005 WW Creep properties
 **************************************************************************/
-std::ios::pos_type CSolidProperties::Read(std::ifstream* msp_file)
+std::ios::pos_type CSolidProperties::Read(
+    std::ifstream* msp_file,
+    const std::size_t number_of_elements,
+    std::map<MaterialParameter::Name, std::vector<double> >&
+        heterogeneous_material_data)
 {
     char buffer[MAX_ZEILE];
     std::string sub_line;
@@ -512,15 +516,31 @@ std::ios::pos_type CSolidProperties::Read(std::ifstream* msp_file)
                     // except the Youngs modulus data are element wise.
                     // data_Youngs transverse isotropic linear elasticity
                     {
+                        if (heterogeneous_material_data.find(
+                                MaterialParameter::YOUNGS_MODULUS) ==
+                            heterogeneous_material_data.end())
+                        {
+                            heterogeneous_material_data
+                                [MaterialParameter::YOUNGS_MODULUS] =
+                                    std::vector<double>(number_of_elements);
+                        }
+
                         std::string file_name;
                         in_sd >> file_name;
+
+                        std::vector<double>& data_vector =
+                            heterogeneous_material_data
+                                [MaterialParameter::YOUNGS_MODULUS];
+                        MaterialLib::readData(FilePath + file_name,
+                                              data_vector);
+
                         double anisotropic_factor[3];
                         for (int i = 0; i < 2; i++)
                             in_sd >> anisotropic_factor[i];
                         anisotropic_factor[2] = 1.0;
                         _element_youngs_moduli =
                             new MaterialLib::ElementWiseDistributedData(
-                                FilePath + file_name, anisotropic_factor);
+                                data_vector, anisotropic_factor);
 
                         // data_Youngs:
                         // 0: nu_{ia} (Poisson's ratio w.r.t. the
@@ -539,11 +559,26 @@ std::ios::pos_type CSolidProperties::Read(std::ifstream* msp_file)
                     break;
                 case 9999:  // element wise distributed.
                 {
+                    if (heterogeneous_material_data.find(
+                            MaterialParameter::YOUNGS_MODULUS) ==
+                        heterogeneous_material_data.end())
+                    {
+                        heterogeneous_material_data
+                            [MaterialParameter::YOUNGS_MODULUS] =
+                                std::vector<double>(number_of_elements);
+                    }
+
                     std::string file_name;
                     in_sd >> file_name;
+
+                    std::vector<double>& data_vector =
+                        heterogeneous_material_data
+                            [MaterialParameter::YOUNGS_MODULUS];
+                    MaterialLib::readData(FilePath + file_name, data_vector);
+
                     _element_youngs_moduli =
-                        new MaterialLib::ElementWiseDistributedData(FilePath +
-                                                                    file_name);
+                        new MaterialLib::ElementWiseDistributedData(
+                            data_vector);
                     in_sd.clear();
                     break;
                 }
@@ -8846,7 +8881,10 @@ double CSolidProperties::getBulkModulus() const
    01/2005 OK Boolean type
    01/2005 OK Destruct before read
 **************************************************************************/
-bool MSPRead(const std::string& given_file_base_name)
+bool MSPRead(const std::string& given_file_base_name,
+             const std::size_t number_of_elements,
+             std::map<MaterialParameter::Name, std::vector<double> >&
+                 heterogeneous_material_data)
 {
     //----------------------------------------------------------------------
     // OK  MSPDelete();
@@ -8883,7 +8921,8 @@ bool MSPRead(const std::string& given_file_base_name)
         {
             m_msp = new SolidProp::CSolidProperties();
             m_msp->file_base_name = given_file_base_name;
-            position = m_msp->Read(&msp_file);
+            position = m_msp->Read(&msp_file, number_of_elements,
+                                   heterogeneous_material_data);
             msp_vector.push_back(m_msp);
             msp_file.seekg(position, std::ios::beg);
         }  // keyword found

@@ -398,4 +398,15 @@ ConstrainedVariable::type convertConstrainedVariable(const std::string& str);
 std::string convertConstrainedVariableToString(
     ConstrainedVariable::type constrained_variable);
 
+namespace MaterialParameter
+{
+enum Name
+{
+    POROSITY,
+    PERMEABILITY,
+    THERMAL_CONDUCTIVITY,
+    YOUNGS_MODULUS
+};
+};
+
 #endif  // FEMENUMS_H
