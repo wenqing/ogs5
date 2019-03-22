@@ -23,15 +23,19 @@ class ElementWiseDistributedData
 {
 public:
     explicit ElementWiseDistributedData(const std::string& file_name)
-        : _anisotropic_factor{1.0, 1.0, 1.0}
     {
+        _anisotropic_factor[0] = 1.0;
+        _anisotropic_factor[1] = 1.0;
+        _anisotropic_factor[2] = 1.0;
+
         readData(file_name);
     }
     ElementWiseDistributedData(const std::string& file_name,
                                const double anisotropic_factor[3])
-        : _anisotropic_factor{anisotropic_factor[0], anisotropic_factor[1],
-                              anisotropic_factor[2]}
     {
+        _anisotropic_factor[0] = anisotropic_factor[0];
+        _anisotropic_factor[1] = anisotropic_factor[1];
+        _anisotropic_factor[2] = anisotropic_factor[2];
         readData(file_name);
     }
 
@@ -46,7 +50,7 @@ public:
     }
 
 private:
-    const double _anisotropic_factor[3];
+    double _anisotropic_factor[3];
     std::vector<double> _data;
 
     void readData(const std::string& file_name);
