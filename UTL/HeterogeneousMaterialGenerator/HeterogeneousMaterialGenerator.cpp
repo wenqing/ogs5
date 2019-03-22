@@ -16,6 +16,7 @@
 #include <iostream>
 #include <fstream>
 #include <limits>
+#include <map>
 
 #include "display.h"
 
@@ -73,6 +74,16 @@ createHeterogeneousMaterialGenerator(const std::string file_name)
         &fname, variable_name, std::move(guassian), std::move(ranges));
 }
 
+struct DataPair
+{
+    DataPair(const std::size_t index, const double value)
+        : index_(index), value_(value)
+    {
+    }
+    const std::size_t index_;
+    const double value_;
+};
+
 void HeterogeneousMaterialGenerator::generate(const std::string& base_file_name)
 {
     std::cout << "Generating random " << _variable_name << std::endl;
@@ -80,23 +91,12 @@ void HeterogeneousMaterialGenerator::generate(const std::string& base_file_name)
     std::random_device rd{};
     std::mt19937 gen{rd()};
 
-    const std::string f_name_mat = base_file_name + "_" + ".txt";
-    std::ofstream os_mat(f_name_mat.c_str(), std::ios::trunc);
-    os_mat.setf(std::ios::scientific, std::ios::floatfield);
-    os_mat.precision(12);
-
-    const std::string f_name_vtu_cell = base_file_name + "_" + ".vtu.cell";
-    std::ofstream os_vtu(f_name_vtu_cell.c_str(), std::ios::trunc);
-    os_vtu.setf(std::ios::scientific, std::ios::floatfield);
-    os_vtu.precision(12);
-
-    const std::string delim = " ";
     std::vector<double> values(ele_vector.size());
 
     double min_val = std::numeric_limits<double>::max();
     double max_val = 0.0;
 
-    os_mat << ele_vector.size() << std::endl;
+    std::map<std::size_t, std::vector<DataPair> > set_wise_results{};
     for (std::size_t i = 0; i < ele_vector.size(); i++)
     {
         auto const& element = *ele_vector[i];
@@ -109,11 +109,32 @@ void HeterogeneousMaterialGenerator::generate(const std::string& base_file_name)
             t = gaussian(gen);
         }
 
+        auto& result_vector = set_wise_results[mat_id];
+        result_vector.push_back({i, t});
+
         min_val = std::min(t, min_val);
         max_val = std::max(t, max_val);
         values[i] = t;
-        os_mat << i << delim << t << "\n";
     }
+
+    const std::string delim = " ";
+    for (auto const& results : set_wise_results)
+    {
+        std::ofstream os(base_file_name + "_materialID" +
+                             std::to_string(results.first) + ".txt",
+                         std::ios::trunc);
+        os.setf(std::ios::scientific, std::ios::floatfield);
+        os.precision(12);
+
+        const auto& result_vec = results.second;
+        os << result_vec.size() << "\n";
+        for (auto const& data : result_vec)
+            os << data.index_ << delim << data.value_ << "\n";
+    }
+
+    std::ofstream os_vtu(base_file_name + "_" + ".vtu.cell", std::ios::trunc);
+    os_vtu.setf(std::ios::scientific, std::ios::floatfield);
+    os_vtu.precision(12);
 
     os_vtu << "<DataArray type=\"Float64\" Name=\"" << _variable_name
            << "\" format=\"ascii\" RangeMin=\"" << min_val << "\" RangeMax=\""
