@@ -195,7 +195,9 @@ CMediumProperties::~CMediumProperties(void)
    02/2004 OK Implementation
    last modification:
 **************************************************************************/
-bool MMPRead(std::string base_file_name)
+bool MMPRead(std::string base_file_name, const std::size_t number_of_elements,
+             std::map<MaterialParameter::Name, std::vector<double> >&
+                 heterogeneous_material_data)
 {
     //----------------------------------------------------------------------
     // OK  MMPDelete();
@@ -235,7 +237,8 @@ bool MMPRead(std::string base_file_name)
         if (line_string.find("#MEDIUM_PROPERTIES") != string::npos)
         {
             m_mat_mp = new CMediumProperties();
-            position = m_mat_mp->Read(&mp_file);
+            position = m_mat_mp->Read(&mp_file, number_of_elements,
+                                      heterogeneous_material_data);
             // OK41
             m_mat_mp->number = (int)mmp_vector.size();
             mmp_vector.push_back(m_mat_mp);
@@ -300,7 +303,11 @@ bool MMPRead(std::string base_file_name)
    20.$UNCONFINED_FLOW_GROUP
    21.$FLUID_EXCHANGE_WITH_OTHER_CONTINUA
  */
-std::ios::pos_type CMediumProperties::Read(std::ifstream* mmp_file)
+std::ios::pos_type CMediumProperties::Read(
+    std::ifstream* mmp_file,
+    const std::size_t number_of_elements,
+    std::map<MaterialParameter::Name, std::vector<double> >&
+        heterogeneous_material_data)
 {
     int i, j, k = 0;
     std::string line_string;
@@ -538,11 +545,25 @@ std::ios::pos_type CMediumProperties::Read(std::ifstream* mmp_file)
 #endif
                 case 9999:  // element wise distributed porosity
                 {
+                    if (heterogeneous_material_data.find(
+                            MaterialParameter::POROSITY) ==
+                        heterogeneous_material_data.end())
+                    {
+                        heterogeneous_material_data
+                            [MaterialParameter::POROSITY] =
+                                std::vector<double>(number_of_elements);
+                    }
+
                     std::string file_name;
                     in >> file_name;
+                    std::vector<double>& data_vector =
+                        heterogeneous_material_data
+                            [MaterialParameter::POROSITY];
+                    MaterialLib::readData(FilePath + file_name, data_vector);
+
                     _element_porosity =
-                        new MaterialLib::ElementWiseDistributedData(FilePath +
-                                                                    file_name);
+                        new MaterialLib::ElementWiseDistributedData(
+                            data_vector);
 
                     break;
                 }
@@ -959,14 +980,28 @@ std::ios::pos_type CMediumProperties::Read(std::ifstream* mmp_file)
                     break;
                 case 'E':  // element wise data
                 {
+                    if (heterogeneous_material_data.find(
+                            MaterialParameter::PERMEABILITY) ==
+                        heterogeneous_material_data.end())
+                    {
+                        heterogeneous_material_data
+                            [MaterialParameter::PERMEABILITY] =
+                                std::vector<double>(number_of_elements);
+                    }
+
                     std::string file_name;
                     in >> file_name;
+                    std::vector<double>& data_vector =
+                        heterogeneous_material_data
+                            [MaterialParameter::PERMEABILITY];
+                    MaterialLib::readData(FilePath + file_name, data_vector);
+
                     double anisotropic_factor[3];
                     for (int i = 0; i < 3; i++)
                         in >> anisotropic_factor[i];
                     _element_permeability =
                         new MaterialLib::ElementWiseDistributedData(
-                            FilePath + file_name, anisotropic_factor);
+                            data_vector, anisotropic_factor);
                     break;
                 }
                 default:
@@ -1004,15 +1039,29 @@ std::ios::pos_type CMediumProperties::Read(std::ifstream* mmp_file)
             std::string::npos)
         {
             in.str(GetLineFromFile1(mmp_file));
+
+            if (heterogeneous_material_data.find(
+                    MaterialParameter::THERMAL_CONDUCTIVITY) ==
+                heterogeneous_material_data.end())
+            {
+                heterogeneous_material_data
+                    [MaterialParameter::THERMAL_CONDUCTIVITY] =
+                        std::vector<double>(number_of_elements);
+            }
+
             std::string file_name;
             in >> file_name;
+
+            std::vector<double>& data_vector = heterogeneous_material_data
+                [MaterialParameter::THERMAL_CONDUCTIVITY];
+            MaterialLib::readData(FilePath + file_name, data_vector);
 
             double anisotropic_factor[3];
             for (int i = 0; i < 3; i++)
                 in >> anisotropic_factor[i];
             _element_thermal_conductivity =
-                new MaterialLib::ElementWiseDistributedData(
-                    FilePath + file_name, anisotropic_factor);
+                new MaterialLib::ElementWiseDistributedData(data_vector,
+                                                            anisotropic_factor);
 
             in.clear();
             continue;

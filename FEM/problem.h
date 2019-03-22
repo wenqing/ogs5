@@ -14,12 +14,14 @@
 #ifndef problem_INC
 #define problem_INC
 
+#include <map>
 #include <utility>
 #include <vector>
 
 class CRFProcess;
 
 // GEOLIB
+#include "FEMEnums.h"
 #include "GEOObjects.h"
 
 namespace FiniteElement
@@ -43,6 +45,7 @@ class Problem;
 typedef double (Problem::*ProblemMemFn)(void);
 #define Call_Member_FN(object, ptrToMember) ((object)->*(ptrToMember))
 //---------------------------------------------------------------------
+
 class Problem
 {
 public:
@@ -196,6 +199,8 @@ private:
     void readMaterialIDsForReplacement(const std::string& file_base_name);
 
     void postExcavationProcessForConcreteLinning();
-};
 
+    std::map<MaterialParameter::Name, std::vector<double> >
+        _heterogeneous_material_data;
+};
 #endif

@@ -25,10 +25,10 @@
 //#include <fstream>
 
 // GeoLib
+#include "FEMEnums.h"
 #include "GeoType.h"
-#include "makros.h"  // JT
-
 #include "PhysicalConstant.h"
+#include "makros.h"  // JT
 
 // PCSLib
 #include "Material/DistributedData/ElementWiseDistributedData.h"
@@ -62,7 +62,10 @@ public:
     void Set(std::string, std::string, double);
     void SetDB(std::string, std::string, double);
     int GetPropertyType(std::string);
-    std::ios::pos_type Read(std::ifstream*);
+    std::ios::pos_type Read(
+        std::ifstream* mmp_file, const std::size_t number_of_elements,
+        std::map<MaterialParameter::Name, std::vector<double> >&
+            heterogeneous_material_data);
     void Write(std::fstream*);
     void WriteTecplot(std::string);
 
@@ -397,7 +400,10 @@ extern void read_keywd_list(void);
 extern std::list<std::string> mat_name_list;
 
 extern void MMPWrite(std::string);
-extern bool MMPRead(std::string);
+extern bool MMPRead(std::string base_file_name,
+                    const std::size_t number_of_elements,
+                    std::map<MaterialParameter::Name, std::vector<double> >&
+                        heterogeneous_material_data);
 extern void MMPDelete();
 extern CMediumProperties* MMPGet(const std::string&);
 extern void MMP2PCSRelation(CRFProcess*);

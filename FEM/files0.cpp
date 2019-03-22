@@ -101,6 +101,8 @@ void CURWrite();                                  // OK
 #include "readNonBlankLineFromInputStream.h"
 //#include "FEMIO.h"
 
+#include "FEMEnums.h"
+
 using namespace std;
 
 static bool isValidTextFileFormat(const std::string& basename,
@@ -175,7 +177,9 @@ static bool checkFormatOfInputFiles(const std::string& basename)
 /**************************************************************************/
 int ReadData(const char* dateiname,
              GEOLIB::GEOObjects& geo_obj,
-             std::string& unique_name)
+             std::string& unique_name,
+             std::map<MaterialParameter::Name, std::vector<double> >&
+                 heterogeneous_material_data)
 {
 #if defined(USE_MPI)  // WW
     if (myrank == 0)
@@ -239,8 +243,21 @@ int ReadData(const char* dateiname,
     OUTRead(dateiname, geo_obj, unique_name);
     TIMRead(dateiname);
 
-    MSPRead(dateiname);
-    MMPRead(dateiname);
+    FEMDeleteAll();  // KR moved from FEMRead()
+    std::vector<CFEMesh*> mesh_vec;
+    FEMRead(dateiname, mesh_vec, &geo_obj, &unique_name);
+    if (!mesh_vec.empty())  // KR
+    {
+        fem_msh_vector.insert(fem_msh_vector.end(),
+                              mesh_vec.begin(),
+                              mesh_vec.end());  // re-inserted by KR
+        CompleteMesh();                         // WW
+    }
+
+    MSPRead(
+        dateiname, mesh_vec[0]->ele_vector.size(), heterogeneous_material_data);
+    MMPRead(
+        dateiname, mesh_vec[0]->ele_vector.size(), heterogeneous_material_data);
     REACINTRead(dateiname);  // CB new reaction interface
     RCRead(dateiname);
     REACT_CAP_Read(dateiname,
@@ -253,17 +270,6 @@ int ReadData(const char* dateiname,
     CHMRead(dateiname);  // MX for CHEMAPP
 #endif
     NUMRead(dateiname);
-
-    FEMDeleteAll();  // KR moved from FEMRead()
-    std::vector<CFEMesh*> mesh_vec;
-    FEMRead(dateiname, mesh_vec, &geo_obj, &unique_name);
-    if (!mesh_vec.empty())  // KR
-    {
-        fem_msh_vector.insert(fem_msh_vector.end(),
-                              mesh_vec.begin(),
-                              mesh_vec.end());  // re-inserted by KR
-        CompleteMesh();                         // WW
-    }
 
     // SBOK4209 MSHWrite(dateiname);
     // PCTRead is bounded by msh
@@ -551,9 +557,9 @@ string GetLineFromFile1(ifstream* ein)
                         // ist, zeile �berlesen. Sonst ist das
             // eine Datenzeile
             if ((i != -1))
-                zeile = line.substr(
-                    i, j - i);  // Ab erstem nicht-Leerzeichen bis
-                                // Kommentarzeichen rauskopieren in neuen
+                zeile =
+                    line.substr(i, j - i);  // Ab erstem nicht-Leerzeichen bis
+            // Kommentarzeichen rauskopieren in neuen
             // substring, falls Zeile nicht leer ist
             i = (int)zeile.find_last_not_of(
                 " ");  // Suche nach dem letzten Zeichen, dass kein Leerzeichen
@@ -1161,9 +1167,8 @@ std::string GetUncommentedLine(std::string line)
                        i);  // Nach Kommentarzeichen ; suchen. j = Position des
                             // Kommentarzeichens, j=-1 wenn es keines gibt.
     if ((i != -1))
-        zeile =
-            line.substr(i, j - i);  // Ab erstem nicht-Leerzeichen bis
-                                    // Kommentarzeichen rauskopieren in neuen
+        zeile = line.substr(i, j - i);  // Ab erstem nicht-Leerzeichen bis
+    // Kommentarzeichen rauskopieren in neuen
     // substring, falls Zeile nicht leer ist
     i = (int)zeile.find_last_not_of(
         " ");  // Suche nach dem letzten Zeichen, dass kein Leerzeichen ist
