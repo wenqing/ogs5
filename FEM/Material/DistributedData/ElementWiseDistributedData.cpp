@@ -19,7 +19,7 @@
 
 namespace MaterialLib
 {
-void ElementWiseDistributedData::readData(const std::string& file_name)
+void readData(const std::string& file_name, std::vector<double>& data)
 {
     std::ifstream ins(file_name.c_str());
     if (!ins.good())
@@ -29,7 +29,6 @@ void ElementWiseDistributedData::readData(const std::string& file_name)
     }
     int size;
     ins >> size;
-    _data.resize(size);
 
     for (int i = 0; i < size; i++)
     {
@@ -37,7 +36,7 @@ void ElementWiseDistributedData::readData(const std::string& file_name)
         ins >> id;
         double value;
         ins >> value;
-        _data[id] = value;
+        data[id] = value;
     }
 }
 
