@@ -4451,6 +4451,8 @@ double CMediumProperties::Porosity(CElement* assem)
             break;
 #endif
 
+        case 9999:
+            return _element_porosity->getParameterAtElement(number);
         default:
             DisplayMsgLn("Unknown porosity model!");
             break;
@@ -4621,7 +4623,7 @@ double* CMediumProperties::PermeabilityTensor(long index)
         const int dimen = m_pcs->m_msh->GetCoordinateFlag() / 10;
         for (int i = 0; i < dimen * dimen; i++)
             tensor[i] = 0.0;
-        const double kT = _element_permeability->getParameterAtElement(number);
+        const double kT = _element_permeability->getParameterAtElement(index);
         for (int i = 0; i < dimen; i++)
             tensor[i * dimen + i] =
                 kT * _element_permeability->getAnisotropicFactor(i);
@@ -8085,7 +8087,7 @@ double CMediumProperties::StorageFunction(long index, double* gp, double theta)
             const double biots_constant = solid_prop->getBiotsConstant();
             const double porosity = Porosity(index, theta);
             return (biots_constant - porosity) * (1.0 - biots_constant) /
-                   solid_prop->getBulkModulus();
+                   solid_prop->getBulkModulus(index);
         }
         case 10:
             if (permeability_saturation_model[0] == 10)  // MW

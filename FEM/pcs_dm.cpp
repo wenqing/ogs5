@@ -192,7 +192,7 @@ void CRFProcessDeformation::Initialization()
 
         if (smat->Time_Dependent_E_nv_mode == 2)
             continue;
-        if (smat->hasElementWiseYoungsModuli())
+        if (!smat->hasAnisotropicYoungsModuli())
             continue;
         smat->ElasticConstitutiveTransverseIsotropic(0, problem_dimension_dm);
     }

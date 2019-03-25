@@ -534,7 +534,7 @@ void CFiniteElementVec::SetMaterial()
     smat = msp_vector[MatGroup];
     // WX:01.2013. time dependent E nv aniso
     if (smat->Time_Dependent_E_nv_mode == 2 ||
-        smat->hasElementWiseYoungsModuli())
+        smat->hasAnisotropicYoungsModuli())
         smat->ElasticConstitutiveTransverseIsotropic(MeshElement->GetIndex(),
                                                      ele_dim);
     smat->axisymmetry = pcs->m_msh->isAxisymmetry();
@@ -2009,7 +2009,8 @@ void CFiniteElementVec::LocalAssembly_continuum(const int update)
         smat->Youngs_mode != 2)  // modified due to transverse isotropic
                                  // elasticity: UJG 24.11.2009
     {
-        if (smat->Youngs_mode < 10 || smat->Youngs_mode > 13)
+        if ((smat->Youngs_mode < 10 || smat->Youngs_mode > 13) &&
+            !smat->hasAnisotropicYoungsModuli())
         {
 #ifdef RFW_FRACTURE
             smat->Calculate_Lame_Constant(GetMeshElement());

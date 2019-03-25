@@ -1864,7 +1864,7 @@ double CSolidProperties::getYoungsModulus(const long element_id,
             return CalulateValue(data_Youngs, reference);
         case 1:
             return (*data_Youngs)(0);
-        case 999:
+        case 9999:
             assert(_element_youngs_moduli);
             return _element_youngs_moduli->getParameterAtElement(element_id);
     }
@@ -2402,7 +2402,9 @@ void CSolidProperties::ElasticConstitutiveTransverseIsotropic(
     int size;
     size = Dimension * 2;
 
-    switch (Youngs_mode)
+    const int youngs_mode_type =
+        Youngs_mode < 20 ? Youngs_mode : Youngs_mode - 10;
+    switch (youngs_mode_type)
     {
         case 10:
             int i, j, l, m;
@@ -8820,26 +8822,38 @@ double CSolidProperties::getBishopCoefficient(const double effectiveS,
     return p;
 }
 
-double CSolidProperties::getBulkModulus() const
+double CSolidProperties::getBulkModulus(const long element_id) const
 {
     if (K > DBL_MIN)
         return K;
 
-    if (Youngs_mode < 10 || Youngs_mode > 13)
+    if (!((Youngs_mode >= 10 && Youngs_mode <= 14) ||
+          (Youngs_mode >= 20 && Youngs_mode <= 24)))
         return E / 3 / (1 - 2 * PoissonRatio);
 
-    // average Youngs modulus
-    double const E_av =
-        2. / 3. * (*data_Youngs)(0) + 1. / 3. * (*data_Youngs)(1);
+    double Ei = 0.;
+    double nu_ia = 0.;
+    double Ea = 0.;
 
-    // Poisson ratio perpendicular to the plane of isotropie, due to strain in
-    // the plane of isotropie
-    const double nu_ia = (*data_Youngs)(2);
+    if (!_element_youngs_moduli)
+    {
+        Ei = (*data_Youngs)(0);
+        Ea = (*data_Youngs)(1);
+        nu_ia = (*data_Youngs)(2);
+    }
+    else
+    {
+        Ei = _element_youngs_moduli->getParameterAtElement(element_id);
+        Ea = Ei * _element_youngs_moduli->getAnisotropicFactor(1);
+        nu_ia = (*data_Youngs)(0);
+    }
+
+    // average Youngs modulus
+    double const E_av = 2. / 3. * Ei + 1. / 3. * Ea;
 
     // Poisson ratio in the plane of isotropie, due to strain perpendicular to
     // the plane of isotropie
-    const double nu_ai =
-        nu_ia * (*data_Youngs)(1) / (*data_Youngs)(0);  //  nu_ai=nu_ia*Ea/Ei
+    const double nu_ai = nu_ia * Ea / Ei;  //  nu_ai=nu_ia*Ea/Ei
 
     // Poisson ratio in the plane of isotropy
     const double nu_i = Poisson_Ratio();
