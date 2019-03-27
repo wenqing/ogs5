@@ -5343,134 +5343,49 @@ int CSolidProperties::DirectStressIntegrationMOHR(const int GPiGPj,
     return yield;
 }
 
-// WX: calculate prin. stress and direc.
 void CSolidProperties::CalPrinStrDir(double* stress, double* prin_str,
                                      double* prin_dir, int Dim)
 {
-    int i, j, p, q, u, w, t, s, l;
-    double fm, cn, sn, omega, x, y, d;
-    double eps = 1e-12, TmpValue1;
-    int jt = 100;
-    int n = 3;
-    double a[9] = {0.}, v[9] = {0.};
-    int Tmp[3] = {0}, TmpValue2;
-    l = 1;
-    p = 0;
-    q = 0;
-    for (i = 0; i < 3; i++)
-        a[i + i * n] = stress[i];
-    a[1] = stress[3];
-    a[3] = a[1];
+    Eigen::Matrix<double, 3, 3> stress_tensor;
 
-    if (Dim == 2)
+    if (Dim == 3)
     {
-        a[2] = 0;
-        a[6] = 0;
-        a[5] = 0;
-        a[7] = 0;
+        stress_tensor(0, 0) = stress[0];
+        stress_tensor(0, 1) = stress[3];
+        stress_tensor(0, 2) = stress[4];
+        stress_tensor(1, 0) = stress[3];
+        stress_tensor(1, 1) = stress[1];
+        stress_tensor(1, 2) = stress[5];
+        stress_tensor(2, 0) = stress[4];
+        stress_tensor(2, 1) = stress[5];
+        stress_tensor(2, 2) = stress[2];
     }
     else
     {
-        a[2] = stress[4];
-        a[6] = a[2];
-        a[5] = stress[6];
-        a[7] = a[5];
+        stress_tensor(0, 0) = stress[0];
+        stress_tensor(0, 1) = stress[3];
+        stress_tensor(0, 2) = 0.0;
+        stress_tensor(1, 0) = stress[3];
+        stress_tensor(1, 1) = stress[1];
+        stress_tensor(1, 2) = 0.0;
+        stress_tensor(2, 0) = 0.0;
+        stress_tensor(2, 1) = 0.0;
+        stress_tensor(2, 2) = stress[2];
     }
 
-    for (i = 0; i <= n - 1; i++)
-    {
-        v[i * n + i] = 1.0;
-        for (j = 0; j <= n - 1; j++)
-            if (i != j)
-                v[i * n + j] = 0.0;
-    }
-    while (1 == 1)
-    {
-        fm = 0.0;
-        for (i = 0; i <= n - 1; i++)
-            for (j = 0; j <= n - 1; j++)
-            {
-                d = fabs(a[i * n + j]);
-                if ((i != j) && (d > fm))
-                {
-                    fm = d;
-                    p = i;
-                    q = j;
-                }
-            }
-        if (fm < eps)
-            break;
-        if (l > jt)
-            break;
-        l = l + 1;
-        u = p * n + q;
-        w = p * n + p;
-        t = q * n + p;
-        s = q * n + q;
-        x = -a[u];
-        y = (a[s] - a[w]) / 2.0;
-        omega = x / sqrt(x * x + y * y);
-        if (y < 0.0)
-            omega = -omega;
-        sn = 1.0 + sqrt(1.0 - omega * omega);
-        sn = omega / sqrt(2.0 * sn);
-        cn = sqrt(1.0 - sn * sn);
-        fm = a[w];
-        a[w] = fm * cn * cn + a[s] * sn * sn + a[u] * omega;
-        a[s] = fm * sn * sn + a[s] * cn * cn - a[u] * omega;
-        a[u] = 0.0;
-        a[t] = 0.0;
-        for (j = 0; j <= n - 1; j++)
-            if ((j != p) && (j != q))
-            {
-                u = p * n + j;
-                w = q * n + j;
-                fm = a[u];
-                a[u] = fm * cn + a[w] * sn;
-                a[w] = -fm * sn + a[w] * cn;
-            }
-        for (i = 0; i <= n - 1; i++)
-            if ((i != p) && (i != q))
-            {
-                u = i * n + p;
-                w = i * n + q;
-                fm = a[u];
-                a[u] = fm * cn + a[w] * sn;
-                a[w] = -fm * sn + a[w] * cn;
-            }
-        for (i = 0; i <= n - 1; i++)
-        {
-            u = i * n + p;
-            w = i * n + q;
-            fm = v[u];
-            v[u] = fm * cn + v[w] * sn;
-            v[w] = -fm * sn + v[w] * cn;
-        }
-    }
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 3, 3> > eigensolver(
+        stress_tensor);
 
-    for (i = 0; i < 3; i++)
-    {
-        prin_str[i] = a[i * n + i];
-        Tmp[i] = i;
-    }
+    Eigen::VectorXd const& p_stress = eigensolver.eigenvalues();
+    for (int i = 0; i < 3; i++)
+        prin_str[i] = p_stress[i];
 
-    for (i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++)
     {
-        for (j = i + 1; j < 3; j++)
-            if (prin_str[i] < prin_str[j])
-            {
-                TmpValue1 = prin_str[i];
-                prin_str[i] = prin_str[j];
-                prin_str[j] = TmpValue1;
-                TmpValue2 = Tmp[i];
-                Tmp[i] = Tmp[j];
-                Tmp[j] = TmpValue2;
-            }
+        Eigen::VectorXd const& v = eigensolver.eigenvectors().col(i);
+        for (int j = 0; j < 3; j++)
+            prin_dir[j * 3 + i] = v[j];
     }
-
-    for (i = 0; i < 3; i++)
-        for (j = 0; j < 3; j++)
-            prin_dir[j * 3 + i] = v[j * 3 + Tmp[i]];
 }
 
 // WX: calculate transform matrix between normal stress and principal stress
