@@ -534,7 +534,7 @@ void CFiniteElementVec::SetMaterial()
     smat = msp_vector[MatGroup];
     // WX:01.2013. time dependent E nv aniso
     if (smat->Time_Dependent_E_nv_mode == 2 ||
-        smat->hasElementWiseYoungsModuli())
+        smat->hasAnisotropicYoungsModuli())
         smat->ElasticConstitutiveTransverseIsotropic(MeshElement->GetIndex(),
                                                      ele_dim);
     smat->axisymmetry = pcs->m_msh->isAxisymmetry();
