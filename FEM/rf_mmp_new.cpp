@@ -4451,6 +4451,8 @@ double CMediumProperties::Porosity(CElement* assem)
             break;
 #endif
 
+        case 9999:
+            return _element_porosity->getParameterAtElement(number);
         default:
             DisplayMsgLn("Unknown porosity model!");
             break;
@@ -4621,7 +4623,7 @@ double* CMediumProperties::PermeabilityTensor(long index)
         const int dimen = m_pcs->m_msh->GetCoordinateFlag() / 10;
         for (int i = 0; i < dimen * dimen; i++)
             tensor[i] = 0.0;
-        const double kT = _element_permeability->getParameterAtElement(number);
+        const double kT = _element_permeability->getParameterAtElement(index);
         for (int i = 0; i < dimen; i++)
             tensor[i * dimen + i] =
                 kT * _element_permeability->getAnisotropicFactor(i);
