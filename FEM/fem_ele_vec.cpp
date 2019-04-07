@@ -472,6 +472,7 @@ CFiniteElementVec::~CFiniteElementVec()
     AuxMatrix = NULL;
     AuxMatrix2 = NULL;  // NW
     Disp = NULL;
+    nodal_dT = NULL;
     Sxx = NULL;
     Syy = NULL;
     Szz = NULL;
@@ -542,9 +543,10 @@ void CFiniteElementVec::SetMaterial()
     // MSP
     smat = msp_vector[MatGroup];
     // WX:01.2013. time dependent E nv aniso
-    if (smat->Time_Dependent_E_nv_mode == 2||
-        smat->hasElementWiseYoungsModuli())
-        smat->CalculateTransformMatrixFromNormalVector(ele_dim);
+    if (smat->Time_Dependent_E_nv_mode == 2 ||
+        smat->hasAnisotropicYoungsModuli())
+        smat->ElasticConstitutiveTransverseIsotropic(MeshElement->GetIndex(),
+                                                     ele_dim);
     smat->axisymmetry = pcs->m_msh->isAxisymmetry();
     // Single yield surface model
     if (smat->Plasticity_type == 2)
@@ -1038,7 +1040,7 @@ void CFiniteElementVec::LocalAssembly(const int update)
     }
     else
 #endif  //#if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
-        // WW
+    // WW
     {
 #if defined(USE_PETSC)  // || defined (other parallel solver lib). 04.2012 WW
 // TODO
@@ -2305,8 +2307,9 @@ void CFiniteElementVec::LocalAssembly_continuum(const int update)
 
             for (i = 0; i < ns; i++)
                 stress0[i] = (*eleV_DM->Stress)(i, gp);
-            smat->_bgra_creep->integrateStress(
-                dt, temperature, *smat, *De, *ConsistDep, stress0, dstress, update);
+            smat->_bgra_creep->integrateStress(element_id, dt, temperature,
+                                               *smat, *De, *ConsistDep, stress0,
+                                               dstress, update);
             dPhi = 1.0;
         }
 
