@@ -398,7 +398,14 @@ private:
     double E_Function(int dim, const FiniteElement::ElementValue_DM* ele_val,
                       int ngp);  // WX:06.2012
 
-    bool hasElementWiseYoungsModuli() const { return _element_youngs_moduli; }
+    bool hasAnisotropicYoungsModuli() const
+    {
+        if (Youngs_mode > 9 && Youngs_mode < 14)
+            return true;
+        if (Youngs_mode > 19 && Youngs_mode < 24)
+            return true;
+        return false;
+    }
     // Plasticity
     // Drucker-Prager
     double GetAngleCoefficent_DP(const double Angle);
