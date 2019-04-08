@@ -2009,7 +2009,7 @@ void CFiniteElementVec::LocalAssembly_continuum(const int update)
         smat->Youngs_mode != 2)  // modified due to transverse isotropic
                                  // elasticity: UJG 24.11.2009
     {
-        if (smat->Youngs_mode < 10 || smat->Youngs_mode > 13)
+        if(!smat->hasAnisotropicYoungsModuli())
         {
 #ifdef RFW_FRACTURE
             smat->Calculate_Lame_Constant(GetMeshElement());
