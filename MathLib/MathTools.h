@@ -96,6 +96,17 @@ float normalize(float min, float max, float val);
  */
 double getAngle(const double p0[3], const double p1[3], const double p2[3]);
 
+
+/**
+ * Let \f$p_0, p_1, p_2 \in \mathbb{R}^3\f$. The function getAngle
+ * computes the angle between the edges \f$(p_0,p_1)\f$ and \f$(p_1,p_2)\f$
+ * @param p0 start point of edge 0
+ * @param p1 end point of edge 0 and start point of edge 1
+ * @param p2 end point of edge 1
+ * @return boolean to indicate whether the angle is acute.
+ */
+bool isAcuteAngle(const double p0[3], const double p1[3], const double p2[3]);
+
 /**
  * simple power function that takes as a second argument an integer instead of a
  * float

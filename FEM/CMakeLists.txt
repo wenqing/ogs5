@@ -53,6 +53,7 @@ set( HEADERS
 	vtk.h
 	OutputTools.h
 	ShapeFunctionPool.h
+        Deformation/Excavation.h
 	Material/Fluid/GibbsFreeEnergy/DimensionLessGibbsFreeEnergyRegion1.h
 	Material/Fluid/Density/WaterDensityIAPWSIF97Region1.h
 	Material/Fluid/Viscosity/WaterViscosityIAPWS.h
@@ -114,6 +115,7 @@ set( SOURCES
 	tools.cpp
 	vtk.cpp
 	ShapeFunctionPool.cpp
+        Deformation/Excavation.cpp
 	Material/Fluid/GibbsFreeEnergy/DimensionLessGibbsFreeEnergyRegion1.cpp
 	Material/Fluid/Viscosity/WaterViscosityIAPWS.cpp
 	Material/Solid/BGRaCreep.cpp
