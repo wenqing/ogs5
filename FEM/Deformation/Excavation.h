@@ -26,12 +26,14 @@ public:
                const double end_position[3], const double start_time,
                const double end_time)
         : _zone_id(zone_id),
-          _start_position{start_position[0], start_position[1],
-                          start_position[2]},
-          _end_position{end_position[0], end_position[1], end_position[2]},
           _start_time(start_time),
           _end_time(end_time)
     {
+        for (int i = 0; i < 3; i++)
+        {
+            _start_position[i] = start_position[i];
+            _end_position[i] = end_position[i];
+        }
     }
 
     void deactivateElements(const double t,
@@ -39,8 +41,8 @@ public:
 
 private:
     const int _zone_id;
-    const double _start_position[3];
-    const double _end_position[3];
+    double _start_position[3];
+    double _end_position[3];
     const double _start_time;
     const double _end_time;
 
