@@ -20,6 +20,7 @@
 
 #include "FEMEnums.h"
 #include "rf_pcs.h"
+#include "Deformation/Excavation.h"
 
 // Strong discontinuity
 extern bool Localizing;  // for tracing localization
@@ -43,6 +44,11 @@ using FiniteElement::CFiniteElementVec;
 class CPARDomain;
 #endif
 
+namespace MeshLib
+{
+class Excavation;
+}
+
 namespace process
 {
 // Elasto-plastic Deformation
@@ -65,7 +71,6 @@ public:
 
     // Aux. Memory
     double* GetAuxArray() const { return ARRAY; }
-
     void ScalingNodeForce(const double SFactor);
     void InitGauss();
 
@@ -109,11 +114,12 @@ public:
 
     // Access members
     CFiniteElementVec* GetFEMAssembler() { return fem_dm; }
-
     // WX:07.2011
     void PostExcavation();
     // WX:10.2011
     void UpdateIniStateValue();
+
+    void deactivateElementsForExcavation(const double t);
 
 private:
     CFiniteElementVec* fem_dm;
@@ -137,7 +143,15 @@ private:
     // For strong discontinuity approach
     void Trace_Discontinuity();
     long MarkBifurcatedNeighbor(const int PathIndex);
+
+    // Excavation data
+    std::vector<MeshLib::Excavation*> _excavation_set;
+    friend void readExcavationMechanicalData(
+        const std::string& file_name, CRFProcessDeformation& depormation_pcs);
 };
+
+void readExcavationMechanicalData(const std::string& file_name,
+                                  CRFProcessDeformation& depormation_pcs);
 }  // namespace process
 
 extern void CalStressInvariants(const long Node_Inex, double* StressInv);

@@ -13,7 +13,7 @@
 #include <cmath>
 #include <fstream>
 #include <iomanip>
-#include <iostream>
+#include <fstream>
 #include <time.h>
 
 #include "display.h"
@@ -148,6 +148,12 @@ CRFProcessDeformation::~CRFProcessDeformation()
         }
         while (LastElement.size() > 0)
             LastElement.pop_back();
+    }
+
+    for (std::size_t i = 0; i < _excavation_set.size(); i++)
+    {
+        if (_excavation_set[i])
+            delete _excavation_set[i];
     }
 }
 
@@ -414,13 +420,11 @@ void CRFProcessDeformation::InitialMBuffer()
  **************************************************************************/
 double CRFProcessDeformation::Execute(int loop_process_number)
 {
-    ScreenMessage(
-        "      ================================================\n");
+    ScreenMessage("      ================================================\n");
     ScreenMessage("      ->Process %d: %s\n",
-                           loop_process_number,
-                           convertProcessTypeToString(getProcessType()).data());
-    ScreenMessage(
-        "      ================================================\n");
+                  loop_process_number,
+                  convertProcessTypeToString(getProcessType()).data());
+    ScreenMessage("      ================================================\n");
 
     clock_t dm_time;
 
@@ -633,7 +637,7 @@ double CRFProcessDeformation::Execute(int loop_process_number)
             NormU = 1.0e+8;
 
             ScreenMessage("      Starting loading step %d/%d\n", l,
-                                   number_of_load_steps);
+                          number_of_load_steps);
             ScreenMessage("      Load factor: %g\n", LoadFactor);
         }
         ite_steps = 0;
@@ -878,9 +882,8 @@ double CRFProcessDeformation::Execute(int loop_process_number)
     dm_time += clock();
 
     ScreenMessage("      CPU time elapsed in deformation: %g s\n",
-                           (double)dm_time / CLOCKS_PER_SEC);
-    ScreenMessage(
-        "      ------------------------------------------------\n");
+                  (double)dm_time / CLOCKS_PER_SEC);
+    ScreenMessage("      ------------------------------------------------\n");
 
     // Recovery the old solution.  Temp --> u_n	for flow process
     if (m_num->nls_method != 2)
@@ -3644,4 +3647,89 @@ bool CRFProcessDeformation::isDynamic() const
     return fem_dm->dynamic;
 }
 
+void CRFProcessDeformation::deactivateElementsForExcavation(const double t)
+{
+    for (std::size_t i = 0; i < _excavation_set.size(); i++)
+    {
+        _excavation_set[i]->deactivateElements(t, m_msh->ele_vector);
+    }
+}
+
+void readExcavationMechanicalData(const std::string& file_name,
+                                  CRFProcessDeformation& depormation_pcs)
+{
+    std::ifstream ins(file_name.data());
+    std::string line;
+    while (std::getline(ins, line))
+    {
+        if (line.find("$EXCAVATION_DATA") != std::string::npos)
+        {
+            std::getline(ins, line);
+            std::istringstream iss(line);
+            std::string name;
+            int zone_id;
+            if (!(iss >> name >> zone_id))
+            {
+                Display::ScreenMessage(
+                    "$EXCAVATION_DATA: Neither keyword nor the material ID is "
+                    "given");
+                exit(1);
+            }  // error
+            iss.clear();
+
+            std::getline(ins, line);
+            iss.str(line);
+            double start_position[3];
+            if (!(iss >> name >> start_position[0] >> start_position[1] >>
+                  start_position[2]))
+            {
+                Display::ScreenMessage(
+                    "$EXCAVATION_DATA: Neither keyword nor the start point is "
+                    "not given");
+                exit(1);
+            }  // error
+            iss.clear();
+
+            std::getline(ins, line);
+            iss.str(line);
+            double end_position[3];
+            if (!(iss >> name >> end_position[0] >> end_position[1] >>
+                  end_position[2]))
+            {
+                Display::ScreenMessage(
+                    "$EXCAVATION_DATA: Neither keyword nor the end point is "
+                    "not given");
+                exit(1);
+            }  // error
+            iss.clear();
+
+            std::getline(ins, line);
+            iss.str(line);
+            double start_time;
+            if (!(iss >> name >> start_time))
+            {
+                Display::ScreenMessage(
+                    "$EXCAVATION_DATA: Neither keyword nor the start time is "
+                    "not given");
+                exit(1);
+            }  // error
+            iss.clear();
+
+            std::getline(ins, line);
+            iss.str(line);
+            double end_time;
+            if (!(iss >> name >> end_time))
+            {
+                Display::ScreenMessage(
+                    "$EXCAVATION_DATA: Neither keyword nor the start time is "
+                    "not given");
+                exit(1);
+            }  // error
+            iss.clear();
+
+            depormation_pcs._excavation_set.push_back(new MeshLib::Excavation(
+                zone_id, start_position, end_position, start_time, end_time));
+        }
+    }
+}
 }  // namespace process

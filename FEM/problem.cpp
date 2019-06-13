@@ -33,9 +33,9 @@
 //
 /*------------------------------------------------------------------------*/
 /* Pre-processor definitions */
-#include "makros.h"
-#include "display.h"
 #include "MemWatch.h"
+#include "display.h"
+#include "makros.h"
 /*------------------------------------------------------------------------*/
 // MSHLib
 #include "msh_lib.h"
@@ -57,8 +57,8 @@ extern int ReadData(const char*,
 #endif
 
 #include "rf_react.h"
-#include "rf_react_int.h"
 #include "rf_react_cap.h"  //CB merge CAP 0311
+#include "rf_react_int.h"
 
 #include "rf_st_new.h"
 #include "rf_tim_new.h"
@@ -74,11 +74,11 @@ extern int ReadData(const char*,
 #include "fem_ele_vec.h"
 #include "files0.h"  // GetLineFromFile1
 #include "rf_bc_new.h"
+#include "rf_msp_new.h"  //WX:01.2013
 #include "rf_node.h"
 #include "rf_out_new.h"
-#include "tools.h"
 #include "timer.h"
-#include "rf_msp_new.h"  //WX:01.2013
+#include "tools.h"
 //
 #ifdef CHEMAPP
 #include "eqlink.h"
@@ -314,7 +314,7 @@ Problem::Problem(const char* filename)
         pos = 0;
         npos = (int)path.size();
 
-        // Get path
+// Get path
 #ifdef _WIN32
         pos = (int)path.rfind("\\");  // HS keep this on windows
 #else
@@ -465,7 +465,7 @@ Problem::Problem(const char* filename)
 #endif
     }
 #endif  //#if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
-        // WW
+    // WW
     //----------------------------------------------------------------------
     PCSRestart();  // SB
     OUTCheck();    // new SB
@@ -576,7 +576,13 @@ Problem::Problem(const char* filename)
     // simulation 07.09.2007  WW Excavation for defromation
     dm_pcs = (CRFProcessDeformation*)total_processes[12];
     if (dm_pcs)
+    {
+        const std::string fname = filename;
+        // For the excavation approach without initial stress set.
+        process::readExcavationMechanicalData(fname + ".pcs", *dm_pcs);
+        // For another excavation approach.
         dm_pcs->CreateInitialState4Excavation();
+    }
 
 #ifdef OGS_DELETE_EDGES_AFTER_INIT
     // Free memory occupied by edges. 09.2012. WW
@@ -1216,15 +1222,16 @@ void Problem::Euler_TimeDiscretize()
             "\n\n#################################################"
             "############\n");
 
-        ScreenMessage("Time step: %d"
-                               "|  Time: %g"
-                               "|  Time step size: %g\n",
-                               aktueller_zeitschritt, current_time, dt);
+        ScreenMessage(
+            "Time step: %d"
+            "|  Time: %g"
+            "|  Time step size: %g\n",
+            aktueller_zeitschritt, current_time, dt);
         if (dt_rec > dt)
         {
             ScreenMessage(
                 "This time step size was modified to match a "
-                         "critical time!\n");
+                "critical time!\n");
         }
 
         if (CouplingLoop())
@@ -1325,8 +1332,7 @@ void Problem::Euler_TimeDiscretize()
         //		current_time = end_time;
     }
 
-    ScreenMessage(
-            "\n----------------------------------------------------\n");
+    ScreenMessage("\n----------------------------------------------------\n");
     for (i = 0; i < (int)active_process_index.size(); i++)  // JT2012
     {
         m_tim = total_processes[active_process_index[i]]->Tim;
@@ -1334,33 +1340,31 @@ void Problem::Euler_TimeDiscretize()
         ScreenMessage(
             "\nFor process: %s\n",
             convertProcessTypeToString(
-                total_processes[active_process_index[i]]
-                    ->getProcessType()).data());
+                total_processes[active_process_index[i]]->getProcessType())
+                .data());
         if (m_tim->time_control_type == TimeControlType::FIXED_STEPS)
         {
-             ScreenMessage("No time control for this process.\n");
+            ScreenMessage("No time control for this process.\n");
         }
         else
         {
             ScreenMessage("Accepted time steps: %d\n",
-                                   m_tim->accepted_step_count);
+                          m_tim->accepted_step_count);
             ScreenMessage("Rejected time steps: %d\n",
-                                   m_tim->rejected_step_count);
+                          m_tim->rejected_step_count);
         }
         if (total_processes[active_process_index[i]]
                 ->m_num->nls_max_iterations > 1)
         {
             ScreenMessage(
                 "Number of non-converged iterations: %d\n",
-                total_processes[active_process_index[i]]
-                             ->num_notsatisfied);
+                total_processes[active_process_index[i]]->num_notsatisfied);
             ScreenMessage(
                 "Number of stagnated iterations: %d\n",
                 total_processes[active_process_index[i]]->num_diverged);
         }
     }
-    ScreenMessage(
-        "----------------------------------------------------\n");
+    ScreenMessage("----------------------------------------------------\n");
 
 #if defined(USE_PETSC)  // 05.2014. WW
     if (mrank == 0)
@@ -1391,6 +1395,13 @@ bool Problem::CouplingLoop()
     bool run_flag[max_processes];
     int outer_index, inner_index, inner_max;  //, inner_min;
     //
+
+    CRFProcessDeformation* dm_pcs =
+        static_cast<CRFProcessDeformation*>(PCSGet("DEFORMATION"));
+    if (dm_pcs)
+    {
+        dm_pcs->deactivateElementsForExcavation(aktuelle_zeit);
+    }
 
     CTimeDiscretization* m_tim = NULL;
     //
@@ -1545,11 +1556,10 @@ bool Problem::CouplingLoop()
                             MMax(max_outer_error, max_inner_error);
                     //
                     ScreenMessage(
-                    "\n==========================================="
-                     "===========\n");
-                    ScreenMessage(
-                        "Inner coupling loop %d/%d complete.\n",
-                        inner_index + 1, inner_max);
+                        "\n==========================================="
+                        "===========\n");
+                    ScreenMessage("Inner coupling loop %d/%d complete.\n",
+                                  inner_index + 1, inner_max);
                     ScreenMessage(
                         "Max coupling error (relative to tolerance): %0.3e\n",
                         max_inner_error);
@@ -1644,11 +1654,10 @@ if(has_constrained_bc > 0)
             ScreenMessage(
                 "\n======================================================\n");
             ScreenMessage("Outer coupling loop %d/%d complete.\n",
-                                   outer_index + 1,
-                                   cpl_overall_max_iterations);
-             ScreenMessage(
-                 "Max coupling error (relative to tolerance): %0.3e\n",
-                 max_outer_error);
+                          outer_index + 1,
+                          cpl_overall_max_iterations);
+            ScreenMessage("Max coupling error (relative to tolerance): %0.3e\n",
+                          max_outer_error);
             ScreenMessage(
                 "======================================================\n");
 
@@ -1805,11 +1814,11 @@ void Problem::PostCouplingLoop()
 #ifdef GEM_REACT
             if (i ==
                 0)  // for GEM_REACT we also need information on porosity (node
-                    // porosity internally stored in Gems process)!....do it
-                    // only once and it does not matter for which process !
-                    // ....we assume that the first pcs process is the flow
-                    // process...if reload not defined for every process,
-                    // restarting with gems will not work in any case
+                // porosity internally stored in Gems process)!....do it
+                // only once and it does not matter for which process !
+                // ....we assume that the first pcs process is the flow
+                // process...if reload not defined for every process,
+                // restarting with gems will not work in any case
 
                 if ((m_pcs->GetRestartFlag() == FiniteElement::WRITE ||
                      m_pcs->GetRestartFlag() == FiniteElement::READ_WRITE) &&
@@ -1833,7 +1842,7 @@ void Problem::PostCouplingLoop()
         // //MB
         if (force_post_node_copy)
         {  // JT: safety valve. Set this value to true (in Problem()) and values
-           // will be copied here.
+            // will be copied here.
             m_pcs->CopyTimestepNODValues();
             m_pcs->CopyTimestepELEValues();
         }
@@ -4299,48 +4308,48 @@ inline void Problem::LOPExecuteRegionalRichardsFlow(CRFProcess* m_pcs_global,
                     // idxp
                     for (l = 0; l < no_local_nodes; l++)
                         values[l] = m_pcs_local->GetNodeValue(l, idxp);
-                    MPI_Bcast(
-                        (void*)values, no_local_nodes, MPI_DOUBLE, k, comm_DDC);
+                    MPI_Bcast((void*)values, no_local_nodes, MPI_DOUBLE, k,
+                              comm_DDC);
                     for (l = 0; l < no_local_nodes; l++)
-                        m_pcs_global->SetNodeValue(
-                            l + rp * no_local_nodes, idxp, values[l]);
+                        m_pcs_global->SetNodeValue(l + rp * no_local_nodes,
+                                                   idxp, values[l]);
                     // idxcp
                     for (l = 0; l < no_local_nodes; l++)
                         values[l] = m_pcs_local->GetNodeValue(l, idxcp);
-                    MPI_Bcast(
-                        (void*)values, no_local_nodes, MPI_DOUBLE, k, comm_DDC);
+                    MPI_Bcast((void*)values, no_local_nodes, MPI_DOUBLE, k,
+                              comm_DDC);
                     for (l = 0; l < no_local_nodes; l++)
-                        m_pcs_global->SetNodeValue(
-                            l + rp * no_local_nodes, idxcp, values[l]);
+                        m_pcs_global->SetNodeValue(l + rp * no_local_nodes,
+                                                   idxcp, values[l]);
                     // idxS
                     for (l = 0; l < no_local_nodes; l++)
                         values[l] = m_pcs_local->GetNodeValue(l, idxS);
-                    MPI_Bcast(
-                        (void*)values, no_local_nodes, MPI_DOUBLE, k, comm_DDC);
+                    MPI_Bcast((void*)values, no_local_nodes, MPI_DOUBLE, k,
+                              comm_DDC);
                     for (l = 0; l < no_local_nodes; l++)
-                        m_pcs_global->SetNodeValue(
-                            l + rp * no_local_nodes, idxS, values[l]);
+                        m_pcs_global->SetNodeValue(l + rp * no_local_nodes,
+                                                   idxS, values[l]);
                 }
                 else
                 {
                     // idxp
-                    MPI_Bcast(
-                        (void*)values, no_local_nodes, MPI_DOUBLE, k, comm_DDC);
+                    MPI_Bcast((void*)values, no_local_nodes, MPI_DOUBLE, k,
+                              comm_DDC);
                     for (l = 0; l < no_local_nodes; l++)
-                        m_pcs_global->SetNodeValue(
-                            l + rp * no_local_nodes, idxp, values[l]);
+                        m_pcs_global->SetNodeValue(l + rp * no_local_nodes,
+                                                   idxp, values[l]);
                     // idxcp
-                    MPI_Bcast(
-                        (void*)values, no_local_nodes, MPI_DOUBLE, k, comm_DDC);
+                    MPI_Bcast((void*)values, no_local_nodes, MPI_DOUBLE, k,
+                              comm_DDC);
                     for (l = 0; l < no_local_nodes; l++)
-                        m_pcs_global->SetNodeValue(
-                            l + rp * no_local_nodes, idxcp, values[l]);
+                        m_pcs_global->SetNodeValue(l + rp * no_local_nodes,
+                                                   idxcp, values[l]);
                     // idxS
-                    MPI_Bcast(
-                        (void*)values, no_local_nodes, MPI_DOUBLE, k, comm_DDC);
+                    MPI_Bcast((void*)values, no_local_nodes, MPI_DOUBLE, k,
+                              comm_DDC);
                     for (l = 0; l < no_local_nodes; l++)
-                        m_pcs_global->SetNodeValue(
-                            l + rp * no_local_nodes, idxS, values[l]);
+                        m_pcs_global->SetNodeValue(l + rp * no_local_nodes,
+                                                   idxS, values[l]);
                 }
             }
         }
