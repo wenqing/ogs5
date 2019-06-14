@@ -4783,12 +4783,12 @@ double CRFProcess::Execute()
 
     // NW. should mark active elements if any process uses deactivation
     // if(NumDeactivated_SubDomains>0)
-    // TODO if it's nonlinear, CheckMarkedElement() has been already called
-    if (hasAnyProcessDeactivatedSubdomains)
-#ifdef NEW_EQS  // WW
-        if (!configured_in_nonlinearloop)
-#endif
-            CheckMarkedElement();
+    // If it's nonlinear, CheckMarkedElement() has been already called
+//    if (hasAnyProcessDeactivatedSubdomains)
+//#ifdef NEW_EQS  // WW
+//        if (!configured_in_nonlinearloop)
+//#endif
+//            CheckMarkedElement();
     m_msh->SwitchOnQuadraticNodes(false);
 
     // If not Newton-Raphson method. 20.07.2011. WW
