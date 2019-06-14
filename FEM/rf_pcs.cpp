@@ -22,8 +22,8 @@ matrix solver
 #include "rf_pcs.h"
 
 #include <algorithm>
-#include <limits>  // std::numeric_limits
 #include <cmath>
+#include <limits>  // std::numeric_limits
 
 /*--------------------- MPI Parallel  -------------------*/
 #if defined(USE_MPI) || defined(USE_MPI_PARPROC) || defined(USE_MPI_REGSOIL)
@@ -33,8 +33,8 @@ matrix solver
 
 /*--------------------- OpenMP Parallel ------------------*/
 #if defined(LIS)
-#include "lis.h"
 #include <omp.h>
+#include "lis.h"
 #endif
 /*--------------------- OpenMP Parallel ------------------*/
 
@@ -45,21 +45,21 @@ matrix solver
 #endif
 
 // C++
+#include <algorithm>
 #include <cfloat>
 #include <iomanip>  //WW
 #include <iostream>
-#include <algorithm>
 #include <set>
 
-#include "isnan.h"
 #include "display.h"
+#include "isnan.h"
 #include "memory.h"
 // GEOLib
 #include "PointWithID.h"
 
 #include "FEMEnums.h"
-#include "Output.h"
 #include "MathTools.h"
+#include "Output.h"
 
 #include "PhysicalConstant.h"
 
@@ -80,10 +80,10 @@ matrix solver
 #include "rf_fct.h"
 //#include "femlib.h"
 #include "eos.h"
+#include "fem_ele_vec.h"  //WX:08.2011
+#include "rf_kinreact.h"
 #include "rf_msp_new.h"
 #include "rf_node.h"
-#include "rf_kinreact.h"
-#include "fem_ele_vec.h"  //WX:08.2011
 
 #ifdef MFC  // WW
 #include "rf_fluid_momentum.h"
@@ -112,16 +112,16 @@ REACT_BRNS* m_vec_BRNS;
 #elif defined(NEW_EQS)
 #include "equation_class.h"
 #else
-#include "solver.h"  // ConfigRenumberProperties
 #include "matrix_routines.h"
+#include "solver.h"  // ConfigRenumberProperties
 #endif
-#include "problem.h"
 #include "msh_faces.h"
+#include "problem.h"
 #include "rfmat_cp.h"
 
-#include "rf_react_int.h"
-#include "VLE.h"
 #include "Density.h"
+#include "VLE.h"
+#include "rf_react_int.h"
 
 // MathLib
 #include "InterpolationAlgorithms/InverseDistanceInterpolation.h"
@@ -248,7 +248,7 @@ T* resize(T* array, size_t old_size, size_t new_size);
    02/2005 WW Local elment assembly (all protected members)
    last modified:
 **************************************************************************/
-CRFProcess::CRFProcess(void)
+CRFProcess::CRFProcess()
     : _problem(NULL),
       p_var_index(NULL),
       num_nodes_p_var(NULL),
@@ -626,8 +626,8 @@ void CRFProcess::Create()
     if (getProcessType() == FiniteElement::MASS_TRANSPORT)  // SB
     {
         ScreenMessage(" for %s process with component number %d\n",
-                               pcs_primary_function_name[0],
-                               pcs_component_number);
+                      pcs_primary_function_name[0],
+                      pcs_component_number);
     }
 
     if (hasAnyProcessDeactivatedSubdomains)
@@ -960,7 +960,7 @@ void CRFProcess::Create()
     else
         // Bypassing IC
         ScreenMessage("RELOAD is set to be %d. So, bypassing IC's\n",
-                               _init_domain_data_type);
+                      _init_domain_data_type);
 
     if (pcs_type_name_vector.size() &&
         pcs_type_name_vector[0].find("DYNAMIC") != string::npos)  // WW
@@ -1753,7 +1753,7 @@ void PCSDestroyAllProcesses(void)
    last modified:
    10/2010 TF changed process type handling from string to enum
 **************************************************************************/
-bool PCSRead(std::string file_base_name)
+bool PCSRead(const std::string& file_base_name)
 {
     //----------------------------------------------------------------------
     char line[MAX_ZEILE];
@@ -1818,8 +1818,7 @@ bool PCSRead(std::string file_base_name)
         }  // keyword found
     }      // eof
 
-    ScreenMessage("done, read  %d processes\n",
-                           pcs_vector.size());
+    ScreenMessage("done, read  %d processes\n", pcs_vector.size());
 
     return true;
 }
@@ -4594,7 +4593,10 @@ void CRFProcess::CheckMarkedElement()
         else
             elem->MarkingAll(true);
     }
-    size_t node_vector_size = m_msh->nod_vector.size();
+
+	m_msh->markDeactivatedNodes();
+
+	size_t node_vector_size = m_msh->nod_vector.size();
     for (size_t l = 0; l < node_vector_size; l++)
         while (m_msh->nod_vector[l]->getConnectedElementIDs().size())
             m_msh->nod_vector[l]->getConnectedElementIDs().pop_back();
@@ -5742,7 +5744,8 @@ else
         {
             elem = m_msh->ele_vector[i];
             // Marked for use //WX: modified for coupled excavation
-            if (elem->GetMark() && elem->GetExcavState() == -1)
+            if (elem->GetMark() &&
+                (elem->GetExcavState() == -1 || !elem->isElementDeactivated()))
             {
                 elem->SetOrder(false);
                 fem->ConfigElement(elem, Check2D3D);
@@ -5802,9 +5805,10 @@ else
 #endif
     IncorporateBoundaryConditions();
 
+    IncorporateBoundaryConditionsForDeactivatedNodes();
 #ifdef NEW_EQS
-   // ofstream Dum("rf_pcs.txt", ios::out); // WW
-   // eqs_new->Write(Dum);   Dum.close();
+    // ofstream Dum("rf_pcs.txt", ios::out); // WW
+    // eqs_new->Write(Dum);   Dum.close();
 #endif
 
 #define nOUTPUT_EQS_BIN
@@ -6538,8 +6542,8 @@ void CRFProcess::IncorporateBoundaryConditions(const int rank)
     CBoundaryCondition* m_bc;           // WW
     CFunction* m_fct = NULL;            // OK
     bool is_valid = false;              // OK
-    bool excavated = false;          // WX
-    bool onDeactiveBoundary = true;  // WX:09.2011
+    bool excavated = false;             // WX
+    bool onDeactiveBoundary = true;     // WX:09.2011
 #if defined(USE_PETSC)  // || defined(other parallel libs)//03~04.3012. WW
     vector<int> bc_eqs_id;
     vector<double> bc_eqs_value;
@@ -7534,6 +7538,85 @@ void CRFProcess::IncorporateBoundaryConditions(const int rank, const int axis)
         }
        }
      */
+}
+
+void CRFProcess::IncorporateBoundaryConditionsForDeactivatedNodes()
+{
+    if (!m_msh->hasDeactivatedNodes())
+        return;
+    if ((getProcessType() != FiniteElement::LIQUID_FLOW) &&
+          (getProcessType() != FiniteElement::RICHARDS_FLOW) &&
+          (getProcessType() != FiniteElement::MULTI_PHASE_FLOW) &&
+          (getProcessType() != FiniteElement::HEAT_TRANSPORT))
+        return;
+
+    std::vector<std::size_t> const& interface_nodes =
+        m_msh->getInterfaceDodeIDs();
+    if (!interface_nodes.empty() && _problem->hasExcavationSet())
+    {
+        double value = 0.0;
+
+        if (getProcessType() == FiniteElement::HEAT_TRANSPORT)
+            // All zones have the same ambient temperature.
+            value = _problem->getAmbientTemperatureInExcavation(0);
+        else if ((getProcessType() == FiniteElement::LIQUID_FLOW) ||
+                 (getProcessType() == FiniteElement::RICHARDS_FLOW) ||
+                 (getProcessType() == FiniteElement::MULTI_PHASE_FLOW))
+            // All zones have the same ambient pressure.
+            value = _problem->getAmbientPorePressureInExcavation(0);
+        long node_id_offset =
+            getProcessType() == FiniteElement::MULTI_PHASE_FLOW
+                ? m_msh->GetNodesNumber(false)
+                : 0;
+        for (std::size_t i = 0; i < interface_nodes.size(); i++)
+        {
+            if (interface_nodes[i] < m_msh->GetNodesNumber(false))
+            {
+#if defined(USE_PETSC)  // || defined(other parallel libs)
+                bc_eqs_id.push_back(static_cast<int>(
+                    m_msh->nod_vector[interface_nodes[i]]->GetEquationIndex() *
+                        dof_per_node +
+                    node_id_offset));
+                bc_eqs_value.push_back(value);
+
+#elif defined(NEW_EQS)
+                eqs_p->SetKnownX_i(interface_nodes[i] + node_id_offset,
+                                   bc_value);
+#else
+                MXRandbed(interface_nodes[i] + node_id_offset, value, eqs->b);
+#endif
+            }
+        }
+    }
+
+    std::vector<std::size_t> const& inactive_nodes =
+        m_msh->getDeactivatedDodeIDs();
+    if (inactive_nodes.empty())
+        return;
+    long node_id_offset = getProcessType() == FiniteElement::MULTI_PHASE_FLOW
+                              ? m_msh->GetNodesNumber(false)
+                              : 0;
+    for (std::size_t i = 0; i < inactive_nodes.size(); i++)
+    {
+        if (inactive_nodes[i] < m_msh->GetNodesNumber(false))
+        {
+            for (int k = 0; k < dof; k++)
+            {
+#if defined(USE_PETSC)  // || defined(other parallel libs)
+                bc_eqs_id.push_back(static_cast<int>(
+                    m_msh->nod_vector[inactive_nodes[i]]->GetEquationIndex() *
+                        dof_per_node +
+                    node_id_offset * k));
+                bc_eqs_value.push_back(0.0);
+
+#elif defined(NEW_EQS)
+                eqs_p->SetKnownX_i(inactive_nodes[i] + node_id_offset * k, 0.0);
+#else
+                MXRandbed(inactive_nodes[i] + node_id_offset * k, 0.0, eqs->b);
+#endif
+            }
+        }
+    }
 }
 
 bool CRFProcess::checkConstrainedST(std::vector<CSourceTerm*>& st_vector,
@@ -9734,8 +9817,8 @@ double CRFProcess::ExecuteNonLinear(int loop_process_number, bool print_pcs)
     last_error = 1.0;
     for (iter_nlin = 0; iter_nlin < m_num->nls_max_iterations; iter_nlin++)
     {
-        ScreenMessage("    PCS non-linear iteration: %d/%d\n",
-                               iter_nlin, m_num->nls_max_iterations);
+        ScreenMessage("    PCS non-linear iteration: %d/%d\n", iter_nlin,
+                      m_num->nls_max_iterations);
         nonlinear_iteration_error = Execute();
         //
         // ---------------------------------------------------
@@ -9885,7 +9968,8 @@ double CRFProcess::ExecuteNonLinear(int loop_process_number, bool print_pcs)
                         "         %0.3e |"
                         " %0.3e|"
                         "     %0.3e|"
-                        " %0.3e|\n", error, norm_b, norm_x, damping);
+                        " %0.3e|\n",
+                        error, norm_b, norm_x, damping);
                     break;
             }
         }
@@ -10031,9 +10115,8 @@ void CRFProcess::PrintStandardIterationInformation(bool write_std_errors)
         {
             for (ii = 0; ii < pcs_number_of_primary_nvals; ii++)
             {
-                ScreenMessage(
-                    "         PCS error DOF[%d] %0.3e\n",
-                    ii, pcs_absolute_error[ii]);
+                ScreenMessage("         PCS error DOF[%d] %0.3e\n", ii,
+                              pcs_absolute_error[ii]);
             }
         }
         return;
@@ -10041,12 +10124,11 @@ void CRFProcess::PrintStandardIterationInformation(bool write_std_errors)
     //
     // NON-LINEAR METHODS
     if (m_num->nls_method == 0)
-        ScreenMessage("      -->End of PICARD iteration: %d/%d\n",
-                               iter_nlin, m_num->nls_max_iterations);
+        ScreenMessage("      -->End of PICARD iteration: %d/%d\n", iter_nlin,
+                      m_num->nls_max_iterations);
     else
-        ScreenMessage(
-            "      -->End of NEWTON-RAPHSON iteration: %d/%d\n",
-            iter_nlin, m_num->nls_max_iterations);
+        ScreenMessage("      -->End of NEWTON-RAPHSON iteration: %d/%d\n",
+                      iter_nlin, m_num->nls_max_iterations);
     //
     // Errors
     // --------------------------------------------------
@@ -10054,21 +10136,18 @@ void CRFProcess::PrintStandardIterationInformation(bool write_std_errors)
     {
         if (pcs_num_dof_errors == 1)
         {
-            ScreenMessage(
-                "         PCS error: %0.3e\n", pcs_absolute_error[0]);
+            ScreenMessage("         PCS error: %0.3e\n", pcs_absolute_error[0]);
         }
         else
         {
             for (ii = 0; ii < pcs_number_of_primary_nvals; ii++)
             {
-                ScreenMessage(
-                    "         PCS error DOF[%d]: %0.3e\n",
-                    ii, pcs_absolute_error[ii]);
+                ScreenMessage("         PCS error DOF[%d]: %0.3e\n", ii,
+                              pcs_absolute_error[ii]);
             }
         }
-        ScreenMessage(
-            "         ->Euclidian norm of unknowns: %0.3e\n",
-            pcs_unknowns_norm);
+        ScreenMessage("         ->Euclidian norm of unknowns: %0.3e\n",
+                      pcs_unknowns_norm);
     }
 }
 

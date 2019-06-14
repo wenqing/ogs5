@@ -44,9 +44,6 @@
 /*------------------------------------------------------------------------*/
 // Data file
 // OK411
-extern int ReadData(const char*,
-                    GEOLIB::GEOObjects& geo_obj,
-                    std::string& unique_name);
 /* PCS */
 #include "pcs_dm.h"
 #include "rf_pcs.h"
@@ -101,6 +98,12 @@ extern int ReadData(const char*,
 #include "PETSC/PETScLinearSolver.h"
 #endif
 
+#include "Deformation/Excavation.h"
+
+extern int ReadData(const char*,
+                    GEOLIB::GEOObjects& geo_obj,
+                    std::string& unique_name);
+
 using namespace Display;
 
 namespace process
@@ -130,6 +133,10 @@ Problem::Problem(const char* filename)
     if (filename != NULL)
     {
         // read data
+        // For general excavation approach
+        const std::string fname = filename;
+        process::readExcavationData(fname + ".pcs", *this);
+
         ReadData(filename, *_geo_obj, _geo_name);
 #if !defined(USE_PETSC)  // &&  !defined(other parallel libs)//03~04.3012. WW
         DOMRead(filename);
@@ -577,9 +584,6 @@ Problem::Problem(const char* filename)
     dm_pcs = (CRFProcessDeformation*)total_processes[12];
     if (dm_pcs)
     {
-        const std::string fname = filename;
-        // For the excavation approach without initial stress set.
-        process::readExcavationMechanicalData(fname + ".pcs", *dm_pcs);
         // For another excavation approach.
         dm_pcs->CreateInitialState4Excavation();
     }
@@ -673,6 +677,12 @@ Problem::~Problem()
     }
     if (_quadr_shapefunction_pool)
         delete _quadr_shapefunction_pool;
+
+    for (std::size_t i = 0; i < _excavation_set.size(); i++)
+    {
+        if (_excavation_set[i])
+            delete _excavation_set[i];
+    }
 
 #if defined(USE_PETSC) || defined(USE_MPI) || defined(USE_MPI_PARPROC) || \
     defined(USE_MPI_REGSOIL) || defined(USE_MPI_GEMS)
@@ -1398,10 +1408,8 @@ bool Problem::CouplingLoop()
 
     CRFProcessDeformation* dm_pcs =
         static_cast<CRFProcessDeformation*>(PCSGet("DEFORMATION"));
-    if (dm_pcs)
-    {
-        dm_pcs->deactivateElementsForExcavation(aktuelle_zeit);
-    }
+
+    deactivateElementsForExcavation(aktuelle_zeit);
 
     CTimeDiscretization* m_tim = NULL;
     //
@@ -4748,3 +4756,119 @@ double Problem::getEndTime()
     return end_time;
 }
 #endif  // BRNS
+
+void Problem::deactivateElementsForExcavation(const double t)
+{
+    for (std::size_t i = 0; i < _excavation_set.size(); i++)
+    {
+        _excavation_set[i]->deactivateElementsForExcavation(t,
+                                                            *fem_msh_vector[0]);
+    }
+}
+
+double Problem::getAmbientTemperatureInExcavation(const int zone_id) const
+{
+    return _excavation_set[zone_id]->getAmbientTemperature();
+}
+
+double Problem::getAmbientPorePressureInExcavation(const int zone_id) const
+{
+    return _excavation_set[zone_id]->getAmbientPorePressure();
+}
+
+namespace process
+{
+void readExcavationData(const std::string& file_name, Problem& problem)
+{
+    std::ifstream ins(file_name.data());
+    std::string line;
+    while (std::getline(ins, line))
+    {
+        if (line.find("$EXCAVATION_DATA") != std::string::npos)
+        {
+            std::getline(ins, line);
+            std::istringstream iss(line);
+            std::string name;
+            int zone_id;
+            if (!(iss >> name >> zone_id))
+            {
+                Display::ScreenMessage(
+                    "$EXCAVATION_DATA: Neither keyword nor the material ID is "
+                    "given");
+                exit(1);
+            }  // error
+            iss.clear();
+
+            std::getline(ins, line);
+            iss.str(line);
+            double start_position[3];
+            if (!(iss >> name >> start_position[0] >> start_position[1] >>
+                  start_position[2]))
+            {
+                Display::ScreenMessage(
+                    "$EXCAVATION_DATA: Neither keyword nor the start point is "
+                    "not given");
+                exit(1);
+            }  // error
+            iss.clear();
+
+            std::getline(ins, line);
+            iss.str(line);
+            double end_position[3];
+            if (!(iss >> name >> end_position[0] >> end_position[1] >>
+                  end_position[2]))
+            {
+                Display::ScreenMessage(
+                    "$EXCAVATION_DATA: Neither keyword nor the end point is "
+                    "not given");
+                exit(1);
+            }  // error
+            iss.clear();
+
+            std::getline(ins, line);
+            iss.str(line);
+            double start_time;
+            if (!(iss >> name >> start_time))
+            {
+                Display::ScreenMessage(
+                    "$EXCAVATION_DATA: Neither keyword nor the start time is "
+                    "not given");
+                exit(1);
+            }  // error
+            iss.clear();
+
+            std::getline(ins, line);
+            iss.str(line);
+            double end_time;
+            if (!(iss >> name >> end_time))
+            {
+                Display::ScreenMessage(
+                    "$EXCAVATION_DATA: Neither keyword nor the start time is "
+                    "not given");
+                exit(1);
+            }  // error
+            iss.clear();
+
+            std::getline(ins, line);
+            iss.str(line);
+            double T_ref = 293.15;
+            iss >> name;
+            if (name.find("ambient_temperature") != std::string::npos)
+                iss >> T_ref;
+            iss.clear();
+
+			std::getline(ins, line);
+            iss.str(line);
+            double p_ref = 1.e+5;
+            iss >> name;
+            if (name.find("ambient_pore_pressure") != std::string::npos)
+                iss >> p_ref;
+            iss.clear();
+
+            problem._excavation_set.push_back(
+                new MeshLib::Excavation(zone_id, start_position, end_position,
+                                        start_time, end_time, T_ref, p_ref));
+        }
+    }
+}
+}  // namespace process

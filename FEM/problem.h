@@ -30,9 +30,20 @@ class CFiniteElementStd;
 class CFiniteElementVec;
 }  // namespace FiniteElement
 
+namespace MeshLib
+{
+class Excavation;
+}
+
 //---------------------------------------------------------------------
 // Pointers to member functions
 class Problem;
+
+namespace process
+{
+void readExcavationData(const std::string& file_name, Problem& problem);
+}  // namespace process
+
 typedef double (Problem::*ProblemMemFn)(void);
 #define Call_Member_FN(object, ptrToMember) ((object)->*(ptrToMember))
 //---------------------------------------------------------------------
@@ -87,6 +98,10 @@ public:
         mrank = rank;
         msize = size;
     }
+
+    bool hasExcavationSet() const { return !_excavation_set.empty(); }
+    double getAmbientTemperatureInExcavation(const int zone_id) const;
+    double getAmbientPorePressureInExcavation(const int zone_id) const;
 
 private:
     // Time:
@@ -182,5 +197,13 @@ private:
     int msize;
 
     static const size_t max_processes = 16;
+
+    // Excavation data
+    std::vector<MeshLib::Excavation*> _excavation_set;
+    friend void process::readExcavationData(
+        const std::string& file_name, Problem& problem);
+
+    void deactivateElementsForExcavation(const double t);
 };
+
 #endif

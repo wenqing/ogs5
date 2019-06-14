@@ -9,12 +9,11 @@
 
 #include "pcs_dm.h"
 
+#include <time.h>
 #include <cfloat>
 #include <cmath>
 #include <fstream>
 #include <iomanip>
-#include <fstream>
-#include <time.h>
 
 #include "display.h"
 #include "makros.h"
@@ -148,12 +147,6 @@ CRFProcessDeformation::~CRFProcessDeformation()
         }
         while (LastElement.size() > 0)
             LastElement.pop_back();
-    }
-
-    for (std::size_t i = 0; i < _excavation_set.size(); i++)
-    {
-        if (_excavation_set[i])
-            delete _excavation_set[i];
     }
 }
 
@@ -451,7 +444,7 @@ double CRFProcessDeformation::Execute(int loop_process_number)
     m_msh->SwitchOnQuadraticNodes(true);
     //
     // TEST if(num_type_name.find("EXCAVATION")!=0)
-    if (hasAnyProcessDeactivatedSubdomains || NumDeactivated_SubDomains > 0 ||
+    if ((hasAnyProcessDeactivatedSubdomains && NumDeactivated_SubDomains > 0) ||
         num_type_name.find("EXCAVATION") != string::npos)
         // if(NumDeactivated_SubDomains>0||num_type_name.find("EXCAVATION")!=string::npos)
         CheckMarkedElement();
@@ -2757,8 +2750,10 @@ void CRFProcessDeformation::GlobalAssembly()
             else
                 CalcBC_or_SecondaryVariable_Dynamics(true);
         }
-//  {  		MXDumpGLS("rf_pcs1.txt",1,eqs->b,eqs->x);  //abort();}
-//
+        //  {  		MXDumpGLS("rf_pcs1.txt",1,eqs->b,eqs->x);  //abort();}
+        //
+
+		IncorporateBoundaryConditionsForDeactivatedNodes();
 
 #define atest_dump
 #ifdef test_dump
@@ -2814,179 +2809,242 @@ Programing:
 **************************************************************************/
 void CRFProcessDeformation::PostExcavation()
 {
-    std::vector<int> deact_dom;
-    // PCS_ExcavState = -1;
-    bool now_Excav = false;
-    MeshLib::CElem* elem = NULL;
-    MeshLib::CNode* node = NULL;
-    for (size_t l = 0; l < msp_vector.size(); l++)
+    if (m_msh->hasDeactivatedNodes())
     {
-        if (msp_vector[l]->excavated)
-            deact_dom.push_back(l);
-    }
-    // if(ExcavMaterialGroup>=0&&PCS_ExcavState<0)	//WX:01.2010.update pcs
-    // excav state
-    if (ExcavMaterialGroup >= 0)
-    {
-        for (size_t l = 0; l < m_msh->ele_vector.size(); l++)
-        {
-            // if((m_msh->ele_vector[l]->GetExcavState()>0)&&!(m_msh->ele_vector[l]->GetMark()))//WX:07.2011
-            // HM excav
-            if (ExcavMaterialGroup ==
-                static_cast<int>(m_msh->ele_vector[l]->GetPatchIndex()))
-            {
-                if ((m_msh->ele_vector[l]->GetExcavState() > -1) &&
-                    m_msh->ele_vector[l]->GetMark())
-                {
-                    if (m_msh->ele_vector[l]->GetExcavState() == 1)
-                        m_msh->ele_vector[l]->SetExcavState(
-                            0);          // 1=now, 0=past
-                    PCS_ExcavState = 1;  // not necessary
-                    now_Excav = true;    // new elems are excavated at this time
-                                         // step break;
-                }
-            }
-        }
-    }
-
-    if (deact_dom.size() > 0 ||
-        now_Excav)  // WX:01.2011 modified for coupled excavation
-    {
-        //	 		  MXDumpGLS("rf_pcs.txt",1,eqs->b,eqs->x);  //abort();}
-        // 07.04.2010 WW
         if ((fem_dm->getCoupledFlowProcessType() != FiniteElement::NO_PCS) &&
             Neglect_H_ini == 2)
         {
             InitialNodeValueHpcs();
         }
 
-        bool done;
         ElementValue_DM* eleV_DM = NULL;
         for (size_t l = 0; l < m_msh->ele_vector.size(); l++)
         {
             eleV_DM = ele_value_dm[l];
-            //
-            (*eleV_DM->Stress0) =
-                (*eleV_DM->Stress);  // if not assembly the excavated eles in
-                                     // next time step
-            //
-            elem = m_msh->ele_vector[l];
-            done = false;
-            for (size_t i = 0; i < deact_dom.size(); i++)
+            MeshLib::CElem const* elem = m_msh->ele_vector[l];
+            if (elem->isElementDeactivated())
             {
-                if (elem->GetPatchIndex() ==
-                    static_cast<std::size_t>(deact_dom[i]))
+                (*eleV_DM->Stress0) = (*eleV_DM->Stress);
+            }
+            else
+            {
+                *(eleV_DM->Stress) = 0.;
+                *(eleV_DM->Stress0) = 0.;
+                if (eleV_DM->Stress_j)
+                    (*eleV_DM->Stress_j) = 0.0;
+                if (eleV_DM->Stress_i)
+                    (*eleV_DM->Stress_i) = 0.0;
+            }
+            if (Neglect_H_ini == 1)  // WX:04.2013
+                CalIniTotalStress();
+        }
+        int Idx_Strain[6];
+        Idx_Strain[0] = GetNodeValueIndex("STRAIN_XX");
+        Idx_Strain[1] = GetNodeValueIndex("STRAIN_YY");
+        Idx_Strain[2] = GetNodeValueIndex("STRAIN_ZZ");
+        Idx_Strain[3] = GetNodeValueIndex("STRAIN_XY");
+        if (problem_dimension_dm == 3)
+        {
+            Idx_Strain[4] = GetNodeValueIndex("STRAIN_XZ");
+            Idx_Strain[5] = GetNodeValueIndex("STRAIN_YZ");
+        }
+        std::vector<std::size_t>& inactive_node_IDs =
+            m_msh->getDeactivatedDodeIDs();
+        for (std::size_t i = 0; i < inactive_node_IDs.size(); i++)
+        {
+            MeshLib::CNode const* node =
+                m_msh->nod_vector[inactive_node_IDs[i]];
+            if (node->getConnectedElementIDs().size() == 0)
+            {
+                for (int ii = 0; ii < (2 * problem_dimension_dm); ii++)
+                    fem_dm->pcs->SetNodeValue(i, Idx_Strain[ii], 0);
+            }
+        }
+        return;
+    }
+    else  // To be removed
+    {
+        std::vector<int> deact_dom;
+        // PCS_ExcavState = -1;
+        bool now_Excav = false;
+        MeshLib::CElem* elem = NULL;
+        MeshLib::CNode* node = NULL;
+        for (size_t l = 0; l < msp_vector.size(); l++)
+        {
+            if (msp_vector[l]->excavated)
+                deact_dom.push_back(l);
+        }
+        // if(ExcavMaterialGroup>=0&&PCS_ExcavState<0)	//WX:01.2010.update
+        // pcs excav state
+        if (ExcavMaterialGroup >= 0)
+        {
+            for (size_t l = 0; l < m_msh->ele_vector.size(); l++)
+            {
+                // if((m_msh->ele_vector[l]->GetExcavState()>0)&&!(m_msh->ele_vector[l]->GetMark()))//WX:07.2011
+                // HM excav
+                if (ExcavMaterialGroup ==
+                    static_cast<int>(m_msh->ele_vector[l]->GetPatchIndex()))
                 {
-                    elem->MarkingAll(false);
-                    *(eleV_DM->Stress) = 0.;
-                    *(eleV_DM->Stress0) = 0.;
-                    if (eleV_DM->Stress_j)
-                        (*eleV_DM->Stress_j) = 0.0;
-                    if (eleV_DM->Stress_i)
-                        (*eleV_DM->Stress_i) = 0.0;
-                    done = true;
-                    break;
+                    if ((m_msh->ele_vector[l]->GetExcavState() > -1) &&
+                        m_msh->ele_vector[l]->GetMark())
+                    {
+                        if (m_msh->ele_vector[l]->GetExcavState() == 1)
+                            m_msh->ele_vector[l]->SetExcavState(
+                                0);          // 1=now, 0=past
+                        PCS_ExcavState = 1;  // not necessary
+                        now_Excav = true;    // new elems are excavated at
+                                             // this time step break;
+                    }
                 }
             }
-            if (ExcavMaterialGroup >= 0)  // WX
+        }
+
+        if (deact_dom.size() > 0 ||
+            now_Excav)  // WX:01.2011 modified for coupled excavation
+        {
+            //	 		  MXDumpGLS("rf_pcs.txt",1,eqs->b,eqs->x);
+            ////abort();}
+            // 07.04.2010 WW
+            if ((fem_dm->getCoupledFlowProcessType() !=
+                 FiniteElement::NO_PCS) &&
+                Neglect_H_ini == 2)
             {
-                if (elem->GetExcavState() >= 0)
-                {
-                    elem->MarkingAll(false);
-                    // if update stress0
-                    (*eleV_DM->Stress) = 0.;
-                    (*eleV_DM->Stress0) = 0.;
-                    if (eleV_DM->Stress_j)
-                        (*eleV_DM->Stress_j) = 0.0;
-                    if (eleV_DM->Stress_i)
-                        (*eleV_DM->Stress_i) = 0.0;
-                    //
-                    done = true;
-                }
+                InitialNodeValueHpcs();
             }
-            if (hasAnyProcessDeactivatedSubdomains)  // WX:11.2012 if there is
-                                                     // deactivated subdomain
-                                                     // when excavated
+
+            bool done;
+            ElementValue_DM* eleV_DM = NULL;
+            for (size_t l = 0; l < m_msh->ele_vector.size(); l++)
             {
-                for (int i = 0; i < NumDeactivated_SubDomains; i++)
+                eleV_DM = ele_value_dm[l];
+                //
+                (*eleV_DM->Stress0) =
+                    (*eleV_DM->Stress);  // if not assembly the excavated
+                                         // eles in next time step
+                //
+                elem = m_msh->ele_vector[l];
+                done = false;
+                for (size_t i = 0; i < deact_dom.size(); i++)
                 {
                     if (elem->GetPatchIndex() ==
-                        static_cast<std::size_t>(Deactivated_SubDomain[i]))
+                        static_cast<std::size_t>(deact_dom[i]))
                     {
                         elem->MarkingAll(false);
+                        *(eleV_DM->Stress) = 0.;
+                        *(eleV_DM->Stress0) = 0.;
+                        if (eleV_DM->Stress_j)
+                            (*eleV_DM->Stress_j) = 0.0;
+                        if (eleV_DM->Stress_i)
+                            (*eleV_DM->Stress_i) = 0.0;
                         done = true;
                         break;
                     }
                 }
-            }
-            if (done)
-                continue;
-            else
-                elem->MarkingAll(true);
-        }
-
-        size_t mesh_node_vector_size(m_msh->nod_vector.size());
-        for (size_t l = 0; l < mesh_node_vector_size; l++)
-        {
-            while (m_msh->nod_vector[l]->getConnectedElementIDs().size())
-                m_msh->nod_vector[l]->getConnectedElementIDs().pop_back();
-        }
-        // for (size_t l = 0; l < mesh_node_vector_size; l++)
-        size_t mesh_ele_vector_size(m_msh->ele_vector.size());
-        for (size_t l = 0; l < mesh_ele_vector_size; l++)  // WX: 07.2011
-        {
-            elem = m_msh->ele_vector[l];
-            if (!elem->GetMark())
-                continue;
-            // for(size_t i=0; i<elem->GetNodesNumber(m_msh->getOrder()); i++)
-            for (size_t i = 0; i < elem->GetNodesNumber(1);
-                 i++)  // WX:10.2011 change for one way coup. M->H
-            {
-                done = false;
-                node = elem->GetNode(i);
-                for (size_t j = 0; j < node->getConnectedElementIDs().size();
-                     j++)
+                if (ExcavMaterialGroup >= 0)  // WX
                 {
-                    if (l == node->getConnectedElementIDs()[j])
+                    if (elem->GetExcavState() >= 0)
                     {
+                        elem->MarkingAll(false);
+                        // if update stress0
+                        (*eleV_DM->Stress) = 0.;
+                        (*eleV_DM->Stress0) = 0.;
+                        if (eleV_DM->Stress_j)
+                            (*eleV_DM->Stress_j) = 0.0;
+                        if (eleV_DM->Stress_i)
+                            (*eleV_DM->Stress_i) = 0.0;
+                        //
                         done = true;
-                        break;
                     }
                 }
-                if (!done)
-                    node->getConnectedElementIDs().push_back(l);
+                if (hasAnyProcessDeactivatedSubdomains)  // WX:11.2012 if
+                                                         // there is
+                                                         // deactivated
+                                                         // subdomain when
+                                                         // excavated
+                {
+                    for (int i = 0; i < NumDeactivated_SubDomains; i++)
+                    {
+                        if (elem->GetPatchIndex() ==
+                            static_cast<std::size_t>(Deactivated_SubDomain[i]))
+                        {
+                            elem->MarkingAll(false);
+                            done = true;
+                            break;
+                        }
+                    }
+                }
+                if (done)
+                    continue;
+                else
+                    elem->MarkingAll(true);
+            }
+
+            size_t mesh_node_vector_size(m_msh->nod_vector.size());
+            for (size_t l = 0; l < mesh_node_vector_size; l++)
+            {
+                while (m_msh->nod_vector[l]->getConnectedElementIDs().size())
+                    m_msh->nod_vector[l]->getConnectedElementIDs().pop_back();
+            }
+            // for (size_t l = 0; l < mesh_node_vector_size; l++)
+            size_t mesh_ele_vector_size(m_msh->ele_vector.size());
+            for (size_t l = 0; l < mesh_ele_vector_size; l++)  // WX: 07.2011
+            {
+                elem = m_msh->ele_vector[l];
+                if (!elem->GetMark())
+                    continue;
+                // for(size_t i=0;
+                // i<elem->GetNodesNumber(m_msh->getOrder()); i++)
+                for (size_t i = 0; i < elem->GetNodesNumber(1);
+                     i++)  // WX:10.2011 change for one way coup. M->H
+                {
+                    done = false;
+                    node = elem->GetNode(i);
+                    for (size_t j = 0;
+                         j < node->getConnectedElementIDs().size();
+                         j++)
+                    {
+                        if (l == node->getConnectedElementIDs()[j])
+                        {
+                            done = true;
+                            break;
+                        }
+                    }
+                    if (!done)
+                        node->getConnectedElementIDs().push_back(l);
+                }
+            }
+            if (Neglect_H_ini == 1)  // WX:04.2013
+                CalIniTotalStress();
+        }
+
+        // WX:10.2011 strain update for excavated node, the excavated node
+        // Strain =
+        // 0
+        int Idx_Strain[6];
+        Idx_Strain[0] = GetNodeValueIndex("STRAIN_XX");
+        Idx_Strain[1] = GetNodeValueIndex("STRAIN_YY");
+        Idx_Strain[2] = GetNodeValueIndex("STRAIN_ZZ");
+        Idx_Strain[3] = GetNodeValueIndex("STRAIN_XY");
+        if (problem_dimension_dm == 3)
+        {
+            Idx_Strain[4] = GetNodeValueIndex("STRAIN_XZ");
+            Idx_Strain[5] = GetNodeValueIndex("STRAIN_YZ");
+        }
+        for (size_t i = 0; i < m_msh->GetNodesNumber(false); i++)
+        {
+            node = m_msh->nod_vector[i];
+            if (node->getConnectedElementIDs().size() == 0)
+            {
+                for (int ii = 0; ii < (2 * problem_dimension_dm); ii++)
+                    fem_dm->pcs->SetNodeValue(i, Idx_Strain[ii], 0);
             }
         }
-        if (Neglect_H_ini == 1)  // WX:04.2013
-            CalIniTotalStress();
     }
-
-    // WX:10.2011 strain update for excavated node, the excavated node Strain =
-    // 0
-    int Idx_Strain[6];
-    Idx_Strain[0] = GetNodeValueIndex("STRAIN_XX");
-    Idx_Strain[1] = GetNodeValueIndex("STRAIN_YY");
-    Idx_Strain[2] = GetNodeValueIndex("STRAIN_ZZ");
-    Idx_Strain[3] = GetNodeValueIndex("STRAIN_XY");
-    if (problem_dimension_dm == 3)
-    {
-        Idx_Strain[4] = GetNodeValueIndex("STRAIN_XZ");
-        Idx_Strain[5] = GetNodeValueIndex("STRAIN_YZ");
-    }
-    for (size_t i = 0; i < m_msh->GetNodesNumber(false); i++)
-    {
-        node = m_msh->nod_vector[i];
-        if (node->getConnectedElementIDs().size() == 0)
-            for (int ii = 0; ii < (2 * problem_dimension_dm); ii++)
-                fem_dm->pcs->SetNodeValue(i, Idx_Strain[ii], 0);
-    }
-    return;
 }
 /**************************************************************************
 FEMLib-Method:
-Task: update initial stress. if (Neglect_H_ini == 2) also update pw,pg,pc ini
-Programing:
-07/2011 WX
+Task: update initial stress. if (Neglect_H_ini == 2) also update pw,pg,pc
+ini Programing: 07/2011 WX
 **************************************************************************/
 void CRFProcessDeformation::UpdateIniStateValue()
 {
@@ -3104,7 +3162,9 @@ void CRFProcessDeformation::WriteGaussPointStress(const bool last_step)
     for (std::size_t i = 0; i < m_msh->ele_vector.size(); i++)
     {
         elem = m_msh->ele_vector[i];
-        if (ExcavMaterialGroup > -1)  // WX:if excavation write all eles
+        if (ExcavMaterialGroup > -1 ||
+            elem->isElementDeactivated())  // WX:if excavation write
+                                                // all element
             ActiveElements++;
         else
         {
@@ -3275,12 +3335,13 @@ void CRFProcessDeformation::ReleaseLoadingByExcavation()
     }
     if (actElements == 0)
     {
-        cout << "No element specified for excavation. Please check data in .st "
+        cout << "No element specified for excavation. Please check data in "
+                ".st "
                 "file "
              << "\n";
         abort();
     }
-// 2. Compute the released node loading
+    // 2. Compute the released node loading
 
 #if !defined(NEW_EQS) && !defined(USE_PETSC)  // WW. 06.11.2008, 04.2012
     SetLinearSolver(eqs);
@@ -3615,17 +3676,17 @@ bool CRFProcessDeformation::CalcBC_or_SecondaryVariable_Dynamics(bool BC)
             //
             v = GetNodeValue(i, idx_disp[k]);
             v += GetNodeValue(i, idx_vel[k]) * dt +
-                 0.5 * dt * dt * (ARRAY[i + Shift[k]] +
-                                  m_num->GetDynamicDamping_beta2() *
-                                      GetNodeValue(i, idx_acc0[k]));
+                 0.5 * dt * dt *
+                     (ARRAY[i + Shift[k]] + m_num->GetDynamicDamping_beta2() *
+                                                GetNodeValue(i, idx_acc0[k]));
             SetNodeValue(i, idx_disp[k], v);
             if (bc_type[i] & (int)MathLib::fastpow(2, k + problem_dimension_dm))
                 continue;
             // v
             v = GetNodeValue(i, idx_vel[k]);
-            v += dt * ARRAY[i + Shift[k]] +
-                 m_num->GetDynamicDamping_beta1() * dt *
-                     GetNodeValue(i, idx_acc0[k]);
+            v += dt * ARRAY[i + Shift[k]] + m_num->GetDynamicDamping_beta1() *
+                                                dt *
+                                                GetNodeValue(i, idx_acc0[k]);
             SetNodeValue(i, idx_vel[k], v);
         }
 
@@ -3647,89 +3708,37 @@ bool CRFProcessDeformation::isDynamic() const
     return fem_dm->dynamic;
 }
 
-void CRFProcessDeformation::deactivateElementsForExcavation(const double t)
+void CRFProcessDeformation::IncorporateBoundaryConditionsForDeactivatedNodes()
 {
-    for (std::size_t i = 0; i < _excavation_set.size(); i++)
+    if (!m_msh->hasDeactivatedNodes())
+        return;
+    if (((getProcessType() == FiniteElement::DEFORMATION_DYNAMIC) ||
+          (getProcessType() == FiniteElement::DEFORMATION_FLOW) ||
+          (getProcessType() == FiniteElement::DEFORMATION_H2)))
+        return;
+
+    std::vector<std::size_t> const& inactive_nodes =
+        m_msh->getDeactivatedDodeIDs();
+    if (inactive_nodes.empty())
+        return;
+    long node_id_offset = m_msh->GetNodesNumber(true);
+    for (std::size_t i = 0; i < inactive_nodes.size(); i++)
     {
-        _excavation_set[i]->deactivateElements(t, m_msh->ele_vector);
-    }
-}
-
-void readExcavationMechanicalData(const std::string& file_name,
-                                  CRFProcessDeformation& depormation_pcs)
-{
-    std::ifstream ins(file_name.data());
-    std::string line;
-    while (std::getline(ins, line))
-    {
-        if (line.find("$EXCAVATION_DATA") != std::string::npos)
-        {
-            std::getline(ins, line);
-            std::istringstream iss(line);
-            std::string name;
-            int zone_id;
-            if (!(iss >> name >> zone_id))
+            for (int k = 0; k < problem_dimension_dm; k++)
             {
-                Display::ScreenMessage(
-                    "$EXCAVATION_DATA: Neither keyword nor the material ID is "
-                    "given");
-                exit(1);
-            }  // error
-            iss.clear();
+#if defined(USE_PETSC)  // || defined(other parallel libs)
+                bc_eqs_id.push_back(static_cast<int>(
+                    m_msh->nod_vector[inactive_nodes[i]]->GetEquationIndex() *
+                        dof_per_node +
+                    node_id_offset * k));
+                bc_eqs_value.push_back(0.0);
 
-            std::getline(ins, line);
-            iss.str(line);
-            double start_position[3];
-            if (!(iss >> name >> start_position[0] >> start_position[1] >>
-                  start_position[2]))
-            {
-                Display::ScreenMessage(
-                    "$EXCAVATION_DATA: Neither keyword nor the start point is "
-                    "not given");
-                exit(1);
-            }  // error
-            iss.clear();
-
-            std::getline(ins, line);
-            iss.str(line);
-            double end_position[3];
-            if (!(iss >> name >> end_position[0] >> end_position[1] >>
-                  end_position[2]))
-            {
-                Display::ScreenMessage(
-                    "$EXCAVATION_DATA: Neither keyword nor the end point is "
-                    "not given");
-                exit(1);
-            }  // error
-            iss.clear();
-
-            std::getline(ins, line);
-            iss.str(line);
-            double start_time;
-            if (!(iss >> name >> start_time))
-            {
-                Display::ScreenMessage(
-                    "$EXCAVATION_DATA: Neither keyword nor the start time is "
-                    "not given");
-                exit(1);
-            }  // error
-            iss.clear();
-
-            std::getline(ins, line);
-            iss.str(line);
-            double end_time;
-            if (!(iss >> name >> end_time))
-            {
-                Display::ScreenMessage(
-                    "$EXCAVATION_DATA: Neither keyword nor the start time is "
-                    "not given");
-                exit(1);
-            }  // error
-            iss.clear();
-
-            depormation_pcs._excavation_set.push_back(new MeshLib::Excavation(
-                zone_id, start_position, end_position, start_time, end_time));
-        }
+#elif defined(NEW_EQS)
+                eqs_p->SetKnownX_i(inactive_nodes[i] + node_id_offset * k, 0.0);
+#else
+                MXRandbed(inactive_nodes[i] + node_id_offset * k, 0.0, eqs->b);
+#endif
+            }
     }
 }
 }  // namespace process

@@ -59,7 +59,7 @@ class ElementValue;
 namespace MeshLib
 {
 class CFEMesh;
-}
+}  // namespace MeshLib
 
 #ifdef NEW_EQS  // WW
 namespace Math_Group
@@ -330,7 +330,7 @@ public:
     void Write_Processed_BC();  // 05.08.2011. WW
     void Read_Processed_BC();   // 05.08.2011. WW
 
-    friend bool PCSRead(std::string);
+    friend bool PCSRead(const std::string& file_base_name);
     //....................................................................
     // 1-GEO
     int ite_steps;  /// Newton step index;
@@ -421,7 +421,7 @@ public:
     void ReadSolution();   // WW
     //....................................................................
     // Construction / destruction
-    CRFProcess(void);
+    CRFProcess();
     void Create(void);
 
     virtual ~CRFProcess();
@@ -740,7 +740,10 @@ public:
 #endif
     // BC
     void IncorporateBoundaryConditions(const int rank = -1);
-    // PCH for FLUID_MOMENTUM
+
+	virtual void IncorporateBoundaryConditionsForDeactivatedNodes();
+
+	// PCH for FLUID_MOMENTUM
     void IncorporateBoundaryConditions(const int rank, const int axis);
 #if !defined(USE_PETSC)  // && !defined(other parallel libs)//03.3012. WW
     void SetBoundaryConditionSubDomain();  // WW
@@ -949,7 +952,7 @@ private:
 extern std::vector<CRFProcess*> pcs_vector;
 extern std::vector<ElementValue*>
     ele_gp_value;  // Gauss point value for velocity. WW
-extern bool PCSRead(std::string);
+extern bool PCSRead(const std::string& file_base_name);
 extern void PCSWrite(std::string);
 extern void RelocateDeformationProcess(CRFProcess* m_pcs);
 extern void PCSDestroyAllProcesses(void);

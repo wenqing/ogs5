@@ -20,7 +20,6 @@
 
 #include "FEMEnums.h"
 #include "rf_pcs.h"
-#include "Deformation/Excavation.h"
 
 // Strong discontinuity
 extern bool Localizing;  // for tracing localization
@@ -43,11 +42,6 @@ using FiniteElement::CFiniteElementVec;
 #if !defined(USE_PETSC)  // && !defined(other parallel libs)//03.3012. WW
 class CPARDomain;
 #endif
-
-namespace MeshLib
-{
-class Excavation;
-}
 
 namespace process
 {
@@ -119,8 +113,6 @@ public:
     // WX:10.2011
     void UpdateIniStateValue();
 
-    void deactivateElementsForExcavation(const double t);
-
 private:
     CFiniteElementVec* fem_dm;
     void InitialMBuffer();
@@ -144,14 +136,8 @@ private:
     void Trace_Discontinuity();
     long MarkBifurcatedNeighbor(const int PathIndex);
 
-    // Excavation data
-    std::vector<MeshLib::Excavation*> _excavation_set;
-    friend void readExcavationMechanicalData(
-        const std::string& file_name, CRFProcessDeformation& depormation_pcs);
+    virtual void IncorporateBoundaryConditionsForDeactivatedNodes();
 };
-
-void readExcavationMechanicalData(const std::string& file_name,
-                                  CRFProcessDeformation& depormation_pcs);
 }  // namespace process
 
 extern void CalStressInvariants(const long Node_Inex, double* StressInv);
