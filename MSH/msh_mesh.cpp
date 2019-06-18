@@ -15,8 +15,8 @@
    last modified
 **************************************************************************/
 #include <cfloat>
-#include <cmath>
 #include <climits>
+#include <cmath>
 #include <fstream>
 #include <iomanip>  //WW
 #include <iostream>
@@ -24,9 +24,9 @@
 #include <vector>
 
 // BaseLib
+#include "Histogram.h"
 #include "display.h"
 #include "memory.h"
-#include "Histogram.h"
 
 #include "FileTools.h"
 
@@ -51,9 +51,9 @@
 
 #include "mathlib.h"
 // FEM
+#include "ShapeFunctionPool.h"
 #include "fem_ele.h"
 #include "files0.h"
-#include "ShapeFunctionPool.h"
 
 using FiniteElement::CElement;
 
@@ -3599,6 +3599,54 @@ void CFEMesh::markTopSurfaceFaceElements3D()
     ofile_asci << "#STOP"
                << "\n";
 #endif
+}
+
+void CFEMesh::markDeactivatedNodes()
+{ 
+    _deactivated_node_IDs.clear();
+    _interface_node_IDs.clear();
+
+    std::vector<bool> done(nod_vector.size());
+
+	const bool quad = (NodesNumber_Linear != NodesNumber_Quadratic);
+    for (std::size_t i = 0; i < ele_vector.size(); i++)
+    {
+        MeshLib::CElem* element = ele_vector[i];
+        if ((!element->isElementDeactivated()) && element->GetMark())
+            continue;
+
+        for (int j = 0; j < element->GetNodesNumber(quad); j++)
+        {
+			MeshLib::CNode const* node =
+                element->GetNode(j);
+            if (done[node->GetIndex()])
+                continue;
+
+            const std::size_t n_elements(node->getConnectedElementIDs().size());
+            bool on_boundray = false;
+            for (std::size_t k = 0; k < n_elements; k++)
+            {
+                MeshLib::CElem const* connected_element =
+                    ele_vector[node->getConnectedElementIDs()[k]];
+                if ((!connected_element->isElementDeactivated()) &&
+                    connected_element->GetMark())
+                {
+                    on_boundray = true;
+                    break;
+                }
+            }
+            if (on_boundray)
+            {
+                _interface_node_IDs.push_back(node->GetIndex());
+                done[node->GetIndex()] = true;
+            }
+            else
+            {
+                _deactivated_node_IDs.push_back(node->GetIndex());
+                done[node->GetIndex()] = true;
+            }
+        }
+    }
 }
 
 }  // namespace MeshLib

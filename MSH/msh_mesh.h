@@ -23,6 +23,7 @@
 
 // C++
 #include <string>
+#include <vector>
 
 /** depreciated includes of GEOLib */
 #include "geo_lib.h"
@@ -32,10 +33,10 @@
 
 // GEOLIB
 #include "GEOObjects.h"
+#include "Grid.h"
 #include "Point.h"
 #include "Polyline.h"
 #include "Surface.h"
-#include "Grid.h"
 
 // MSHLib
 #include "MSHEnums.h"  // KR 2010/11/15
@@ -584,8 +585,27 @@ protected:
 public:
     void constructMeshGrid();
 
+    bool hasDeactivatedNodes() const { return !_deactivated_node_IDs.empty(); }
+
+	std::vector<std::size_t> getDeactivatedDodeIDs() const
+    {
+        return _deactivated_node_IDs;
+    }
+
+	std::vector<std::size_t> getInterfaceDodeIDs() const
+    {
+        return _interface_node_IDs;
+    }
+
+    void markDeactivatedNodes();
+
 private:
     GEOLIB::Grid<MeshLib::CNode>* _mesh_grid;
+
+    std::vector<std::size_t> _deactivated_node_IDs;
+    std::vector<std::size_t> _interface_node_IDs;
+    std::vector<bool> _elements_deactivation_status;
+    friend class Excavation;
 };
 
 }  // namespace MeshLib

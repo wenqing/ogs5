@@ -29,6 +29,7 @@ class CRFProcess;
 
 namespace MeshLib
 {
+class Excavation;
 //------------------------------------------------------------------------
 // Class definition
 class CElem : public CCore
@@ -308,6 +309,13 @@ public:
         excavated = ExcavState;
     }  // WX:01.2011 set excavation state
 
+    bool isElementDeactivated() const
+    {
+        return _elements_deactivation_status
+                   ? (*_elements_deactivation_status)[index]
+                   : false;
+    }
+
 private:
     // Members
     // ID
@@ -377,6 +385,10 @@ private:
     // PCS
     friend class process::CRFProcessDeformation;
     friend class ::CRFProcess;
+
+    /// Pointer to _elements_deactivation_status.
+    std::vector<bool>* _elements_deactivation_status;
+    friend class Excavation;
 };
 }  // namespace MeshLib
 #endif

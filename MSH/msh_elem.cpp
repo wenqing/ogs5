@@ -41,7 +41,8 @@ CElem::CElem(size_t Index)
       nodes(nnodes),
       nodes_index(nnodes),
       patch_index(0),
-      transform_tensor(NULL)
+      transform_tensor(NULL),
+      _elements_deactivation_status(NULL)
 {
     grid_adaptation = -1;
     volume = 0.0;
@@ -62,7 +63,8 @@ CElem::CElem(size_t Index)
    Programing:
    06/2005 WW Implementation
 **************************************************************************/
-CElem::CElem() : CCore(0), normal_vector(NULL)
+CElem::CElem()
+    : CCore(0), normal_vector(NULL), _elements_deactivation_status(NULL)
 {
     selected = 0;
     // matgroup_view = 0;
@@ -95,7 +97,10 @@ CElem::CElem() : CCore(0), normal_vector(NULL)
    06/2005 WW Implementation
 **************************************************************************/
 CElem::CElem(size_t Index, CElem* onwer, int Face)
-    : CCore(Index), normal_vector(NULL), owner(onwer)
+    : CCore(Index),
+      normal_vector(NULL),
+      owner(onwer),
+      _elements_deactivation_status(NULL)
 {
     int i, j, k, n, ne;
     int faceIndex_loc[10];
@@ -194,7 +199,9 @@ CElem::CElem(size_t Index, CElem* onwer, int Face)
    06/2005 WW/OK Implementation
 **************************************************************************/
 CElem::CElem(size_t Index, CElem* m_ele_parent)
-    : CCore(Index), normal_vector(NULL)
+    : CCore(Index),
+      normal_vector(NULL),
+      _elements_deactivation_status(NULL)
 {
     //  static int faceIndex_loc[10];
     //  static int edgeIndex_loc[10];
@@ -252,7 +259,8 @@ CElem::CElem(CElem const& elem)
       grid_adaptation(elem.grid_adaptation),
       patch_index(elem.patch_index),
       area(elem.area),
-      angle(elem.angle)
+      angle(elem.angle),
+      _elements_deactivation_status(elem._elements_deactivation_status)
 {
     for (size_t k(0); k < 3; k++)
     {
@@ -302,7 +310,8 @@ CElem::CElem(MshElemType::type t, size_t node0, size_t node1, size_t node2,
       nfaces(3),
       patch_index(mat),
       transform_tensor(NULL),
-      neighbors(nfaces)
+      neighbors(nfaces),
+      _elements_deactivation_status(NULL)
 {
     nodes_index[0] = node0;
     nodes_index[1] = node1;
@@ -339,7 +348,8 @@ CElem::CElem(MshElemType::type t, size_t node0, size_t node1, size_t node2,
       nfaces(4),
       patch_index(mat),
       transform_tensor(NULL),
-      neighbors(nfaces)
+      neighbors(nfaces),
+      _elements_deactivation_status(NULL)
 {
     nodes_index[0] = node0;
     nodes_index[1] = node1;
