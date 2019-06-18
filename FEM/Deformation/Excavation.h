@@ -17,17 +17,20 @@
 
 namespace MeshLib
 {
-class CElem;
+class CFEMesh;
 
 class Excavation
 {
 public:
     Excavation(const int zone_id, const double start_position[3],
                const double end_position[3], const double start_time,
-               const double end_time)
+               const double end_time, const double ambient_temperature,
+               const double ambient_pore_pressure)
         : _zone_id(zone_id),
           _start_time(start_time),
-          _end_time(end_time)
+          _end_time(end_time),
+          _ambient_temperature(ambient_temperature),
+          _ambient_pore_pressure(ambient_pore_pressure)
     {
         for (int i = 0; i < 3; i++)
         {
@@ -36,8 +39,10 @@ public:
         }
     }
 
-    void deactivateElements(const double t,
-                            std::vector<MeshLib::CElem*>& element_vector) const;
+    void deactivateElementsForExcavation(const double t, MeshLib::CFEMesh& mesh) const;
+
+	double getAmbientTemperature() const { return _ambient_temperature; }
+    double getAmbientPorePressure() const { return _ambient_pore_pressure; }
 
 private:
     const int _zone_id;
@@ -45,6 +50,8 @@ private:
     double _end_position[3];
     const double _start_time;
     const double _end_time;
+    const double _ambient_temperature;
+    const double _ambient_pore_pressure;
 
     bool isInExcavatedZone(const double t,
                            const double current_position[]) const;

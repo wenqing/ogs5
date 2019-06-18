@@ -21,22 +21,30 @@
 
 namespace MeshLib
 {
-void Excavation::deactivateElements(
-    const double t, std::vector<MeshLib::CElem*>& element_vector) const
+void Excavation::deactivateElementsForExcavation(const double t,
+                                                 MeshLib::CFEMesh& mesh) const
 {
     if (t < _start_time || t > _end_time)
         return;
-    for (std::size_t i = 0; i < element_vector.size(); i++)
+    if (mesh._elements_deactivation_status.empty())
+        mesh._elements_deactivation_status.resize(mesh.ele_vector.size());
+
+    for (std::size_t i = 0; i < mesh.ele_vector.size(); i++)
     {
-        MeshLib::CElem* element = element_vector[i];
+        MeshLib::CElem* element = mesh.ele_vector[i];
         if (element->GetPatchIndex() != _zone_id)
+        {
+            mesh._elements_deactivation_status[i] = false;
             continue;
+        }
 
         double const* center = element->GetGravityCenter();
-        const bool status = isInExcavatedZone(t, center);
-        element->SetMark(status);
-        element->SetExcavState(status ? 1 : -1);
+        mesh._elements_deactivation_status[i] = isInExcavatedZone(t, center);
+        element->_elements_deactivation_status =
+            &mesh._elements_deactivation_status;
     }
+
+    mesh.markDeactivatedNodes();
 }
 
 bool Excavation::isInExcavatedZone(const double t,
@@ -63,8 +71,8 @@ bool Excavation::isInExcavatedZone(const double t,
     if (!MathLib::isAcuteAngle(current_position, _start_position, current_end))
         return false;
 
-    return MathLib::isAcuteAngle(
-        current_position, current_end, _start_position);
+    return MathLib::isAcuteAngle(current_position, current_end,
+                                 _start_position);
 }
 
 }  // namespace MeshLib

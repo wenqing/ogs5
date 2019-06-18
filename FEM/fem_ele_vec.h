@@ -148,7 +148,7 @@ private:
     //
     const int ns;  // Number of stresses components
 
-    // Flow coupling
+	// Flow coupling
     ProcessType _flow_type;
 
     // Primary value indeces
