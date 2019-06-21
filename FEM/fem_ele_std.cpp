@@ -25,10 +25,10 @@
 #include "mathlib.h"
 // Problems
 //#include "rf_mfp_new.h"
+#include "SparseMatrixDOK.h"
+#include "eos.h"
 #include "rf_mmp_new.h"
 #include "rf_msp_new.h"
-#include "eos.h"
-#include "SparseMatrixDOK.h"
 
 #include "pcs_dm.h"  // displacement coupled
 #include "rfmat_cp.h"
@@ -61,8 +61,8 @@ using Math_Group::CSparseMatrix;
 extern "C"
 {
 #include <cvode/cvode.h>             /* prototypes for CVODE fcts., consts. */
-#include <nvector/nvector_serial.h>  /* serial N_Vector types, fcts., macros */
 #include <cvode/cvode_dense.h>       /* prototype for CVDense */
+#include <nvector/nvector_serial.h>  /* serial N_Vector types, fcts., macros */
 #include <sundials/sundials_dense.h> /* definitions DlsMat DENSE_ELEM */
 #include <sundials/sundials_types.h> /* definition of type realtype */
 }
@@ -1584,6 +1584,10 @@ double CFiniteElementStd::CalCoefMass()
                 double arg[2];
                 arg[0] = interpolate(NodalVal1);   //   p
                 arg[1] = interpolate(NodalValC1);  //   T
+                if (cpl_pcs)
+                     arg[1] = interpolate(NodalValC1);
+                else
+                     arg[1] = PhysicalConstant::CelsiusZeroInKelvin + 20.0;
                 drho_dp_rho = FluidProp->drhodP(arg) / rho_val;
             }
             else
@@ -1729,7 +1733,10 @@ double CFiniteElementStd::CalCoefMass()
             {  // drho_dp from rho-p-T relation
                 double arg[2];
                 arg[0] = PG;
-                arg[1] = interpolate(NodalValC1);  // T
+                if (cpl_pcs)
+                     arg[1] = interpolate(NodalValC1);
+                else
+                     arg[1] = PhysicalConstant::CelsiusZeroInKelvin + 20.0;
                 drho_dp_rho = FluidProp->drhodP(arg) / rhow;
             }
             else
@@ -2265,7 +2272,7 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
             if (T_Flag)
                 variables[1] = interpolate(NodalValC);  // OK4709 temperature
             else
-                variables[1] = 15;  // WX
+                variables[1] = PhysicalConstant::CelsiusZeroInKelvin + 20.0;
 
             // OK4709
             mat_fac = FluidProp->Viscosity(variables);
@@ -2625,7 +2632,7 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
                 if (cpl_pcs)
                     TG = interpolate(NodalValC1);
                 else
-                    TG = 296.0;
+                    TG = PhysicalConstant::CelsiusZeroInKelvin + 20.0;
                 MediaProp->CalStressPermeabilityFactor(w, TG);
                 for (size_t i = 0; i < dim; i++)
                     tensor[i * dim + i] *= w[i];
@@ -6476,9 +6483,8 @@ void CFiniteElementStd::CalcSolidDensityRate()
                 const double rhoTil = 0.1;
                 const double omega = 2.0 * 3.1416;
                 gp_ele->rho_s_curr[gp] =
-                    rhoSR0 +
-                    rhoTil * sin(omega * aktuelle_zeit) /
-                        (1.0 - poro);  // TN Test mass transfer
+                    rhoSR0 + rhoTil * sin(omega * aktuelle_zeit) /
+                                 (1.0 - poro);  // TN Test mass transfer
                 gp_ele->q_R[gp] = rhoTil * omega * cos(omega * aktuelle_zeit) /
                                   (1.0 - poro);  // TN Test mass transfer
             }
@@ -9011,9 +9017,7 @@ void CFiniteElementStd::Assemble_strainCPL(const int phase)
  */
 //**************************************************************************
 #if defined(USE_PETSC)  // && !defined(other parallel libs)//03~04.3012. WW
-void CFiniteElementStd::Assemble_strainCPL_Matrix(const double, const int)
-{
-}
+void CFiniteElementStd::Assemble_strainCPL_Matrix(const double, const int) {}
 #else
 void CFiniteElementStd::Assemble_strainCPL_Matrix(const double fac,
                                                   const int phase)
@@ -11952,9 +11956,8 @@ void CFiniteElementStd::CalcEnergyNorm(double& err_norm0, double& err_normn)
     for (i = 0; i < nnodes; i++)
     {
 #if defined(USE_PETSC)  // || defined(other parallel libs)//07.3012. WW
-        NodalVal0[i] = atol +
-                       rtol * max(fabs(pcs->GetNodeValue(nodes[i], idx)),
-                                  fabs(x_n[nodes[i] * dof_n]));
+        NodalVal0[i] = atol + rtol * max(fabs(pcs->GetNodeValue(nodes[i], idx)),
+                                         fabs(x_n[nodes[i] * dof_n]));
 #else
         NodalVal0[i] =
             atol + rtol * max(fabs(pcs->GetNodeValue(nodes[i], idx)),
