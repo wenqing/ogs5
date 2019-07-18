@@ -309,11 +309,18 @@ public:
         excavated = ExcavState;
     }  // WX:01.2011 set excavation state
 
-    bool isElementDeactivated() const
+    bool isElementExcavated() const
     {
         return _elements_deactivation_status
                    ? (*_elements_deactivation_status)[index]
                    : false;
+    }
+
+	bool isNodeOnInteface(const std::size_t node_id) const
+    {
+		// isNodeOnInteface is called after isElementExcavated.
+		// Therefore the initialization of _is_interface_node is guaranteed.
+        return (*_is_interface_node)[node_id];
     }
 
 private:
@@ -386,8 +393,10 @@ private:
     friend class process::CRFProcessDeformation;
     friend class ::CRFProcess;
 
-    /// Pointer to _elements_deactivation_status.
+    /// Pointer to CFEMesh::_elements_deactivation_status.
     std::vector<bool>* _elements_deactivation_status;
+	/// Pointer to CFEMesh::_is_interface_node.
+    std::vector<bool>* _is_interface_node;
     friend class Excavation;
 };
 }  // namespace MeshLib

@@ -3602,24 +3602,30 @@ void CFEMesh::markTopSurfaceFaceElements3D()
 }
 
 void CFEMesh::markDeactivatedNodes()
-{ 
+{
     _deactivated_node_IDs.clear();
     _interface_node_IDs.clear();
 
-    std::vector<bool> done(nod_vector.size());
+    for (std::size_t i = 0; i < nod_vector.size(); i++)
+    {
+        nod_vector[i]->SetMark(false);
+    }
+    if (_is_interface_node.empty())
+        _is_interface_node.resize(nod_vector.size());
 
-	const bool quad = (NodesNumber_Linear != NodesNumber_Quadratic);
+    const bool quad = (NodesNumber_Linear != NodesNumber_Quadratic);
     for (std::size_t i = 0; i < ele_vector.size(); i++)
     {
         MeshLib::CElem* element = ele_vector[i];
-        if ((!element->isElementDeactivated()) && element->GetMark())
+        if ((!element->isElementExcavated()) && element->GetMark())
             continue;
+
+		element->_is_interface_node = &_is_interface_node;
 
         for (int j = 0; j < element->GetNodesNumber(quad); j++)
         {
-			MeshLib::CNode const* node =
-                element->GetNode(j);
-            if (done[node->GetIndex()])
+            MeshLib::CNode* node = element->GetNode(j);
+            if (node->GetMark())
                 continue;
 
             const std::size_t n_elements(node->getConnectedElementIDs().size());
@@ -3628,7 +3634,7 @@ void CFEMesh::markDeactivatedNodes()
             {
                 MeshLib::CElem const* connected_element =
                     ele_vector[node->getConnectedElementIDs()[k]];
-                if ((!connected_element->isElementDeactivated()) &&
+                if ((!connected_element->isElementExcavated()) &&
                     connected_element->GetMark())
                 {
                     on_boundray = true;
@@ -3638,12 +3644,13 @@ void CFEMesh::markDeactivatedNodes()
             if (on_boundray)
             {
                 _interface_node_IDs.push_back(node->GetIndex());
-                done[node->GetIndex()] = true;
+                _is_interface_node[node->GetIndex()] = true;
+                node->SetMark(true);
             }
             else
             {
                 _deactivated_node_IDs.push_back(node->GetIndex());
-                done[node->GetIndex()] = true;
+                node->SetMark(true);
             }
         }
     }

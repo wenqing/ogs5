@@ -605,6 +605,7 @@ private:
     std::vector<std::size_t> _deactivated_node_IDs;
     std::vector<std::size_t> _interface_node_IDs;
     std::vector<bool> _elements_deactivation_status;
+    std::vector<bool> _is_interface_node;
     friend class Excavation;
 };
 
