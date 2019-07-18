@@ -587,7 +587,7 @@ public:
 
     bool hasDeactivatedNodes() const { return !_deactivated_node_IDs.empty(); }
 
-	std::vector<std::size_t> getDeactivatedDodeIDs() const
+    std::vector<std::size_t> getDeactivatedNodeIDs() const
     {
         return _deactivated_node_IDs;
     }

@@ -3606,52 +3606,56 @@ void CFEMesh::markDeactivatedNodes()
     _deactivated_node_IDs.clear();
     _interface_node_IDs.clear();
 
+    if (_is_interface_node.empty())
+        _is_interface_node.resize(nod_vector.size());
+
     for (std::size_t i = 0; i < nod_vector.size(); i++)
     {
         nod_vector[i]->SetMark(false);
+        _is_interface_node[i] = false;
     }
-    if (_is_interface_node.empty())
-        _is_interface_node.resize(nod_vector.size());
 
     const bool quad = (NodesNumber_Linear != NodesNumber_Quadratic);
     for (std::size_t i = 0; i < ele_vector.size(); i++)
     {
         MeshLib::CElem* element = ele_vector[i];
-        if ((!element->isElementExcavated()) && element->GetMark())
+        if (!element->isElementExcavated())
             continue;
 
-		element->_is_interface_node = &_is_interface_node;
+        element->_is_interface_node = &_is_interface_node;
 
-        for (int j = 0; j < element->GetNodesNumber(quad); j++)
+        for (std::size_t j = 0; j < element->GetNodesNumber(quad); j++)
         {
             MeshLib::CNode* node = element->GetNode(j);
             if (node->GetMark())
                 continue;
 
-            const std::size_t n_elements(node->getConnectedElementIDs().size());
-            bool on_boundray = false;
-            for (std::size_t k = 0; k < n_elements; k++)
+            const std::size_t n_connected_elements(
+                node->getConnectedElementIDs().size());
+            std::size_t counter_deactivated_element = 0;
+            for (std::size_t k = 0; k < n_connected_elements; k++)
             {
                 MeshLib::CElem const* connected_element =
                     ele_vector[node->getConnectedElementIDs()[k]];
-                if ((!connected_element->isElementExcavated()) &&
-                    connected_element->GetMark())
+                if (connected_element->isElementExcavated())
                 {
-                    on_boundray = true;
-                    break;
+                    counter_deactivated_element++;
                 }
             }
-            if (on_boundray)
+            if (counter_deactivated_element > 0)
             {
-                _interface_node_IDs.push_back(node->GetIndex());
-                _is_interface_node[node->GetIndex()] = true;
-                node->SetMark(true);
+                if (counter_deactivated_element !=
+                    n_connected_elements)  // On interface.
+                {
+                    _interface_node_IDs.push_back(node->GetIndex());
+                    _is_interface_node[node->GetIndex()] = true;
+                }
+                else  // In deactivated zone.
+                {
+                    _deactivated_node_IDs.push_back(node->GetIndex());
+                }
             }
-            else
-            {
-                _deactivated_node_IDs.push_back(node->GetIndex());
-                node->SetMark(true);
-            }
+            node->SetMark(true);
         }
     }
 }

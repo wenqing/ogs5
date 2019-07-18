@@ -5745,7 +5745,7 @@ else
             elem = m_msh->ele_vector[i];
             // Marked for use //WX: modified for coupled excavation
             if (elem->GetMark() &&
-                (elem->GetExcavState() == -1 || !elem->isElementDeactivated()))
+                (elem->GetExcavState() == -1 || !elem->isElementExcavated()))
             {
                 elem->SetOrder(false);
                 fem->ConfigElement(elem, Check2D3D);

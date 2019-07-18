@@ -2822,7 +2822,7 @@ void CRFProcessDeformation::PostExcavation()
         {
             eleV_DM = ele_value_dm[l];
             MeshLib::CElem const* elem = m_msh->ele_vector[l];
-            if (elem->isElementDeactivated())
+            if (elem->isElementExcavated())
             {
                 (*eleV_DM->Stress0) = (*eleV_DM->Stress);
             }
@@ -3163,8 +3163,8 @@ void CRFProcessDeformation::WriteGaussPointStress(const bool last_step)
     {
         elem = m_msh->ele_vector[i];
         if (ExcavMaterialGroup > -1 ||
-            elem->isElementDeactivated())  // WX:if excavation write
-                                                // all element
+            elem->isElementExcavated())  // WX:if excavation write
+                                         // all element
             ActiveElements++;
         else
         {

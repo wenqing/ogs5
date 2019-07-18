@@ -709,8 +709,8 @@ void CFiniteElementVec::ComputeStrain(const int ip)
 {
     int i, j = 0, k = 0;
     if (excavation ||
-        MeshElement->isElementDeactivated())  // WX:03.2012 if element is
-                                                   // excavated, strain = 0
+        MeshElement->isElementExcavated())  // WX:03.2012 if element is
+                                            // excavated, strain = 0
     {
         for (i = 0; i < ns; i++)
             dstrain[i] = 0.;
@@ -858,7 +858,7 @@ void CFiniteElementVec::ComputeMatrix_RHS(const double fkt, const Matrix* p_D)
         }
         if (PreLoad == 11)
             continue;
-        if (excavation || MeshElement->isElementDeactivated())
+        if (excavation || MeshElement->isElementExcavated())
             continue;  // WX:08.2011
 // Local assembly of stiffness matrix, B^T C B
 #ifdef JFNK_H2M
@@ -1199,7 +1199,7 @@ void CFiniteElementVec::LocalAssembly(const int update)
                 }
             }
         }
-        if (MeshElement->isElementDeactivated())
+        if (MeshElement->isElementExcavated())
         {
             *(eleV_DM->Stress) = 0.;
         }
@@ -1330,7 +1330,7 @@ bool CFiniteElementVec::GlobalAssembly()
         return true;
 
     // For excavation simulation. 12.2009. WW
-    if (excavation || MeshElement->isElementDeactivated())  // WX: modify
+    if (excavation || MeshElement->isElementExcavated())  // WX: modify
     {
         // MeshElement->MarkingAll(false);
         //*(eleV_DM->Stress) = 0.;
@@ -2067,7 +2067,9 @@ void CFiniteElementVec::LocalAssembly_continuum(const int update)
         {
             for (i = 0; i < ns; i++)
                 dstress[i] = 0.0;
-            if (!(excavation || MeshElement->isElementDeactivated()))  // WX:07.2011 nonlinear excavation
+            if (!(excavation ||
+                  MeshElement->isElementExcavated()))  // WX:07.2011 nonlinear
+                                                       // excavation
             {
                 // De->Write();
                 De->multi(dstrain, dstress);
@@ -2083,8 +2085,7 @@ void CFiniteElementVec::LocalAssembly_continuum(const int update)
         // Integrate the stress by return mapping:
         //---------------------------------------------------------
         if (excavation ||
-            MeshElement
-                ->isElementDeactivated())  // if elem is excavated, only do
+            MeshElement->isElementExcavated())  // if elem is excavated, only do
                                                 // the comp. rhs WX:08.2011
         {
             for (i = 0; i < ns; i++)
@@ -2560,7 +2561,7 @@ bool CFiniteElementVec::RecordGuassStrain(const int gp, const int gp_r,
 void CFiniteElementVec::ExtropolateGuassStrain()
 {
     // WX:03.2012. if excavation dbuff changed
-    if (pcs->ExcavMaterialGroup > -1 || MeshElement->isElementDeactivated())
+    if (pcs->ExcavMaterialGroup > -1 || MeshElement->isElementExcavated())
     {
         int tmp_excavstate = -1;
         for (int i = 0; i < nnodes; i++)
