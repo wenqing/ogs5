@@ -1917,6 +1917,21 @@ void CFiniteElementVec::GlobalAssembly_RHS()
             }
         }
     }
+
+    // New for excavation
+    if (MeshElement->isElementExcavated())
+    {
+        for (int i = 0; i < nnodesHQ; i++)
+        {
+            if (MeshElement->isNodeOnInteface(
+                    MeshElement->nodes[i]->GetIndex()))
+                continue;
+
+            for (std::size_t j = 0; j < dim; j++)
+                b_rhs[eqs_number[i] + NodeShift[j]] = 0.0;
+        }
+    }
+
 #endif
 }
 /***************************************************************************

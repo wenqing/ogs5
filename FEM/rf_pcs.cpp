@@ -7568,6 +7568,7 @@ void CRFProcess::IncorporateBoundaryConditionsForDeactivatedNodes()
             getProcessType() == FiniteElement::MULTI_PHASE_FLOW
                 ? m_msh->GetNodesNumber(false)
                 : 0;
+
         for (std::size_t i = 0; i < interface_nodes.size(); i++)
         {
             if (interface_nodes[i] < m_msh->GetNodesNumber(false))
@@ -7590,7 +7591,7 @@ void CRFProcess::IncorporateBoundaryConditionsForDeactivatedNodes()
     }
 
     std::vector<std::size_t> const& inactive_nodes =
-        m_msh->getDeactivatedDodeIDs();
+        m_msh->getDeactivatedNodeIDs();
     if (inactive_nodes.empty())
         return;
     long node_id_offset = getProcessType() == FiniteElement::MULTI_PHASE_FLOW

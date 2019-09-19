@@ -2753,7 +2753,7 @@ void CRFProcessDeformation::GlobalAssembly()
         //  {  		MXDumpGLS("rf_pcs1.txt",1,eqs->b,eqs->x);  //abort();}
         //
 
-		IncorporateBoundaryConditionsForDeactivatedNodes();
+        IncorporateBoundaryConditionsForDeactivatedNodes();
 
 #define atest_dump
 #ifdef test_dump
@@ -2822,11 +2822,8 @@ void CRFProcessDeformation::PostExcavation()
         {
             eleV_DM = ele_value_dm[l];
             MeshLib::CElem const* elem = m_msh->ele_vector[l];
+            (*eleV_DM->Stress0) = (*eleV_DM->Stress);
             if (elem->isElementExcavated())
-            {
-                (*eleV_DM->Stress0) = (*eleV_DM->Stress);
-            }
-            else
             {
                 *(eleV_DM->Stress) = 0.;
                 *(eleV_DM->Stress0) = 0.;
@@ -2849,7 +2846,7 @@ void CRFProcessDeformation::PostExcavation()
             Idx_Strain[5] = GetNodeValueIndex("STRAIN_YZ");
         }
         std::vector<std::size_t>& inactive_node_IDs =
-            m_msh->getDeactivatedDodeIDs();
+            m_msh->getDeactivatedNodeIDs();
         for (std::size_t i = 0; i < inactive_node_IDs.size(); i++)
         {
             MeshLib::CNode const* node =
@@ -3718,7 +3715,7 @@ void CRFProcessDeformation::IncorporateBoundaryConditionsForDeactivatedNodes()
         return;
 
     std::vector<std::size_t> const& inactive_nodes =
-        m_msh->getDeactivatedDodeIDs();
+        m_msh->getDeactivatedNodeIDs();
     if (inactive_nodes.empty())
         return;
     long node_id_offset = m_msh->GetNodesNumber(true);

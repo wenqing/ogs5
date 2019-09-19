@@ -29,17 +29,25 @@ void Excavation::deactivateElementsForExcavation(const double t,
     if (mesh._elements_deactivation_status.empty())
         mesh._elements_deactivation_status.resize(mesh.ele_vector.size());
 
+    const double k = (t - _start_time) / (_end_time - _start_time);
+    static double current_end[3];
+    for (int i = 0; i < 3; i++)
+    {
+        current_end[i] =
+            k * (_end_position[i] - _start_position[i]) + _start_position[i];
+    }
+
     for (std::size_t i = 0; i < mesh.ele_vector.size(); i++)
     {
         MeshLib::CElem* element = mesh.ele_vector[i];
         if (element->GetPatchIndex() != _zone_id)
         {
-            mesh._elements_deactivation_status[i] = false;
             continue;
         }
 
         double const* center = element->GetGravityCenter();
-        mesh._elements_deactivation_status[i] = isInExcavatedZone(t, center);
+        mesh._elements_deactivation_status[i] =
+            isInExcavatedZone(t, current_end, center);
         element->_elements_deactivation_status =
             &mesh._elements_deactivation_status;
     }
@@ -47,7 +55,7 @@ void Excavation::deactivateElementsForExcavation(const double t,
     mesh.markDeactivatedNodes();
 }
 
-bool Excavation::isInExcavatedZone(const double t,
+bool Excavation::isInExcavatedZone(const double t, const double current_end[],
                                    const double current_position[]) const
 {
     // For 2D
@@ -56,17 +64,9 @@ bool Excavation::isInExcavatedZone(const double t,
         return true;
 
     // 3D
-
     if (t > _end_time)  // Finished excavation.
         return true;
 
-    const double k = (t - _start_time) / (_end_time - _start_time);
-    static double current_end[3];
-    for (int i = 0; i < 3; i++)
-    {
-        current_end[i] =
-            k * (_end_position[i] - _start_position[i]) + _start_position[i];
-    }
 
     if (!MathLib::isAcuteAngle(current_position, _start_position, current_end))
         return false;

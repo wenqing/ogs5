@@ -4857,7 +4857,7 @@ void readExcavationData(const std::string& file_name, Problem& problem)
                 iss >> T_ref;
             iss.clear();
 
-			std::getline(ins, line);
+            std::getline(ins, line);
             iss.str(line);
             double p_ref = 1.e+5;
             iss >> name;

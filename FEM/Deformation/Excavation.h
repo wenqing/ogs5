@@ -53,7 +53,7 @@ private:
     const double _ambient_temperature;
     const double _ambient_pore_pressure;
 
-    bool isInExcavatedZone(const double t,
+    bool isInExcavatedZone(const double t, const double current_end[],
                            const double current_position[]) const;
 };
 }  // namespace MeshLib
