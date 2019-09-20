@@ -4761,8 +4761,8 @@ void Problem::deactivateElementsForExcavation(const double t)
 {
     for (std::size_t i = 0; i < _excavation_set.size(); i++)
     {
-        _excavation_set[i]->deactivateElementsForExcavation(t,
-                                                            *fem_msh_vector[0]);
+        _excavation_set[i]->deactivateElementsForExcavation(
+            t, *fem_msh_vector[0], mrank);
     }
 }
 

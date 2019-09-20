@@ -14,6 +14,8 @@
    08/2005 WW/OK Encapsulation from rf_ele_msh
    last modified
 **************************************************************************/
+
+#include <algorithm>
 #include <cfloat>
 #include <climits>
 #include <cmath>
@@ -54,6 +56,10 @@
 #include "ShapeFunctionPool.h"
 #include "fem_ele.h"
 #include "files0.h"
+
+#ifdef USE_MPI
+#include "par_ddc.h"
+#endif
 
 using FiniteElement::CElement;
 
@@ -3601,7 +3607,7 @@ void CFEMesh::markTopSurfaceFaceElements3D()
 #endif
 }
 
-void CFEMesh::markDeactivatedNodes()
+void CFEMesh::markDeactivatedNodes(const int rank)
 {
     _deactivated_node_IDs.clear();
     _interface_node_IDs.clear();
@@ -3616,9 +3622,16 @@ void CFEMesh::markDeactivatedNodes()
     }
 
     const bool quad = (NodesNumber_Linear != NodesNumber_Quadratic);
+#ifdef USE_MPI
+    CPARDomain* m_dom = dom_vector[rank];
+    for (std::size_t i = 0; i < m_dom->elements.size(); i++)
+    {
+        MeshLib::CElem* element = ele_vector[m_dom->elements[i]];
+#else
     for (std::size_t i = 0; i < ele_vector.size(); i++)
     {
         MeshLib::CElem* element = ele_vector[i];
+#endif
         if (!element->isElementExcavated())
             continue;
 
@@ -3644,15 +3657,25 @@ void CFEMesh::markDeactivatedNodes()
             }
             if (counter_deactivated_element > 0)
             {
+#ifdef USE_MPI
+                const std::vector<long>::iterator it =
+                    std::find(m_dom->nodes.begin(), m_dom->nodes.end(),
+                              static_cast<long>(node->GetIndex()));
+                const std::size_t entry_id =
+                    std::distance(m_dom->nodes.begin(), it);
+#else
+                const std::size_t entry_id = node->GetIndex();
+#endif
+
                 if (counter_deactivated_element !=
                     n_connected_elements)  // On interface.
                 {
-                    _interface_node_IDs.push_back(node->GetIndex());
+                    _interface_node_IDs.push_back(entry_id);
                     _is_interface_node[node->GetIndex()] = true;
                 }
                 else  // In deactivated zone.
                 {
-                    _deactivated_node_IDs.push_back(node->GetIndex());
+                    _deactivated_node_IDs.push_back(entry_id);
                 }
             }
             node->SetMark(true);

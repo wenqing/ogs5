@@ -597,7 +597,7 @@ public:
         return _interface_node_IDs;
     }
 
-    void markDeactivatedNodes();
+    void markDeactivatedNodes(const int rank = -1);
 
 private:
     GEOLIB::Grid<MeshLib::CNode>* _mesh_grid;

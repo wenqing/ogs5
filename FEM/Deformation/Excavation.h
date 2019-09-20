@@ -39,9 +39,10 @@ public:
         }
     }
 
-    void deactivateElementsForExcavation(const double t, MeshLib::CFEMesh& mesh) const;
+    void deactivateElementsForExcavation(const double t, MeshLib::CFEMesh& mesh,
+                                         const int rank) const;
 
-	double getAmbientTemperature() const { return _ambient_temperature; }
+    double getAmbientTemperature() const { return _ambient_temperature; }
     double getAmbientPorePressure() const { return _ambient_pore_pressure; }
 
 private:

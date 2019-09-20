@@ -22,7 +22,8 @@
 namespace MeshLib
 {
 void Excavation::deactivateElementsForExcavation(const double t,
-                                                 MeshLib::CFEMesh& mesh) const
+                                                 MeshLib::CFEMesh& mesh,
+                                                 const int rank) const
 {
     if (t < _start_time || t > _end_time)
         return;
@@ -52,7 +53,7 @@ void Excavation::deactivateElementsForExcavation(const double t,
             &mesh._elements_deactivation_status;
     }
 
-    mesh.markDeactivatedNodes();
+    mesh.markDeactivatedNodes(rank);
 }
 
 bool Excavation::isInExcavatedZone(const double t, const double current_end[],
