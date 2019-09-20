@@ -136,7 +136,8 @@ private:
     void Trace_Discontinuity();
     long MarkBifurcatedNeighbor(const int PathIndex);
 
-    virtual void IncorporateBoundaryConditionsForDeactivatedNodes();
+    virtual void IncorporateBoundaryConditionsForDeactivatedNodes(
+        const int rank = -1);
 };
 }  // namespace process
 

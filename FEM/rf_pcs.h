@@ -741,9 +741,10 @@ public:
     // BC
     void IncorporateBoundaryConditions(const int rank = -1);
 
-	virtual void IncorporateBoundaryConditionsForDeactivatedNodes();
+    virtual void IncorporateBoundaryConditionsForDeactivatedNodes(
+        const int rank = -1);
 
-	// PCH for FLUID_MOMENTUM
+    // PCH for FLUID_MOMENTUM
     void IncorporateBoundaryConditions(const int rank, const int axis);
 #if !defined(USE_PETSC)  // && !defined(other parallel libs)//03.3012. WW
     void SetBoundaryConditionSubDomain();  // WW

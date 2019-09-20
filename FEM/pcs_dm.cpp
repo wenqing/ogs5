@@ -2664,6 +2664,8 @@ void CRFProcessDeformation::GlobalAssembly()
         IncorporateSourceTerms(myrank);
         // Apply Dirchlete bounday condition
         IncorporateBoundaryConditions(myrank);
+        // For excavation
+        IncorporateBoundaryConditionsForDeactivatedNodes(myrank);
         //....................................................................
 
         // Assemble global system
@@ -2753,6 +2755,7 @@ void CRFProcessDeformation::GlobalAssembly()
         //  {  		MXDumpGLS("rf_pcs1.txt",1,eqs->b,eqs->x);  //abort();}
         //
 
+        // For excavation
         IncorporateBoundaryConditionsForDeactivatedNodes();
 
 #define atest_dump
@@ -3705,8 +3708,26 @@ bool CRFProcessDeformation::isDynamic() const
     return fem_dm->dynamic;
 }
 
-void CRFProcessDeformation::IncorporateBoundaryConditionsForDeactivatedNodes()
+void CRFProcessDeformation::IncorporateBoundaryConditionsForDeactivatedNodes(
+    const int rank)
 {
+#if defined(USE_PETSC)  // || defined(other parallel libs)
+    Display::ScreenMessage(
+        "IncorporateBoundaryConditionsForDeactivatedNodes does not work under  "
+        "USE_PETSC");
+    exit(1);
+#endif
+
+#ifdef NEW_EQS
+#ifdef USE_MPI
+    CPARDomain* m_dom = dom_vector[rank];
+    Linear_EQS* eqs_p = eqs_p = m_dom->eqs;
+    ;
+#else
+    Linear_EQS* eqs_p = eqs_new;
+#endif
+#endif
+
     if (!m_msh->hasDeactivatedNodes())
         return;
     if (((getProcessType() == FiniteElement::DEFORMATION_DYNAMIC) ||
@@ -3723,14 +3744,7 @@ void CRFProcessDeformation::IncorporateBoundaryConditionsForDeactivatedNodes()
     {
             for (int k = 0; k < problem_dimension_dm; k++)
             {
-#if defined(USE_PETSC)  // || defined(other parallel libs)
-                bc_eqs_id.push_back(static_cast<int>(
-                    m_msh->nod_vector[inactive_nodes[i]]->GetEquationIndex() *
-                        dof_per_node +
-                    node_id_offset * k));
-                bc_eqs_value.push_back(0.0);
-
-#elif defined(NEW_EQS)
+#if defined(NEW_EQS)
                 eqs_p->SetKnownX_i(inactive_nodes[i] + node_id_offset * k, 0.0);
 #else
                 MXRandbed(inactive_nodes[i] + node_id_offset * k, 0.0, eqs->b);

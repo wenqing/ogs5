@@ -5715,6 +5715,8 @@ void CRFProcess::GlobalAssembly()
         IncorporateSourceTerms(j);
         if (m_num->nls_method != 2)  // 06.09.2010. WW
             IncorporateBoundaryConditions(j);
+        // For excavation
+        IncorporateBoundaryConditionsForDeactivatedNodes(j);
 /*
    //TEST
    string test = "rank";
@@ -5805,6 +5807,7 @@ else
 #endif
     IncorporateBoundaryConditions();
 
+    // For excavation
     IncorporateBoundaryConditionsForDeactivatedNodes();
 #ifdef NEW_EQS
     // ofstream Dum("rf_pcs.txt", ios::out); // WW
@@ -7540,8 +7543,26 @@ void CRFProcess::IncorporateBoundaryConditions(const int rank, const int axis)
      */
 }
 
-void CRFProcess::IncorporateBoundaryConditionsForDeactivatedNodes()
+void CRFProcess::IncorporateBoundaryConditionsForDeactivatedNodes(
+    const int rank)
 {
+#if defined(USE_PETSC)  // || defined(other parallel libs)
+    Display::ScreenMessage(
+        "IncorporateBoundaryConditionsForDeactivatedNodes does not work under  "
+        "USE_PETSC");
+    exit(1);
+#endif
+
+#ifdef NEW_EQS
+#ifdef USE_MPI
+    CPARDomain* m_dom = dom_vector[rank];
+    Linear_EQS* eqs_p = eqs_p = m_dom->eqs;
+    ;
+#else
+    Linear_EQS* eqs_p = eqs_new;
+#endif
+#endif
+
     if (!m_msh->hasDeactivatedNodes())
         return;
     if ((getProcessType() != FiniteElement::LIQUID_FLOW) &&
@@ -7564,29 +7585,48 @@ void CRFProcess::IncorporateBoundaryConditionsForDeactivatedNodes()
                  (getProcessType() == FiniteElement::MULTI_PHASE_FLOW))
             // All zones have the same ambient pressure.
             value = _problem->getAmbientPorePressureInExcavation(0);
-        long node_id_offset =
-            getProcessType() == FiniteElement::MULTI_PHASE_FLOW
-                ? m_msh->GetNodesNumber(false)
-                : 0;
 
-        for (std::size_t i = 0; i < interface_nodes.size(); i++)
+        if (getProcessType() == FiniteElement::MULTI_PHASE_FLOW)
         {
-            if (interface_nodes[i] < m_msh->GetNodesNumber(false))
+            for (std::size_t i = 0; i < interface_nodes.size(); i++)
             {
-#if defined(USE_PETSC)  // || defined(other parallel libs)
-                bc_eqs_id.push_back(static_cast<int>(
-                    m_msh->nod_vector[interface_nodes[i]]->GetEquationIndex() *
-                        dof_per_node +
-                    node_id_offset));
-                bc_eqs_value.push_back(value);
-
-#elif defined(NEW_EQS)
-                eqs_p->SetKnownX_i(interface_nodes[i] + node_id_offset,
-                                   bc_value);
+#if defined(USE_MPI)
+                if (interface_nodes[i] < m_dom->nnodes_dom)
 #else
-                MXRandbed(interface_nodes[i] + node_id_offset, value, eqs->b);
+                if (interface_nodes[i] < m_msh->GetNodesNumber(false))
+#endif
+                {
+#if defined(NEW_EQS)
+                    eqs_p->SetKnownX_i(interface_nodes[i],
+                                       0.0);  // capillary pressure.
+                    eqs_p->SetKnownX_i(
+                        interface_nodes[i] + m_msh->GetNodesNumber(false),
+                        value);
+#else
+                    MXRandbed(interface_nodes[i], 0.0, eqs->b);
+                    MXRandbed(interface_nodes[i] + m_msh->GetNodesNumber(false),
+                              value, eqs->b);
+#endif
+                }
+            }
+        }
+        else
+        {
+            for (std::size_t i = 0; i < interface_nodes.size(); i++)
+            {
+#if defined(USE_MPI)
+                if (interface_nodes[i] < m_dom->nnodes_dom)
+#else
+                if (interface_nodes[i] < m_msh->GetNodesNumber(false))
+#endif
+                {
+#if defined(NEW_EQS)
+                    eqs_p->SetKnownX_i(interface_nodes[i], value);
+#else
+                    MXRandbed(interface_nodes[i], value, eqs->b);
 #endif
             }
+        }
         }
     }
 
@@ -7599,18 +7639,15 @@ void CRFProcess::IncorporateBoundaryConditionsForDeactivatedNodes()
                               : 0;
     for (std::size_t i = 0; i < inactive_nodes.size(); i++)
     {
+#if defined(USE_MPI)
+        if (inactive_nodes[i] < m_dom->nnodes_dom)
+#else
         if (inactive_nodes[i] < m_msh->GetNodesNumber(false))
+#endif
         {
             for (int k = 0; k < dof; k++)
             {
-#if defined(USE_PETSC)  // || defined(other parallel libs)
-                bc_eqs_id.push_back(static_cast<int>(
-                    m_msh->nod_vector[inactive_nodes[i]]->GetEquationIndex() *
-                        dof_per_node +
-                    node_id_offset * k));
-                bc_eqs_value.push_back(0.0);
-
-#elif defined(NEW_EQS)
+#if defined(NEW_EQS)
                 eqs_p->SetKnownX_i(inactive_nodes[i] + node_id_offset * k, 0.0);
 #else
                 MXRandbed(inactive_nodes[i] + node_id_offset * k, 0.0, eqs->b);
