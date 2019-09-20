@@ -7648,7 +7648,12 @@ void CRFProcess::IncorporateBoundaryConditionsForDeactivatedNodes(
             for (int k = 0; k < dof; k++)
             {
 #if defined(NEW_EQS)
-                eqs_p->SetKnownX_i(inactive_nodes[i] + node_id_offset * k, 0.0);
+#ifdef USE_MPI
+                const long eqs_id_offset = m_dom->shift[k];
+#else
+                const long eqs_id_offset = node_id_offset * k;
+#endif
+                eqs_p->SetKnownX_i(inactive_nodes[i] + eqs_id_offset, 0.0);
 #else
                 MXRandbed(inactive_nodes[i] + node_id_offset * k, 0.0, eqs->b);
 #endif
