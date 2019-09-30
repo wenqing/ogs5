@@ -2665,7 +2665,7 @@ void CRFProcessDeformation::GlobalAssembly()
         // Apply Dirchlete bounday condition
         IncorporateBoundaryConditions(myrank);
         // For excavation
-        IncorporateBoundaryConditionsForDeactivatedNodes(myrank);
+        //       IncorporateBoundaryConditionsForDeactivatedNodes(myrank);
         //....................................................................
 
         // Assemble global system
@@ -2756,7 +2756,7 @@ void CRFProcessDeformation::GlobalAssembly()
         //
 
         // For excavation
-        IncorporateBoundaryConditionsForDeactivatedNodes();
+        // IncorporateBoundaryConditionsForDeactivatedNodes();
 
 #define atest_dump
 #ifdef test_dump
@@ -2848,7 +2848,7 @@ void CRFProcessDeformation::PostExcavation()
             Idx_Strain[4] = GetNodeValueIndex("STRAIN_XZ");
             Idx_Strain[5] = GetNodeValueIndex("STRAIN_YZ");
         }
-        std::vector<std::size_t>& inactive_node_IDs =
+        std::vector<std::size_t> inactive_node_IDs =
             m_msh->getDeactivatedNodeIDs();
         for (std::size_t i = 0; i < inactive_node_IDs.size(); i++)
         {
@@ -3721,7 +3721,7 @@ void CRFProcessDeformation::IncorporateBoundaryConditionsForDeactivatedNodes(
 #ifdef NEW_EQS
 #ifdef USE_MPI
     CPARDomain* m_dom = dom_vector[rank];
-    Linear_EQS* eqs_p = eqs_p = m_dom->eqs;
+    Linear_EQS* eqs_p = m_dom->eqs;
     ;
 #else
     Linear_EQS* eqs_p = eqs_new;

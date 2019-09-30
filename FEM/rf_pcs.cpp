@@ -4594,9 +4594,13 @@ void CRFProcess::CheckMarkedElement()
             elem->MarkingAll(true);
     }
 
-	m_msh->markDeactivatedNodes();
+#ifdef USE_MPI
+    m_msh->markDeactivatedNodes(myrank);
+#else
+    m_msh->markDeactivatedNodes();
+#endif
 
-	size_t node_vector_size = m_msh->nod_vector.size();
+    size_t node_vector_size = m_msh->nod_vector.size();
     for (size_t l = 0; l < node_vector_size; l++)
         while (m_msh->nod_vector[l]->getConnectedElementIDs().size())
             m_msh->nod_vector[l]->getConnectedElementIDs().pop_back();
@@ -7556,7 +7560,7 @@ void CRFProcess::IncorporateBoundaryConditionsForDeactivatedNodes(
 #ifdef NEW_EQS
 #ifdef USE_MPI
     CPARDomain* m_dom = dom_vector[rank];
-    Linear_EQS* eqs_p = eqs_p = m_dom->eqs;
+    Linear_EQS* eqs_p = m_dom->eqs;
     ;
 #else
     Linear_EQS* eqs_p = eqs_new;
@@ -7591,7 +7595,7 @@ void CRFProcess::IncorporateBoundaryConditionsForDeactivatedNodes(
             for (std::size_t i = 0; i < interface_nodes.size(); i++)
             {
 #if defined(USE_MPI)
-                if (interface_nodes[i] < m_dom->nnodes_dom)
+                if (static_cast<long>(interface_nodes[i]) < m_dom->nnodes_dom)
 #else
                 if (interface_nodes[i] < m_msh->GetNodesNumber(false))
 #endif
@@ -7615,7 +7619,7 @@ void CRFProcess::IncorporateBoundaryConditionsForDeactivatedNodes(
             for (std::size_t i = 0; i < interface_nodes.size(); i++)
             {
 #if defined(USE_MPI)
-                if (interface_nodes[i] < m_dom->nnodes_dom)
+                if (static_cast<long>(interface_nodes[i]) < m_dom->nnodes_dom)
 #else
                 if (interface_nodes[i] < m_msh->GetNodesNumber(false))
 #endif
@@ -7640,7 +7644,7 @@ void CRFProcess::IncorporateBoundaryConditionsForDeactivatedNodes(
     for (std::size_t i = 0; i < inactive_nodes.size(); i++)
     {
 #if defined(USE_MPI)
-        if (inactive_nodes[i] < m_dom->nnodes_dom)
+        if (static_cast<long>(inactive_nodes[i]) < m_dom->nnodes_dom)
 #else
         if (inactive_nodes[i] < m_msh->GetNodesNumber(false))
 #endif
