@@ -4784,6 +4784,8 @@ void readExcavationData(const std::string& file_name, Problem& problem)
     std::string line;
     while (std::getline(ins, line))
     {
+        if (line.find("#STOP") != std::string::npos)
+            return;
         if (line.find("$EXCAVATION_DATA") != std::string::npos)
         {
             std::getline(ins, line);
@@ -4852,17 +4854,27 @@ void readExcavationData(const std::string& file_name, Problem& problem)
             std::getline(ins, line);
             iss.str(line);
             double T_ref = 293.15;
-            iss >> name;
-            if (name.find("ambient_temperature") != std::string::npos)
-                iss >> T_ref;
+            if (!(iss >> name >> T_ref))
+            {
+                Display::ScreenMessage(
+                    "$EXCAVATION_DATA: Neither keyword nor the ambient "
+                    " temperature is not given");
+                exit(1);
+
+            }
             iss.clear();
 
             std::getline(ins, line);
             iss.str(line);
             double p_ref = 1.e+5;
-            iss >> name;
-            if (name.find("ambient_pore_pressure") != std::string::npos)
-                iss >> p_ref;
+            if (!(iss >> name >> p_ref))
+            {
+                Display::ScreenMessage(
+                    "$EXCAVATION_DATA: Neither keyword nor the ambient "
+                    "pore pressure is not given");
+                exit(1);
+
+            }
             iss.clear();
 
             problem._excavation_set.push_back(
