@@ -877,7 +877,7 @@ public:
     void DumpEqs(std::string file_name);
 #endif
     bool Check();                 // OK
-    int ExcavMaterialGroup;       // WX
+    std::vector<int> ExcavMaterialGroup;  // WX
     int ExcavDirection;           // WX
     int ExcavCurve;               // WX
     double ExcavBeginCoordinate;  // WX

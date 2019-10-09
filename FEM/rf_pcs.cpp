@@ -405,7 +405,7 @@ CRFProcess::CRFProcess(void)
     this->FCT_K = NULL;
     this->FCT_d = NULL;
 #endif
-    ExcavMaterialGroup = -1;   // 01.2010 WX
+    // ExcavMaterialGroup = -1;   // 01.2010 WX
     PCS_ExcavState = -1;       // WX
     Neglect_H_ini = -1;        // WX
     m_conversion_rate = NULL;  // WW
@@ -1858,7 +1858,7 @@ CRFProcess* CRFProcess::CopyPCStoDM_PCS()
         dm_pcs->Deactivated_SubDomain[i] = Deactivated_SubDomain[i];
     pcs_deformation = 1;
     // WX:01.2011 for coupled excavation
-    if (ExcavMaterialGroup >= 0)
+    if (!ExcavMaterialGroup.empty())
     {
         dm_pcs->ExcavMaterialGroup = ExcavMaterialGroup;
         dm_pcs->ExcavDirection = ExcavDirection;
@@ -2297,8 +2297,30 @@ std::ios::pos_type CRFProcess::Read(std::ifstream* pcs_file)
         // WX:07.2011
         if (line_string.find("$TIME_CONTROLLED_EXCAVATION") == 0)
         {
-            *pcs_file >> ExcavMaterialGroup >> ExcavDirection >>
-                ExcavBeginCoordinate >> ExcavCurve;
+            int int_buff;
+            *pcs_file >> int_buff >> ExcavDirection >> ExcavBeginCoordinate >>
+                ExcavCurve >> std::ws;
+
+            if (int_buff > 0)  // Single material domain
+                ExcavMaterialGroup.push_back(int_buff);
+            else  // -int_buff is the number of the excavated subdomains.
+            {
+                std::string new_line;
+                std::getline(*pcs_file, new_line);
+                std::stringstream ss;
+                ss.str(new_line);
+                std::string comment;
+                ss >> comment;
+                const int number_excavated_subdomains = -int_buff;
+                for (int k = 0; k < number_excavated_subdomains; k++)
+                {
+                    int mat_id;
+                    ss >> mat_id;
+                    ExcavMaterialGroup.push_back(mat_id);
+                }
+                ss.clear();
+            }
+
             continue;
         }
         if (line_string.find("$NEGLECT_H_INI_EFFECT") == 0)  // WX:10.2011
@@ -4580,15 +4602,21 @@ void CRFProcess::CheckMarkedElement()
                 break;
             }
         }
-        // WX:02.2013: excav with deactivated subdomain
-        if (ExcavMaterialGroup == (int)elem->GetPatchIndex())
+        for (std::size_t i_exc_mat = 0; i_exc_mat < ExcavMaterialGroup.size();
+             i_exc_mat++)
         {
-            if (!elem->GetMark() || abs(elem->GetExcavState()) < MKleinsteZahl)
+            // WX:02.2013: excav with deactivated subdomain
+            if (ExcavMaterialGroup[i_exc_mat] == (int)elem->GetPatchIndex())
             {
-                elem->MarkingAll(false);
-                done = true;
+                if (!elem->GetMark() ||
+                    abs(elem->GetExcavState()) < MKleinsteZahl)
+                {
+                    elem->MarkingAll(false);
+                    done = true;
+                }
             }
         }
+
         if (done)
             continue;
         else
@@ -4657,18 +4685,23 @@ void CRFProcess::CheckExcavedElement()
     for (long l = 0; l < (long)m_msh->ele_vector.size(); l++)
     {
         CElem* elem = m_msh->ele_vector[l];
-        if ((int)elem->GetPatchIndex() == ExcavMaterialGroup &&
-            elem->GetExcavState() == -1)  // WX:04.2012
+
+        for (std::size_t i_exc_mat = 0; i_exc_mat < ExcavMaterialGroup.size();
+             i_exc_mat++)
         {
-            double const* ele_center(elem->GetGravityCenter());
-            double max_excavation_range = 0;
-            double min_excavation_range = 0;
-            if (isPointInExcavatedDomain(ele_center, max_excavation_range,
-                                         min_excavation_range))
+            if ((int)elem->GetPatchIndex() == ExcavMaterialGroup[i_exc_mat] &&
+                elem->GetExcavState() == -1)  // WX:04.2012
             {
-                elem->SetExcavState(1);
+                double const* ele_center(elem->GetGravityCenter());
+                double max_excavation_range = 0;
+                double min_excavation_range = 0;
+                if (isPointInExcavatedDomain(ele_center, max_excavation_range,
+                                             min_excavation_range))
+                {
+                    elem->SetExcavState(1);
+                }
             }
-        }
+    }
     }
 }
 
@@ -9687,7 +9720,7 @@ double CRFProcess::ExecuteNonLinear(int loop_process_number, bool print_pcs)
         CopyU_n();
     if (hasAnyProcessDeactivatedSubdomains)
         this->CheckMarkedElement();  // NW
-    if (ExcavMaterialGroup > -1)     // WX:07.2011 HM excavation
+    if (!ExcavMaterialGroup.empty())  // WX:07.2011 HM excavation
         this->CheckExcavedElement();
     Tim->last_dt_accepted = true;  // JT2012
 

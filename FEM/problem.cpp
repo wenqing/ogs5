@@ -1744,7 +1744,7 @@ void Problem::PostCouplingLoop()
             if (msp_vector[l]->GetBoolExcavated())
                 doPostExcav = true;
         }
-        if (dm_pcs->ExcavMaterialGroup >= 0 || doPostExcav)
+        if (!dm_pcs->ExcavMaterialGroup.empty() || doPostExcav)
             dm_pcs->PostExcavation();     // WX:07.2011
         if (dm_pcs->UpdateIniState == 1)  // WX:10.2011
             dm_pcs->UpdateIniStateValue();
@@ -1794,7 +1794,7 @@ void Problem::PostCouplingLoop()
     {
         m_pcs = pcs_vector[i];
         if (hasAnyProcessDeactivatedSubdomains &&
-            m_pcs->ExcavMaterialGroup < 0)  // NW
+            m_pcs->ExcavMaterialGroup.empty())  // NW
             // WX:11.2012 when excavated, not do CheckMarkedElement
             m_pcs->CheckMarkedElement();
 #if defined(USE_MPI)  // 18.10.2007 WW

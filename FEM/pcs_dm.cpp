@@ -452,7 +452,7 @@ double CRFProcessDeformation::Execute(int loop_process_number)
         // if(NumDeactivated_SubDomains>0||num_type_name.find("EXCAVATION")!=string::npos)
         CheckMarkedElement();
     // MarkNodesForGlobalAssembly();
-    if (ExcavMaterialGroup > -1)
+    if (!ExcavMaterialGroup.empty())
         CheckExcavedElement();  // WX:07.2011
 
     counter++;  // Times of this method  to be called
@@ -2823,24 +2823,28 @@ void CRFProcessDeformation::PostExcavation()
     }
     // if(ExcavMaterialGroup>=0&&PCS_ExcavState<0)	//WX:01.2010.update pcs
     // excav state
-    if (ExcavMaterialGroup >= 0)
+    if (!ExcavMaterialGroup.empty())
     {
         for (size_t l = 0; l < m_msh->ele_vector.size(); l++)
         {
             // if((m_msh->ele_vector[l]->GetExcavState()>0)&&!(m_msh->ele_vector[l]->GetMark()))//WX:07.2011
             // HM excav
-            if (ExcavMaterialGroup ==
-                static_cast<int>(m_msh->ele_vector[l]->GetPatchIndex()))
+            for (std::size_t i_exc_mat = 0;
+                 i_exc_mat < ExcavMaterialGroup.size(); i_exc_mat++)
             {
-                if ((m_msh->ele_vector[l]->GetExcavState() > -1) &&
-                    m_msh->ele_vector[l]->GetMark())
+                if (ExcavMaterialGroup[i_exc_mat] ==
+                    static_cast<int>(m_msh->ele_vector[l]->GetPatchIndex()))
                 {
-                    if (m_msh->ele_vector[l]->GetExcavState() == 1)
-                        m_msh->ele_vector[l]->SetExcavState(
-                            0);          // 1=now, 0=past
-                    PCS_ExcavState = 1;  // not necessary
-                    now_Excav = true;    // new elems are excavated at this time
-                                         // step break;
+                    if ((m_msh->ele_vector[l]->GetExcavState() > -1) &&
+                        m_msh->ele_vector[l]->GetMark())
+                    {
+                        if (m_msh->ele_vector[l]->GetExcavState() == 1)
+                            m_msh->ele_vector[l]->SetExcavState(
+                                0);          // 1=now, 0=past
+                        PCS_ExcavState = 1;  // not necessary
+                        now_Excav = true;    // new elems are excavated at this
+                                           // time step break;
+                    }
                 }
             }
         }
@@ -2885,7 +2889,7 @@ void CRFProcessDeformation::PostExcavation()
                     break;
                 }
             }
-            if (ExcavMaterialGroup >= 0)  // WX
+            if (!ExcavMaterialGroup.empty())  // WX
             {
                 if (elem->GetExcavState() >= 0)
                 {
@@ -3101,7 +3105,7 @@ void CRFProcessDeformation::WriteGaussPointStress(const bool last_step)
     for (std::size_t i = 0; i < m_msh->ele_vector.size(); i++)
     {
         elem = m_msh->ele_vector[i];
-        if (ExcavMaterialGroup > -1)  // WX:if excavation write all eles
+        if (!ExcavMaterialGroup.empty())  // WX:if excavation write all eles
             ActiveElements++;
         else
         {
@@ -3114,8 +3118,8 @@ void CRFProcessDeformation::WriteGaussPointStress(const bool last_step)
     {
         elem = m_msh->ele_vector[i];
         if (elem->GetMark() ||
-            ExcavMaterialGroup >
-                -1)  // Marked for use//WX:if excavation write all eles
+            !ExcavMaterialGroup
+                 .empty())  // Marked for use//WX:if excavation write all eles
         {
             eleV_DM = ele_value_dm[i];
             file_stress.write((char*)(&i), sizeof(i));
