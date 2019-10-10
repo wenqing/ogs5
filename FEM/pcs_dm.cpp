@@ -60,6 +60,8 @@
 #include "par_ddc.h"
 #endif
 
+#include "TimeInterval.h"
+
 using namespace std;
 
 // Solver
@@ -2908,7 +2910,10 @@ void CRFProcessDeformation::PostExcavation()
                 for (int i = 0; i < NumDeactivated_SubDomains; i++)
                 {
                     if (elem->GetPatchIndex() ==
-                        static_cast<std::size_t>(Deactivated_SubDomain[i]))
+                            static_cast<std::size_t>(
+                                Deactivated_SubDomain[i]) &&
+                        _deactivated_dubdomain_time_intervals[i]
+                            ->isInTimeInterval(aktuelle_zeit))
                     {
                         elem->MarkingAll(false);
                         done = true;
@@ -3389,7 +3394,12 @@ void CRFProcessDeformation::ReleaseLoadingByExcavation()
     Deactivated_SubDomain = new int[SizeSubD];
     NumDeactivated_SubDomains = SizeSubD;
     for (j = 0; j < SizeSubD; j++)
+    {
         Deactivated_SubDomain[j] = ExcavDomainIndex[j];
+        _deactivated_dubdomain_time_intervals.push_back(
+            new BaseLib::TimeInterval(-std::numeric_limits<double>::max(),
+                                      std::numeric_limits<double>::max()));
+    }
 
     // Activate the host domain for excavtion analysis
     for (i = 0; i < (long)m_msh->ele_vector.size(); i++)
