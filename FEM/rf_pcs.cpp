@@ -132,6 +132,8 @@ REACT_BRNS* m_vec_BRNS;
 
 #include "fct_mpi.h"
 
+#include "TimeInterval.h"
+
 #ifndef USE_PETSC
 #include "par_ddc.h"
 #endif
@@ -582,6 +584,13 @@ CRFProcess::~CRFProcess(void)
         ScreenMessage(
             "\t Please make sure that the original initial\
                                 data files are used.\n");
+    }
+
+    for (std::size_t i = 0; i < _deactivated_dubdomain_time_intervals.size();
+         i++)
+    {
+        if (_deactivated_dubdomain_time_intervals[i])
+            delete _deactivated_dubdomain_time_intervals[i];
     }
 }
 
@@ -1856,6 +1865,8 @@ CRFProcess* CRFProcess::CopyPCStoDM_PCS()
         dm_pcs->Deactivated_SubDomain = new int[NumDeactivated_SubDomains];
     for (int i = 0; i < NumDeactivated_SubDomains; i++)
         dm_pcs->Deactivated_SubDomain[i] = Deactivated_SubDomain[i];
+    dm_pcs->_deactivated_dubdomain_time_intervals =
+        _deactivated_dubdomain_time_intervals;
     pcs_deformation = 1;
     // WX:01.2011 for coupled excavation
     if (ExcavMaterialGroup >= 0)
@@ -2164,13 +2175,42 @@ std::ios::pos_type CRFProcess::Read(std::ifstream* pcs_file)
             continue;
         }
         // subkeyword found
-        if (line_string.find("$DEACTIVATED_SUBDOMAIN") != string::npos)
+        if (line_string.find("$DEACTIVATED_SUBDOMAIN") != string::npos &&
+            line_string.find("_WITH_TIME_INTERVAL") == string::npos)
         {
             // WW
             *pcs_file >> NumDeactivated_SubDomains >> ws;
             Deactivated_SubDomain = new int[NumDeactivated_SubDomains];
+            _deactivated_dubdomain_time_intervals.reserve(
+                NumDeactivated_SubDomains);
             for (int i = 0; i < NumDeactivated_SubDomains; i++)
+            {
                 *pcs_file >> Deactivated_SubDomain[i] >> ws;
+                _deactivated_dubdomain_time_intervals.emplace_back(
+                    new BaseLib::TimeInterval(
+                        -std::numeric_limits<double>::max(),
+                        std::numeric_limits<double>::max()));
+            }
+            continue;
+        }
+        if (line_string.find("$DEACTIVATED_SUBDOMAIN_WITH_TIME_INTERVAL") !=
+            string::npos)
+        {
+            // WW
+            *pcs_file >> NumDeactivated_SubDomains >> ws;
+            Deactivated_SubDomain = new int[NumDeactivated_SubDomains];
+            _deactivated_dubdomain_time_intervals.reserve(
+                NumDeactivated_SubDomains);
+            for (int i = 0; i < NumDeactivated_SubDomains; i++)
+            {
+                double start_time;
+                double end_time;
+
+                *pcs_file >> Deactivated_SubDomain[i] >> start_time >>
+                    end_time >> ws;
+                _deactivated_dubdomain_time_intervals.emplace_back(
+                    new BaseLib::TimeInterval(start_time, end_time));
+            }
             continue;
         }
         //....................................................................
@@ -4573,7 +4613,9 @@ void CRFProcess::CheckMarkedElement()
         for (i = 0; i < (size_t)NumDeactivated_SubDomains; i++)
         {
             if (elem->GetPatchIndex() ==
-                static_cast<size_t>(Deactivated_SubDomain[i]))
+                    static_cast<size_t>(Deactivated_SubDomain[i]) &&
+                _deactivated_dubdomain_time_intervals[i]->isInTimeInterval(
+                    aktuelle_zeit))
             {
                 elem->MarkingAll(false);
                 done = true;

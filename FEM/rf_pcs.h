@@ -98,6 +98,11 @@ using MeshLib::CFEMesh;
 
 #define PCS_FILE_EXTENSION ".pcs"
 
+namespace BaseLib
+{
+class TimeInterval;
+}
+
 typedef struct /* Knotenwert-Informationen */
 {
     char name[80];      /* Name der Knotengroesse */
@@ -283,7 +288,8 @@ protected:  // WW
     double time_unit_factor;
     int NumDeactivated_SubDomains;
     int* Deactivated_SubDomain;
-// New equation and solver objects WW
+    std::vector<BaseLib::TimeInterval*> _deactivated_dubdomain_time_intervals;
+    // New equation and solver objects WW
 #if defined(USE_PETSC)  // || defined(other parallel libs)//03.3012. WW
     petsc_group::PETScLinearSolver* eqs_new;
     int mysize;

@@ -14,6 +14,7 @@
 #ifndef TIME_INTERVAL_H
 #define TIME_INTERVAL_H
 
+#include <cassert>
 #include <vector>
 
 namespace BaseLib
@@ -43,21 +44,7 @@ private:
 };
 
 bool isInTimeInterval(const double time,
-                      std::vector<TimeInterval*> const& time_intervals)
-{
-    // No period defined. That means the time is always in period.
-    if (time_intervals.empty())
-        return true;
-
-    for (std::size_t i = 0; i < time_intervals.size(); i++)
-    {
-        if (time_intervals[i]->isInTimeInterval(time))
-        {
-            return true;
-        }
-    }
-    return false;
-}
+                      std::vector<TimeInterval*> const& time_intervals);
 }  // end of namespace BaseLib
 
 #endif

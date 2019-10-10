@@ -16,6 +16,7 @@ set( HEADERS
 	timer.h
 	uniqueListInsert.h
 	wait.h
+	TimeInterval.h
 )
 
 set( SOURCES
@@ -30,6 +31,7 @@ set( SOURCES
 	MemWatch.cpp
 	StringTools.cpp
 	timer.cpp
+	TimeInterval.cpp
 )
 
 # Create the library
