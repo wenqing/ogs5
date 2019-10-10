@@ -41,6 +41,7 @@ class GEOObjects;
 namespace MeshLib
 {
 class CFEMesh;
+class CElem;
 }
 class InitialCondition;
 
@@ -74,6 +75,8 @@ public:
     // DIS
     // KR std::vector<CNodeValue*> node_value_vector;
     void SetDomain(int);
+    void SetElement(const MeshLib::CElem& element, const int nidx,
+                    const double offset);
     void SetByNodeIndex(int);  // 19.11.2009 PCH
     void SetPolyline(int);
     void SetSurface(int);

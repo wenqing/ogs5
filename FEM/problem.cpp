@@ -79,6 +79,9 @@ extern int ReadData(const char*,
 #include "tools.h"
 #include "timer.h"
 #include "rf_msp_new.h"  //WX:01.2013
+
+#include "msh_elem.h"
+
 //
 #ifdef CHEMAPP
 #include "eqlink.h"
@@ -125,7 +128,8 @@ Problem::Problem(const char* filename)
       _geo_obj(new GEOLIB::GEOObjects),
       _geo_name(filename),
       mrank(0),
-      msize(0)
+      msize(0),
+      _materialID_to_be_changed(std::make_pair(-1, -1))
 {
     if (filename != NULL)
     {
@@ -134,6 +138,12 @@ Problem::Problem(const char* filename)
 #if !defined(USE_PETSC)  // &&  !defined(other parallel libs)//03~04.3012. WW
         DOMRead(filename);
 #endif
+
+        if (pcs_vector[0]->ExcavMaterialGroup >=
+            0)  // or other excavation process
+        {
+            readMaterialIDsForReplacement(filename);
+        }
     }
 #if !defined(USE_PETSC) && \
     !defined(NEW_EQS)  // && defined(other parallel libs)//03~04.3012. WW
@@ -1237,6 +1247,9 @@ void Problem::Euler_TimeDiscretize()
             ScreenMessage("This step is accepted.\n");
 
             PostCouplingLoop();
+
+            postExcavationProcessForConcreteLinning();
+
             if (print_result)
             {
                 if (current_time < end_time)
@@ -4739,3 +4752,67 @@ double Problem::getEndTime()
     return end_time;
 }
 #endif  // BRNS
+
+void Problem::postExcavationProcessForConcreteLinning()
+{
+    if (_materialID_to_be_changed.first == -1)
+        return;
+
+    for (std::size_t i = 0; i < pcs_vector.size(); i++)
+    {
+        pcs_vector[i]->dectivateConditionInExcavatedSubDomain(
+            _materialID_to_be_changed.first);
+    }
+
+    CRFProcess* pcs = pcs_vector[0];
+    for (std::size_t i = 0; i < _re_activated_elements.size(); i++)
+    {
+        MeshLib::CElem* element = _re_activated_elements[i];
+
+        double const* ele_center(element->GetGravityCenter());
+        double max_excavation_range = 0;
+        double min_excavation_range = 0;
+        if (pcs->isPointInExcavatedDomain(ele_center, max_excavation_range,
+                                          min_excavation_range))
+        {
+            element->SetPatchIndex(_materialID_to_be_changed.second);
+            element->MarkingAll(true);
+            for (std::size_t j = 0; j < pcs_vector.size(); j++)
+            {
+                pcs_vector[j]->SetInitialConditionInElement(*element);
+            }
+        }
+    }
+}
+
+void Problem::readMaterialIDsForReplacement(const std::string& file_base_name)
+{
+    const std::string file_name = file_base_name + ".pcs";
+    std::ifstream ins(file_name.data());
+    std::string line;
+    while (std::getline(ins, line))
+    {
+        if (line.find("#STOP") != std::string::npos)
+            return;
+        if (line.find("#CONCRETE_LINING_AFTER_EXCAVATION") != std::string::npos)
+        {
+            std::getline(ins, line);
+            std::istringstream iss(line);
+            int subdomain_id0, subdomain_id1;
+            iss >> subdomain_id0 >> subdomain_id1;
+            _materialID_to_be_changed =
+                std::make_pair(subdomain_id0, subdomain_id1);
+
+            for (std::size_t i = 0; i < fem_msh_vector[0]->ele_vector.size();
+                 i++)
+            {
+                if (fem_msh_vector[0]->ele_vector[i]->GetPatchIndex() ==
+                    subdomain_id0)
+                {
+                    _re_activated_elements.push_back(
+                        fem_msh_vector[0]->ele_vector[i]);
+                }
+            }
+        }
+    }
+}
