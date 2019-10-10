@@ -746,6 +746,8 @@ public:
 #endif
     // BC
     void IncorporateBoundaryConditions(const int rank = -1);
+    void dectivateConditionInExcavatedSubDomain(const int material_ID);
+
     // PCH for FLUID_MOMENTUM
     void IncorporateBoundaryConditions(const int rank, const int axis);
 #if !defined(USE_PETSC)  // && !defined(other parallel libs)//03.3012. WW
@@ -822,6 +824,7 @@ public:
     void LOPCopySwellingStrain(CRFProcess* m_pcs);
     VoidFuncInt PCSSetIC_USER;
     void SetIC();
+    void SetInitialConditionInElement(const MeshLib::CElem& element);
     // Remove argument. WW
     void CalcSecondaryVariables(bool initial = false);
     void MMPCalcSecondaryVariablesRichards(int timelevel, bool update);

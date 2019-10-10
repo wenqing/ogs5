@@ -14,7 +14,9 @@
 #ifndef problem_INC
 #define problem_INC
 
+#include <utility>
 #include <vector>
+
 class CRFProcess;
 
 // GEOLIB
@@ -29,6 +31,11 @@ namespace FiniteElement
 class CFiniteElementStd;
 class CFiniteElementVec;
 }  // namespace FiniteElement
+
+namespace MeshLib
+{
+class CElem;
+}
 
 //---------------------------------------------------------------------
 // Pointers to member functions
@@ -182,6 +189,13 @@ private:
     int msize;
 
     static const size_t max_processes = 16;
+
+    // For modeling of excavation with shortcut emplacement.
+    std::pair<int, int> _materialID_to_be_changed;
+    std::vector<MeshLib::CElem*> _re_activated_elements;
+    void readMaterialIDsForReplacement(const std::string& file_base_name);
+
+    void postExcavationProcessForConcreteLinning();
 };
 
 #endif
