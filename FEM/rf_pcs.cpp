@@ -6549,6 +6549,68 @@ void CRFProcess::SetSTWaterGemSubDomain(int myrank)
 
 #endif  //#if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
         // WW
+
+void CRFProcess::dectivateConditionInExcavatedSubDomain(const int material_ID)
+{
+    int rank = -1;
+    if (dom_vector.size() > 0)
+    {
+#if defined(USE_MPI)
+        rank = myrank;
+#else
+        rank = 0;
+#endif
+    }
+
+    long begin = 0;
+    long end = 0;
+    if (rank == -1)
+    {
+        begin = 0;
+        end = (long)bc_node_value.size();
+    }
+#if !defined(USE_PETSC)  // && !defined(other parallel libs)//03~04.3012. WW
+    else
+    {
+        CPARDomain* m_dom = dom_vector[rank];
+        if (rank == 0)
+            begin = 0;
+        else
+            begin = rank_bc_node_value_in_dom[rank - 1];
+        end = rank_bc_node_value_in_dom[rank];
+    }
+#endif  // END: #if !defined(USE_PETSC) // && !defined(other parallel libs)
+
+    for (long i = begin; i < end; i++)
+    {
+        long gindex = i;
+#if !defined(USE_PETSC)  // && !defined(other parallel libs)//03.3012. WW
+        if (rank > -1)
+            gindex = bc_node_value_in_dom[i];
+#endif
+        CBoundaryConditionNode* m_bc_node = bc_node_value[gindex];
+        CBoundaryCondition* m_bc = bc_node[gindex];
+        if (m_bc->getExcavMatGr() != material_ID)
+            continue;
+
+        if (m_bc->getExcav() > 0)
+        {
+            CNode const* node;
+
+            node = m_msh->nod_vector[m_bc_node->geo_node_number];
+            double const* node_coordinate(
+                node->getData());  // Coordinates(node_coordinate);
+            double max_excavation_range = 0;
+            double min_excavation_range = 0;
+            if (isPointInExcavatedDomain(node_coordinate, max_excavation_range,
+                                         min_excavation_range))
+            {
+                m_bc->setExcavationStatus(-1);
+            }
+        }
+    }
+}
+
 /**************************************************************************
    FEMLib-Method: CRFProcess::IncorporateBoundaryConditions
    Task: set PCS boundary conditions
@@ -9172,6 +9234,36 @@ void CRFProcess::SetIC()
             T1[i] += PhysicalConstant::CelsiusZeroInKelvin;
         }
     }
+}
+
+void CRFProcess::SetInitialConditionInElement(const MeshLib::CElem& element)
+{
+    for (int i = 0; i < pcs_number_of_primary_nvals; i++)
+    {
+        int nidx = GetNodeValueIndex(pcs_primary_function_name[i]);
+        FiniteElement::PrimaryVariable pv_i(
+            FiniteElement::convertPrimaryVariable(
+                pcs_primary_function_name[i]));
+        const double offset = (_temp_unit == FiniteElement::CELSIUS &&
+                               pv_i == FiniteElement::TEMPERATURE1)
+                                  ? PhysicalConstant::CelsiusZeroInKelvin
+                                  : 0.0;
+
+        for (size_t j = 0; j < ic_vector.size(); j++)
+        {
+            CInitialCondition* m_ic = ic_vector[j];
+            m_ic->m_msh = m_msh;
+            if (m_ic->getProcessType() != this->getProcessType())
+                continue;
+
+            m_ic->setProcess(this);
+            if (m_ic->getProcessPrimaryVariable() == pv_i)
+            {
+                m_ic->SetElement(element, nidx, offset);
+                m_ic->SetElement(element, nidx+1, offset);
+            }  // end of if
+        }      // end of for j
+    }          // end of for i
 }
 
 /**************************************************************************
