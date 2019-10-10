@@ -127,6 +127,10 @@ public:
     }
     size_t getMeshNodeNumber() const { return _msh_node_number; }
     const std::string& getMeshTypeName() const { return _msh_type_name; }
+    void setExcavationStatus(const int bc_excavation_status)
+    {
+        bcExcav = bc_excavation_status;
+    }
     int getExcav() { return bcExcav; }  // WX:12.2010 get bc excav model
     int getExcavMatGr()
     {

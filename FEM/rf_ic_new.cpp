@@ -18,6 +18,7 @@
 
 #include "makros.h"
 // C++ STL
+#include <algorithm>
 #include <iostream>
 #include <list>
 using namespace std;
@@ -1075,6 +1076,49 @@ void CInitialCondition::SetDomain(int nidx)
            }
            }
          */
+    }
+}
+
+void CInitialCondition::SetElement(const MeshLib::CElem& element,
+                                   const int nidx, const double offset)
+{
+    bool quadratic = false;
+    /// In case of P_U coupling monolithic scheme
+    if (this->getProcess()->type == 41)  // WW Mono
+    {
+        if (convertPrimaryVariableToString(this->getProcessPrimaryVariable())
+                .find("DISPLACEMENT") != string::npos)  // Deform
+            quadratic = true;
+        else
+            quadratic = false;
+    }
+    else if (this->getProcess()->type == 4)
+        quadratic = true;
+    else
+        quadratic = false;
+
+    int index =
+        std::distance(subdom_index.begin(),
+                      std::find(subdom_index.begin(), subdom_index.end(),
+                                element.GetPatchIndex()));
+
+    if (getProcessDistributionType() == FiniteElement::FUNCTION)
+    {
+        for (std::size_t i = 0; i < element.GetNodesNumber(quadratic); i++)
+        {
+            double const* const pnt(element.GetNode(i)->getData());
+            getProcess()->SetNodeValue(
+                element.GetNodeIndex(i), nidx,
+                dis_linear_f->getValue(index, pnt[0], pnt[1], pnt[2]) + offset);
+        }
+    }
+    else
+    {
+        for (std::size_t i = 0; i < element.GetNodesNumber(quadratic); i++)
+        {
+            getProcess()->SetNodeValue(element.GetNodeIndex(i), nidx,
+                                       subdom_ic[index] + offset);
+        }
     }
 }
 
