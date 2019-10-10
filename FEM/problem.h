@@ -183,4 +183,5 @@ private:
 
     static const size_t max_processes = 16;
 };
+
 #endif
