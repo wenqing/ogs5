@@ -112,6 +112,36 @@ class CRFProcessDeformation;
 }
 using process::CRFProcessDeformation;
 
+static void readAddtionalExcavationData(
+    const std::string& file_base_name,
+    std::vector<int>& addtional_excavating_subdomaim_ids)
+{
+    const std::string file_name = file_base_name + ".pcs";
+    std::ifstream ins(file_name.data());
+    std::string line;
+    while (std::getline(ins, line))
+    {
+        if (line.find("#STOP") != std::string::npos)
+            return;
+        if (line.find("#ADDITIONAL_EXCAVATED_SUBDOMAIN_IDS") !=
+            std::string::npos)
+        {
+            std::getline(ins, line);
+            std::istringstream iss(line);
+            int subdomain_number;
+            iss >> subdomain_number;
+            for (int i = 0; i < subdomain_number; i++)
+            {
+                int domain_id;
+                iss >> domain_id;
+                addtional_excavating_subdomaim_ids.push_back(domain_id);
+            }
+            iss.clear();
+            return;
+        }
+    }
+}
+
 /**************************************************************************
    GeoSys - Function: Constructor
    Task:
@@ -145,6 +175,31 @@ Problem::Problem(const char* filename)
             readMaterialIDsForReplacement(filename);
         }
     }
+
+    // See the excavated subdomain IDs to the ID of the major excavated
+    // sudomain.
+    if (pcs_vector[0]->ExcavMaterialGroup >= 0)
+    {
+        const int excavating_subdomaoin_id = pcs_vector[0]->ExcavMaterialGroup;
+        std::vector<int> addtional_excavating_subdomaim_ids;
+        readAddtionalExcavationData(filename,
+                                    addtional_excavating_subdomaim_ids);
+        for (std::size_t i = 0; i < fem_msh_vector[0]->ele_vector.size(); i++)
+        {
+            MeshLib::CElem* element = fem_msh_vector[0]->ele_vector[i];
+            for (std::size_t j = 0;
+                 j < addtional_excavating_subdomaim_ids.size();
+                 j++)
+            {
+                if (element->GetPatchIndex() ==
+                    addtional_excavating_subdomaim_ids[j])
+                {
+                    element->SetPatchIndex(excavating_subdomaoin_id);
+                }
+            }
+        }
+    }
+
 #if !defined(USE_PETSC) && \
     !defined(NEW_EQS)  // && defined(other parallel libs)//03~04.3012. WW
     //#ifndef NEW_EQS
