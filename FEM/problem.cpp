@@ -1303,8 +1303,6 @@ void Problem::Euler_TimeDiscretize()
 
             PostCouplingLoop();
 
-            postExcavationProcessForConcreteLinning();
-
             if (print_result)
             {
                 if (current_time < end_time)
@@ -1321,6 +1319,9 @@ void Problem::Euler_TimeDiscretize()
                 }
 #endif
             }
+
+            postExcavationProcessForConcreteLinning();
+
             accepted_times++;
             for (i = 0; i < (int)active_process_index.size(); i++)
             {
@@ -4836,6 +4837,10 @@ void Problem::postExcavationProcessForConcreteLinning()
             {
                 pcs_vector[j]->SetInitialConditionInElement(*element);
             }
+
+            FiniteElement::ElementValue_DM* element_data =
+                ele_value_dm[element->GetIndex()];
+            element_data->init(*element);
         }
     }
 }
