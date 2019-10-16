@@ -1313,7 +1313,6 @@ void Problem::Euler_TimeDiscretize()
                 if (myrank == 0)
                 {
 #endif
-                    //
                     OUTData(current_time, aktueller_zeitschritt, force_output);
 #if defined(USE_MPI)
                 }
@@ -4809,6 +4808,11 @@ double Problem::getEndTime()
 }
 #endif  // BRNS
 
+bool isElementTypeEntryEmpty(MeshLib::CElem* element)
+{
+    return element == NULL;
+}
+
 void Problem::postExcavationProcessForConcreteLinning()
 {
     if (_materialID_to_be_changed.first == -1)
@@ -4821,9 +4825,10 @@ void Problem::postExcavationProcessForConcreteLinning()
     }
 
     CRFProcess* pcs = pcs_vector[0];
-    for (std::size_t i = 0; i < _re_activated_elements.size(); i++)
+    std::vector<MeshLib::CElem*>::iterator it = _re_activated_elements.begin();
+    while (it != _re_activated_elements.end())
     {
-        MeshLib::CElem* element = _re_activated_elements[i];
+        MeshLib::CElem* element = *it;
 
         double const* ele_center(element->GetGravityCenter());
         double max_excavation_range = 0;
@@ -4841,8 +4846,16 @@ void Problem::postExcavationProcessForConcreteLinning()
             FiniteElement::ElementValue_DM* element_data =
                 ele_value_dm[element->GetIndex()];
             element_data->init(*element);
+
+            it = _re_activated_elements.erase(it);
+        }
+        else
+        {
+            ++it;
         }
     }
+
+    pcs_vector[0]->CheckMarkedElement();
 }
 
 void Problem::readMaterialIDsForReplacement(const std::string& file_base_name)
@@ -4867,7 +4880,7 @@ void Problem::readMaterialIDsForReplacement(const std::string& file_base_name)
                  i++)
             {
                 if (fem_msh_vector[0]->ele_vector[i]->GetPatchIndex() ==
-                    subdomain_id0)
+                    static_cast<std::size_t>(subdomain_id0))
                 {
                     _re_activated_elements.push_back(
                         fem_msh_vector[0]->ele_vector[i]);
