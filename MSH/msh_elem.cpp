@@ -14,6 +14,7 @@
    08/2005 WW/OK Encapsulation from rf_ele_msh
    last modified
 **************************************************************************/
+#include "msh_elem.h"
 
 #include "mathlib.h"
 #include <cmath>
@@ -21,7 +22,8 @@
 #include <float.h>  //WW
 // MSHLib
 // WW#include "MSHEnums.h" // KR 2010/11/15
-#include "msh_elem.h"
+
+#include "msh_lib.h"
 
 namespace MeshLib
 {
@@ -1799,6 +1801,23 @@ void CElem::InvertNormalVector()
     normal_vector[0] = -normal_vector[0];
     normal_vector[1] = -normal_vector[1];
     normal_vector[2] = -normal_vector[2];
+}
+
+void checkConnectedElementsAferExcavation(CElem const& element, double dbuff[])
+{
+    const std::vector<CElem*>& element_vector = fem_msh_vector[0]->ele_vector;
+    for (std::size_t i = 0; i < element.GetNodesNumber(false); i++)
+    {
+        CNode const* node = element.GetNode(i);
+        for (size_t jj = 0; jj < node->getConnectedElementIDs().size(); jj++)
+        {
+            if (element_vector[node->getConnectedElementIDs()[jj]]
+                    ->GetExcavState() > -1)
+                dbuff[i] -= 1;
+        }
+        if (dbuff[i] < DBL_EPSILON)  // avoid error
+            dbuff[i] = 1;
+    }
 }
 
 }  // namespace MeshLib
