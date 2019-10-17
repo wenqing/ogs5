@@ -2548,24 +2548,7 @@ void CFiniteElementVec::ExtropolateGuassStrain()
     // WX:03.2012. if excavation dbuff changed
     if (pcs->ExcavMaterialGroup > -1)
     {
-        int tmp_excavstate = -1;
-        for (int i = 0; i < nnodes; i++)
-        {
-            for (size_t jj = 0;
-                 jj < MeshElement->nodes[i]->getConnectedElementIDs().size();
-                 jj++)
-            {
-                tmp_excavstate =
-                    pcs->m_msh
-                        ->ele_vector[MeshElement->nodes[i]
-                                         ->getConnectedElementIDs()[jj]]
-                        ->GetExcavState();
-                if (tmp_excavstate > -1)
-                    dbuff[i] -= 1;
-            }
-            if (dbuff[i] < MKleinsteZahl)  // avoid error
-                dbuff[i] = 1;
-        }
+        MeshLib::checkConnectedElementsAferExcavation(*MeshElement, dbuff);
     }
 
     // l1=l2=l3=l4=0;
@@ -2694,6 +2677,12 @@ void CFiniteElementVec::ExtropolateGuassStress()
         dbuff[i] =
             (double)MeshElement->nodes[i]->getConnectedElementIDs().size();
     }
+
+    if (pcs->ExcavMaterialGroup > -1)
+    {
+        MeshLib::checkConnectedElementsAferExcavation(*MeshElement, dbuff);
+    }
+
     //
     eleV_DM = ele_value_dm[MeshElement->GetIndex()];
     if (eleV_DM->pStrain)  // 08.02.2008 WW

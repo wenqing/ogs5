@@ -4818,6 +4818,8 @@ void Problem::postExcavationProcessForConcreteLinning()
     if (_materialID_to_be_changed.first == -1)
         return;
 
+    assert(!ele_value_dm.empty());
+
     for (std::size_t i = 0; i < pcs_vector.size(); i++)
     {
         pcs_vector[i]->dectivateConditionInExcavatedSubDomain(
@@ -4838,15 +4840,11 @@ void Problem::postExcavationProcessForConcreteLinning()
         {
             element->SetPatchIndex(_materialID_to_be_changed.second);
             element->MarkingAll(true);
+            element->SetExcavState(-1);
             for (std::size_t j = 0; j < pcs_vector.size(); j++)
             {
                 pcs_vector[j]->SetInitialConditionInElement(*element);
             }
-
-            FiniteElement::ElementValue_DM* element_data =
-                ele_value_dm[element->GetIndex()];
-            element_data->init(*element);
-
             it = _re_activated_elements.erase(it);
         }
         else
@@ -4854,8 +4852,6 @@ void Problem::postExcavationProcessForConcreteLinning()
             ++it;
         }
     }
-
-    pcs_vector[0]->CheckMarkedElement();
 }
 
 void Problem::readMaterialIDsForReplacement(const std::string& file_base_name)
