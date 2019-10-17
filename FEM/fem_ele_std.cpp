@@ -9773,6 +9773,11 @@ void CFiniteElementStd::ExtropolateGauss(MeshLib::CElem& elem,
             (double)MeshElement->nodes[i]->getConnectedElementIDs().size();
     }
 
+    if (pcs->ExcavMaterialGroup > -1)
+    {
+        MeshLib::checkConnectedElementsAferExcavation(*MeshElement, dbuff);
+    }
+
     ElementValue* gp_ele = ele_gp_value[MeshElement->GetIndex()];
     //
     int gp, gp_r, gp_s, gp_t;
@@ -10021,6 +10026,11 @@ void CFiniteElementStd::CalcSaturation(MeshLib::CElem& elem)
         NodalVal0[i] = sign * pcs->GetNodeValue(nodes[i], idx_cp);
     }
 
+    if (pcs->ExcavMaterialGroup > -1)
+    {
+        MeshLib::checkConnectedElementsAferExcavation(*MeshElement, dbuff);
+    }
+
     //
     int gp, gp_r, gp_s, gp_t;
     gp_r = gp_s = gp_t = gp = 0;
@@ -10173,6 +10183,12 @@ void CFiniteElementStd::CalcNodeMatParatemer(MeshLib::CElem& elem)
     for (i = 0; i < nnodes; i++)
         dbuff[i] =
             (double)MeshElement->nodes[i]->getConnectedElementIDs().size();
+
+    if (pcs->ExcavMaterialGroup > -1)
+    {
+        MeshLib::checkConnectedElementsAferExcavation(*MeshElement, dbuff);
+    }
+
     //
     gp_r = gp_s = gp_t = gp = 0;
     // for PG = interpolate(NodalVal0);
