@@ -310,8 +310,10 @@ enum InitDataReadWriteType
 {
     NO_IO = 0,
     READ,
+    READ_WITH_IC,
     WRITE,
     READ_WRITE,
+    READ_WITH_IC_AND_WRITE,
 };
 
 }  // end namespace FiniteElement

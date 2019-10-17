@@ -950,7 +950,9 @@ void CRFProcess::Create()
     }
     //
     if ((_init_domain_data_type == FiniteElement::READ ||
-         _init_domain_data_type == FiniteElement::READ_WRITE) &&
+         _init_domain_data_type == FiniteElement::READ_WRITE ||
+         _init_domain_data_type == FiniteElement::READ_WITH_IC ||
+         _init_domain_data_type == FiniteElement::READ_WITH_IC_AND_WRITE) &&
         type != 4 && type / 10 != 4)  // Modified at 03.08.2010. WW
     {
         // PCH
@@ -959,8 +961,9 @@ void CRFProcess::Create()
     }
 
     if (_init_domain_data_type == FiniteElement::NO_IO ||
-        _init_domain_data_type ==
-            FiniteElement::WRITE)  // PCH: If reload is set, no need to have ICs
+        _init_domain_data_type == FiniteElement::WRITE ||
+        _init_domain_data_type == FiniteElement::READ_WITH_IC ||
+        _init_domain_data_type == FiniteElement::READ_WITH_IC_AND_WRITE)
     {
         // IC
         ScreenMessage("->Assign IC\n");
@@ -2166,9 +2169,13 @@ std::ios::pos_type CRFProcess::Read(std::ifstream* pcs_file)
                 _init_domain_data_type = FiniteElement::WRITE;
             if (reload == 2)
                 _init_domain_data_type = FiniteElement::READ;
+            if (reload == 22)
+                _init_domain_data_type = FiniteElement::READ_WITH_IC;
             if (reload == 3)
                 _init_domain_data_type = FiniteElement::READ_WRITE;
-            if (reload == 1 || reload == 3)
+            if (reload == 33)
+                _init_domain_data_type = FiniteElement::READ_WITH_IC_AND_WRITE;
+            if (reload == 1 || reload == 3 || reload == 33)
                 *pcs_file >> nwrite_restart;  // kg44 read number of timesteps
                                               // between writing restart files
             pcs_file->ignore(MAX_ZEILE, '\n');
