@@ -378,5 +378,8 @@ private:
     friend class process::CRFProcessDeformation;
     friend class ::CRFProcess;
 };
+
+void checkConnectedElementsAferExcavation(CElem const& element, double dbuff[]);
+
 }  // namespace MeshLib
 #endif
