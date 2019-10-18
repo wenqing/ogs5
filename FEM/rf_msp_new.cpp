@@ -1658,7 +1658,7 @@ double CSolidProperties::Heat_Conductivity(double reference)
         case 31:  // K_dry *(1-S) + K_wet * S
         {
             const double* k_T = data_Conductivity->getEntryArray();
-            //		k_T[0]: dry one
+            //  k_T[0]: dry one
             //  k_T[1]: wet one
             return k_T[0] * (1.0 - reference) + k_T[1] * reference;
         }
