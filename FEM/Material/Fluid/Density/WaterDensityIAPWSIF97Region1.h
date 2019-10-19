@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <limits>
 #include <string>
 
 #include "Material/Fluid/GibbsFreeEnergy/DimensionLessGibbsFreeEnergyRegion1.h"
@@ -71,6 +72,9 @@ public:
      */
     double getdValuedp(const double p, const double T)
     {
+        if (p < std::numeric_limits<double>::epsilon())
+            return 0.0;
+
         const double tau = _ref_T / T;
         const double pi = p / _ref_p;
 
