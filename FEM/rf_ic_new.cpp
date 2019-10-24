@@ -1032,7 +1032,7 @@ void CInitialCondition::SetDomain(int nidx)
                         m_msh->nod_vector[nodes_vector[i]]->getData());
                     getProcess()->SetNodeValue(
                         nodes_vector[i], nidx,
-                        dis_linear_f->getValue(k, pnt[0], pnt[1], pnt[2]));
+                        dis_linear_f->getValue(subdom_index[k], pnt[0], pnt[1], pnt[2]));
                 }
             else
                 for (i = 0; i < nodes_vector.size(); i++)
