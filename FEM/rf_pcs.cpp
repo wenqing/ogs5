@@ -22,8 +22,9 @@ matrix solver
 #include "rf_pcs.h"
 
 #include <algorithm>
-#include <limits>  // std::numeric_limits
 #include <cmath>
+#include <iterator>
+#include <limits>  // std::numeric_limits
 
 /*--------------------- MPI Parallel  -------------------*/
 #if defined(USE_MPI) || defined(USE_MPI_PARPROC) || defined(USE_MPI_REGSOIL)
@@ -1868,8 +1869,12 @@ CRFProcess* CRFProcess::CopyPCStoDM_PCS()
         dm_pcs->Deactivated_SubDomain = new int[NumDeactivated_SubDomains];
     for (int i = 0; i < NumDeactivated_SubDomains; i++)
         dm_pcs->Deactivated_SubDomain[i] = Deactivated_SubDomain[i];
-    dm_pcs->_deactivated_dubdomain_time_intervals =
-        _deactivated_dubdomain_time_intervals;
+    std::copy(
+        _deactivated_dubdomain_time_intervals.begin(),
+        _deactivated_dubdomain_time_intervals.end(),
+        std::back_inserter(dm_pcs->_deactivated_dubdomain_time_intervals));
+    _deactivated_dubdomain_time_intervals.clear();
+
     pcs_deformation = 1;
     // WX:01.2011 for coupled excavation
     if (ExcavMaterialGroup >= 0)
