@@ -634,6 +634,7 @@ Problem::Problem(const char* filename)
     for (size_t i = 0; i < no_processes; i++)
     {
         m_pcs = pcs_vector[i];
+        m_pcs->CheckMarkedElement();
         m_pcs->CalcSecondaryVariables(true);  // WW
         m_pcs->Extropolation_MatValue();      // WW
     }
