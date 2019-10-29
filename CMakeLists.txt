@@ -332,6 +332,7 @@ endif ()
 if (OGS_BUILD_UTILITIES)
 	add_subdirectory (UTL/MSHGEOTOOLS/)
 	add_subdirectory (UTL/mHM2OGS/)
+	add_subdirectory (UTL/VariableInterpolation/)
 endif ()
 
 ## Documentation ##
