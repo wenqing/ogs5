@@ -14,13 +14,16 @@
 
 #include "fem_ele.h"
 
-#include <cfloat>
 #include <cassert>
+#include <cfloat>
+#include <limits>
 
-#include "msh_elem.h"
-#include "rf_pcs.h"
+#include "display.h"
 #include "femlib.h"
 #include "mathlib.h"
+#include "MathTools.h"
+#include "msh_elem.h"
+#include "rf_pcs.h"
 
 #ifndef USE_PETSC
 #include "par_ddc.h"
@@ -162,15 +165,8 @@ CElement::~CElement()
 #endif
 }
 
-/**************************************************************************
-   FEMLib-Method:
-   Task:
-   Programing:
-   06/2004 WW Implementation
-   05/2007 WW 1D in 2D
-   Last modified:
-**************************************************************************/
-void CElement::ConfigElement(CElem* MElement, const bool FaceIntegration)
+void CElement::ConfigElementWithoutQuature(CElem* MElement,
+                                           const bool FaceIntegration)
 {
     CNode* a_node = NULL;  // 07.04.2009. WW
     MeshElement = MElement;
@@ -314,6 +310,19 @@ void CElement::ConfigElement(CElem* MElement, const bool FaceIntegration)
         }
     }
 #endif
+}
+
+/**************************************************************************
+   FEMLib-Method:
+   Task:
+   Programing:
+   06/2004 WW Implementation
+   05/2007 WW 1D in 2D
+   Last modified:
+**************************************************************************/
+void CElement::ConfigElement(CElem* MElement, const bool FaceIntegration)
+{
+    ConfigElementWithoutQuature(MElement, FaceIntegration);
 
     // WW
     const MshElemType::type elem_type = MeshElement->GetElementType();
@@ -635,19 +644,9 @@ void CElement::computeJacobian(const int gp, const int order,
                 return;
 
             invJacobian = &_inv_jacobian_all[gp * 4];
-            DetJac = _Jacobian[0] * _Jacobian[3] - _Jacobian[1] * _Jacobian[2];
-            if (fabs(DetJac) < MKleinsteZahl)
-            {
-                std::cout << "\n*** Jacobian: Det == 0 " << DetJac
-                          << " in element " << MeshElement->GetIndex() << "\n";
-                abort();
-            }
-            invJacobian[0] = _Jacobian[3];
-            invJacobian[1] = -_Jacobian[1];
-            invJacobian[2] = -_Jacobian[2];
-            invJacobian[3] = _Jacobian[0];
-            for (size_t i = 0; i < ele_dim * ele_dim; i++)
-                invJacobian[i] /= DetJac;
+            DetJac = MathLib::inverse2x2Matrix(
+                _Jacobian, invJacobian,
+                static_cast<int>(MeshElement->GetIndex()));
             //
             // By WW
             // if(MeshElement->area>0)
@@ -685,41 +684,9 @@ void CElement::computeJacobian(const int gp, const int order,
                 return;
 
             invJacobian = &_inv_jacobian_all[gp * 9];
-            DetJac = _Jacobian[0] * (_Jacobian[4] * _Jacobian[8] -
-                                     _Jacobian[7] * _Jacobian[5]) +
-                     _Jacobian[6] * (_Jacobian[1] * _Jacobian[5] -
-                                     _Jacobian[4] * _Jacobian[2]) +
-                     _Jacobian[3] * (_Jacobian[2] * _Jacobian[7] -
-                                     _Jacobian[8] * _Jacobian[1]);
-
-            if (fabs(DetJac) < MKleinsteZahl)
-            {
-                std::cout << "\n*** Jacobian: DetJac == 0 " << DetJac
-                          << " in element " << MeshElement->GetIndex() << "\n";
-                abort();
-            }
-            invJacobian[0] =
-                _Jacobian[4] * _Jacobian[8] - _Jacobian[7] * _Jacobian[5];
-            invJacobian[1] =
-                _Jacobian[2] * _Jacobian[7] - _Jacobian[1] * _Jacobian[8];
-            invJacobian[2] =
-                _Jacobian[1] * _Jacobian[5] - _Jacobian[2] * _Jacobian[4];
-            //
-            invJacobian[3] =
-                _Jacobian[5] * _Jacobian[6] - _Jacobian[8] * _Jacobian[3];
-            invJacobian[4] =
-                _Jacobian[0] * _Jacobian[8] - _Jacobian[6] * _Jacobian[2];
-            invJacobian[5] =
-                _Jacobian[2] * _Jacobian[3] - _Jacobian[5] * _Jacobian[0];
-            //
-            invJacobian[6] =
-                _Jacobian[3] * _Jacobian[7] - _Jacobian[6] * _Jacobian[4];
-            invJacobian[7] =
-                _Jacobian[1] * _Jacobian[6] - _Jacobian[7] * _Jacobian[0];
-            invJacobian[8] =
-                _Jacobian[0] * _Jacobian[4] - _Jacobian[3] * _Jacobian[1];
-            for (size_t i = 0; i < ele_dim * ele_dim; i++)
-                invJacobian[i] /= DetJac;
+            DetJac = MathLib::inverse3x3Matrix(
+                _Jacobian, invJacobian,
+                static_cast<int>(MeshElement->GetIndex()));
             break;
         }  // end case 3
     }
@@ -770,35 +737,140 @@ void CElement::RealCoordinates(double* realXYZ)
    Programming:
    06/2003     WW        Erste Version
  **************************************************************************/
-void CElement::UnitCoordinates(double* realXYZ)
+void CElement::UnitCoordinates(double* realXYZ, const double tol)
 {
-    setOrder(Order);
-
-    x1buff[0] = X[0];
-    x1buff[1] = Y[0];
-    x1buff[2] = Z[0];
-
-    for (int i = 1; i < nNodes; i++)
+    if (ele_dim == 1)
     {
-        x1buff[0] += X[i];
-        x1buff[1] += Y[i];
-        x1buff[2] += Z[i];
-    }
-    for (size_t i = 0; i < 3; i++)
-        x1buff[i] /= (double)nNodes;
-
-    for (size_t i = 0; i < ele_dim; i++)
-        realXYZ[i] -= x1buff[i];
-
-    for (size_t i = 0; i < ele_dim; i++)
-    {
-        unit[i] = 0.0;
-        for (size_t j = 0; j < ele_dim; j++)
-            unit[i] += invJacobian[j * ele_dim + i] * realXYZ[j];
+        realXYZ[0] = (2.0 * realXYZ[0] - (X[0] + X[1])) / (X[1] - X[0]);
+        return;
     }
 
-    for (size_t i = 0; i < ele_dim; i++)
-        realXYZ[i] = unit[i];
+    // ConfigElement and ConfigShapefunction have to be called beforehand.
+    // Use Newton method to obtain the unit coordinates.
+
+    setOrder(1);
+    static double unit0[3];
+    for (std::size_t k = 0; k < ele_dim; k++)
+    {
+        unit0[k] = unit[k];
+        unit[k] = 0.0;  // initial value
+    }
+
+    static double r[3];
+    static double shp[8];
+    static double d_shp[24];
+    static double J[9];
+    static double inversedJ[9];
+    int counter = 0;
+    double norm_r0 = 0.0;
+    const int max_iterations = 1000;
+    for (;;)
+    {
+        ComputeShapefct(1, shp);
+        for (std::size_t k = 0; k < ele_dim; k++)
+        {
+            r[k] = -realXYZ[k];
+        }
+        for (int i = 0; i < nnodes; i++)
+        {
+            r[0] += shp[i] * X[i];
+            r[1] += shp[i] * Y[i];
+            r[2] += shp[i] * Z[i];
+        }
+
+        double norm_r = std::sqrt(MathLib::scpr(r, r, ele_dim));
+        if (norm_r < std::numeric_limits<double>::epsilon())
+        {
+            break;
+        }
+
+        if (counter == 0)
+        {
+            norm_r0 = norm_r;
+        }
+        else
+        {
+            if (norm_r / norm_r0 < tol)
+            {
+                break;
+            }
+        }
+
+        if (counter > max_iterations)
+        {
+            Display::ScreenMessage(
+                "Maximum iteration reached when find the unit coordinates for "
+                "point (%f, %f, %f) \n",
+                realXYZ[0], realXYZ[1], realXYZ[2]);
+
+            exit(1);
+        }
+
+        computeGradShapefctLocal(1, d_shp);
+
+        for (std::size_t i = 0; i < ele_dim * ele_dim; i++)
+        {
+            J[i] = 0.0;
+        }
+
+        switch (ele_dim)
+        {
+            case 2:
+            {
+                for (int i = 0, j = nnodes; i < nnodes; i++, j++)
+                {
+                    J[0] += X[i] * d_shp[i];
+                    J[2] += Y[i] * d_shp[i];
+                    J[1] += X[i] * d_shp[j];
+                    J[3] += Y[i] * d_shp[j];
+                }
+
+                MathLib::inverse2x2Matrix(
+                    J, inversedJ, static_cast<int>(MeshElement->GetIndex()));
+            }
+            break;
+            case 3:
+            {
+                for (int i = 0; i < nnodes; i++)
+                {
+                    J[0] += X[i] * d_shp[i];
+                    J[3] += Y[i] * d_shp[i];
+                    J[6] += Z[i] * d_shp[i];
+
+                    const int j = i + nnodes;
+                    J[1] += X[i] * d_shp[j];
+                    J[4] += Y[i] * d_shp[j];
+                    J[7] += Z[i] * d_shp[j];
+
+                    const int k = i + 2 * nnodes;
+                    J[2] += X[i] * d_shp[k];
+                    J[5] += Y[i] * d_shp[k];
+                    J[8] += Z[i] * d_shp[k];
+                }
+
+                MathLib::inverse3x3Matrix(
+                    J, inversedJ, static_cast<int>(MeshElement->GetIndex()));
+            }
+            break;
+        }
+
+        // x = x0 -J^{-1} r
+        for (std::size_t i = 0; i < ele_dim; i++)
+        {
+            for (std::size_t j = 0; j < ele_dim; j++)
+            {
+                unit[i] -= inversedJ[i * ele_dim + j] * r[j];
+            }
+        }
+
+        counter++;
+    }
+
+    for (std::size_t k = 0; k < ele_dim; k++)
+    {
+        realXYZ[k] = unit[k];
+        unit[k] = unit0[k];
+    }
 }
 
 void CElement::SetGaussPoint(const int gp, int& gp_r, int& gp_s, int& gp_t)
