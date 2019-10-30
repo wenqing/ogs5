@@ -32,6 +32,7 @@ void DisplayMessage()
         "*  Syntax of input file:\n"
         "*    foo_mesh.msh   // name of pvd file\n"
         "*    foo_pvd.pvd    // name of pvd file\n"
+        "*    LocalNewtonTolerance 1.e-10\n"
         "*    3         // number of specified points\n"
         "*    2  0.1 0.2 0.1 $NAME foo_point1  // ID x y z $NAME file_name\n"
         "*    10 0.1 0.2 0.1 $NAME foo_point2\n"
