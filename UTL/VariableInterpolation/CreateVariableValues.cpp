@@ -19,6 +19,7 @@
 
 #include "ShapeFunctionPool.h"
 #include "fem_ele.h"
+#include "mathlib.h"
 #include "msh_mesh.h"
 
 #include "VariableValues.h"
@@ -31,6 +32,71 @@ void subtractStringInQuatation(std::string& a_string)
     a_string.replace(a_string.begin(), a_string.begin() + pos + 1, "");
     pos = a_string.find("\"");
     a_string.replace(a_string.begin() + pos, a_string.end(), "");
+}
+
+double computePyramidVolume(double const* const p1, double const* const p2,
+                            double const* const p3, double const* const p4,
+                            double const* const p5)
+{
+    return ComputeDetTex(p2, p4, p1, p5) + ComputeDetTex(p2, p3, p4, p5);
+}
+
+bool isPointInElement(MeshLib::CElem const& element, const double x[3])
+{
+    const double tol = 1.0e-9;
+    switch (element.GetElementType())
+    {
+        case MshElemType::HEXAHEDRON:
+        {
+            double const* x_node[8];
+            for (int i = 0; i < 8; i++)
+            {
+                x_node[i] = element.GetNode(i)->getData();
+            }
+
+            const double v0 = element.GetVolume();
+            const double v1 = computePyramidVolume(x_node[4], x_node[5],
+                                                   x_node[1], x_node[0], x) +
+                              computePyramidVolume(x_node[5], x_node[6],
+                                                   x_node[2], x_node[1], x) +
+                              computePyramidVolume(x_node[2], x_node[6],
+                                                   x_node[7], x_node[3], x) +
+                              computePyramidVolume(x_node[0], x_node[3],
+                                                   x_node[7], x_node[4], x) +
+                              computePyramidVolume(x_node[0], x_node[1],
+                                                   x_node[2], x_node[3], x) +
+                              computePyramidVolume(x_node[7], x_node[6],
+                                                   x_node[5], x_node[4], x);
+
+            return (std::fabs(v0 - v1) < tol);
+        }
+        break;
+        case MshElemType::TETRAHEDRON:
+        {
+            double const* x_node[4];
+            for (int i = 0; i < 4; i++)
+            {
+                x_node[i] = element.GetNode(i)->getData();
+            }
+
+            const double v0 = element.GetVolume();
+            const double v1 =
+                ComputeDetTex(x_node[0], x_node[1], x_node[2], x) +
+                ComputeDetTex(x_node[3], x_node[2], x_node[1], x) +
+                ComputeDetTex(x_node[0], x_node[2], x_node[3], x) +
+                ComputeDetTex(x_node[0], x_node[3], x_node[1], x);
+
+            return (std::fabs(v0 - v1) < tol);
+        }
+        break;
+        default:
+        {
+            std::cout << "Only HEXAHEDRON and TETRAHEDRON are supported to "
+                         "identify a point in it.\n";
+            exit(1);
+        }
+    }
+    return false;
 }
 
 VariableValues* createVariableValues(
@@ -49,6 +115,10 @@ VariableValues* createVariableValues(
     ins >> mesh_file_name >> std::ws;
     std::string pvd_file_name;
     ins >> pvd_file_name >> std::ws;
+
+    std::string string_buff;
+    double tol = 1.0-10;
+    ins >> string_buff >> tol;
 
     int num_points;
     ins >> num_points >> std::ws;
@@ -95,6 +165,36 @@ VariableValues* createVariableValues(
     FiniteElement::CElement* quadrature =
         new FiniteElement::CElement(mesh->GetCoordinateFlag());
     quadrature->setOrder(1);
+
+    // Find elements and compute the local coordinates of the specified points
+    const std::vector<MeshLib::CElem*>& elements = mesh->getElementVector();
+
+    for (std::size_t i = 0; i < elements.size(); i++)
+    {
+        MeshLib::CElem* element = elements[i];
+        bool done_ConfigElement = false;
+        for (std::size_t j = 0; j < specified_points.size(); j++)
+        {
+            // Done
+            if (specified_points[j].element_coverred_point)
+                continue;
+
+            double* x = specified_points[j].x;
+            if (isPointInElement(*element, x))
+            {
+                if (!done_ConfigElement)
+                {
+                    quadrature->ConfigElementWithoutQuature(element);
+                    quadrature->ConfigShapefunction(element->GetElementType());
+
+                    done_ConfigElement = true;
+                }
+                specified_points[j].element_coverred_point = element;
+
+                quadrature->UnitCoordinates(specified_points[j].x, tol);
+            }
+        }
+    }
 
     // Read PVD file.
     std::ifstream is_pvd(file_path + "/" + pvd_file_name, std::ios::in);
