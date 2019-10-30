@@ -24,13 +24,15 @@ class CElement;
 namespace MeshLib
 {
 class CFEMesh;
+class CElem;
 }
 
 namespace UTL
 {
 struct SpecifiedPoint
 {
-    SpecifiedPoint(std::string const& name_, const double x_[3]) : name(name_)
+    SpecifiedPoint(std::string const& name_, const double x_[3])
+        : element_coverred_point(NULL), name(name_)
     {
         for (int i = 0; i < 3; i++)
         {
@@ -38,7 +40,8 @@ struct SpecifiedPoint
         }
     }
 
-    std::string name;
+    MeshLib::CElem* element_coverred_point;
+    const std::string name;
     double x[3];
 };
 
