@@ -72,6 +72,8 @@ public:
     CElement(int CoordFlag, const int order = 1);
     virtual ~CElement();
     //
+    void ConfigElementWithoutQuature(CElem* MElement,
+                                     const bool FaceIntegration = false);
     void ConfigElement(CElem* MElement, const bool FaceIntegration = false);
 
     void setElement(CElem* MElement) { MeshElement = MElement; }
@@ -137,11 +139,12 @@ public:
     // Compute the real coordinates from known unit coordinates
     void RealCoordinates(double* realXYZ);
     // Compute the unit coordinates from known unit coordinates
-    void UnitCoordinates(double* realXYZ);
+    // The elememt contains Point realXYZ must be found in advance.
+    void UnitCoordinates(double* realXYZ, const double tol = 1.e-10);
     // For axisymmetrical problems
     void calculateRadius(const int gp);
     //
-    void setUnitCoordinates(double* u)
+    void setUnitCoordinates(double const*const u)
     {
         for (int i = 0; i < 3; i++)
             unit[i] = u[i];
