@@ -12,6 +12,8 @@
 
 #include "MathTools.h"
 
+#include <limits>
+
 namespace MathLib
 {
 void crossProd(const double u[3], const double v[3], double r[3])
@@ -73,4 +75,69 @@ double getAngle(const double p0[3], const double p1[3], const double p2[3])
     return acos(scpr(v0, v1, 3) /
                 (sqrt(scpr(v0, v0, 3)) * sqrt(scpr(v1, v1, 3))));
 }
+
+double inverse2x2Matrix(double const* const matrix, double* inversed_matrix,
+                        const int owner_id)
+{
+    const double DetJac = matrix[0] * matrix[3] - matrix[1] * matrix[2];
+    if (std::fabs(DetJac) < std::numeric_limits<double>::epsilon())
+    {
+        std::cout << "\n*** Jacobian of the matrix == 0 " << DetJac;
+        if (owner_id >= 0)
+        {
+            std::cout << " in element " << owner_id << "\n";
+        }
+        abort();
+    }
+
+    inversed_matrix[0] = matrix[3] / DetJac;
+    inversed_matrix[1] = -matrix[1] / DetJac;
+    inversed_matrix[2] = -matrix[2] / DetJac;
+    inversed_matrix[3] = matrix[0] / DetJac;
+
+    return DetJac;
+}
+
+double inverse3x3Matrix(double const* const matrix, double* inversed_matrix,
+                        const int owner_id)
+{
+    const double DetJac =
+        matrix[0] * (matrix[4] * matrix[8] - matrix[7] * matrix[5]) +
+        matrix[6] * (matrix[1] * matrix[5] - matrix[4] * matrix[2]) +
+        matrix[3] * (matrix[2] * matrix[7] - matrix[8] * matrix[1]);
+
+    if (std::fabs(DetJac) < std::numeric_limits<double>::epsilon())
+    {
+        std::cout << "\n*** Jacobian of the matrix == 0 " << DetJac;
+        if (owner_id >= 0)
+        {
+            std::cout << " in element " << owner_id << "\n";
+        }
+        abort();
+    }
+
+    inversed_matrix[0] =
+        (matrix[4] * matrix[8] - matrix[7] * matrix[5]) / DetJac;
+    inversed_matrix[1] =
+        (matrix[2] * matrix[7] - matrix[1] * matrix[8]) / DetJac;
+    inversed_matrix[2] =
+        (matrix[1] * matrix[5] - matrix[2] * matrix[4]) / DetJac;
+    //
+    inversed_matrix[3] =
+        (matrix[5] * matrix[6] - matrix[8] * matrix[3]) / DetJac;
+    inversed_matrix[4] =
+        (matrix[0] * matrix[8] - matrix[6] * matrix[2]) / DetJac;
+    inversed_matrix[5] =
+        (matrix[2] * matrix[3] - matrix[5] * matrix[0]) / DetJac;
+    //
+    inversed_matrix[6] =
+        (matrix[3] * matrix[7] - matrix[6] * matrix[4]) / DetJac;
+    inversed_matrix[7] =
+        (matrix[1] * matrix[6] - matrix[7] * matrix[0]) / DetJac;
+    inversed_matrix[8] =
+        (matrix[0] * matrix[4] - matrix[3] * matrix[1]) / DetJac;
+
+    return DetJac;
+}
+
 }  // namespace MathLib

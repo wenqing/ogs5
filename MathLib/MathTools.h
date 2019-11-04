@@ -113,6 +113,12 @@ inline T fastpow(T base, size_t exp)
         result *= base;
     return result;
 }
+
+double inverse2x2Matrix(double const* const matrix, double* inversed_matrix,
+                        const int owner_id = -1);
+double inverse3x3Matrix(double const* const matrix, double* inversed_matrix,
+                        const int owner_id = -1);
+
 }  // namespace MathLib
 
 #endif /* MATHTOOLS_H_ */
