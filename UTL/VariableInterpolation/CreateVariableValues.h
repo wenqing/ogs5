@@ -15,18 +15,12 @@
 
 #include <string>
 
-namespace FiniteElement
-{
-class ShapeFunctionPool;
-}
-
 namespace UTL
 {
 class VariableValues;
-VariableValues* createVariableValues(
-    const std::string& file_path,
-    const std::string& file_name,
-    FiniteElement::ShapeFunctionPool* linear_shapefunction_pool);
+VariableValues* createVariableValues(const std::string& file_path,
+                                     const std::string& output_path,
+                                     const std::string& file_name);
 }  // namespace UTL
 
 #endif
