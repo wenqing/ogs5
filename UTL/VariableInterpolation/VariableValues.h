@@ -60,17 +60,22 @@ class VariableValues
 {
 public:
     VariableValues(MeshLib::CFEMesh const* mesh,
-                   FiniteElement::CElement const* quadrature,
+                   FiniteElement::CElement* quadrature,
                    std::vector<SpecifiedPoint> const& specified_points,
                    std::vector<DataPVD> const pvd_data);
     ~VariableValues();
 
+    void interpolate();
+
 private:
     MeshLib::CFEMesh const* _mesh;
-    FiniteElement::CElement const* _quadrature;
+    FiniteElement::CElement* _quadrature;
 
     std::vector<SpecifiedPoint> const _specified_points;
     std::vector<DataPVD> const _pvd_data;
 };
+
+void subtractStringInQuatation(std::string& a_string);
+
 }  // namespace UTL
 #endif

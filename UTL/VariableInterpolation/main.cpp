@@ -12,11 +12,13 @@
  */
 
 #include <cstdlib>
+#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 
 #include "Base/FileTools.h"
+#include "display.h"
 
 #include "CreateVariableValues.h"
 #include "ShapeFunctionPool.h"
@@ -131,10 +133,17 @@ int main(int argc, char** argv)
     if (o_path.empty())
         o_path = file_path;
 
-    FiniteElement::ShapeFunctionPool* linear_shapefunction_pool = NULL;
-    UTL::VariableValues* variable_values = UTL::createVariableValues(
-        file_path, file_name, linear_shapefunction_pool);
+    clock_t c_time = -clock();
 
-    delete linear_shapefunction_pool;
+    UTL::VariableValues* variable_values =
+        UTL::createVariableValues(file_path, o_path, file_name);
+
+    variable_values->interpolate();
+
+    c_time += clock();
+
+    Display::ScreenMessage("CPU time elapsed: %g s\n",
+                           (double)c_time / CLOCKS_PER_SEC);
+
     return 0;
 }
