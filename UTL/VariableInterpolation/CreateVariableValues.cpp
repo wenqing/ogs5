@@ -17,7 +17,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "ShapeFunctionPool.h"
+#include "FileTools.h"
 #include "fem_ele.h"
 #include "mathlib.h"
 #include "msh_mesh.h"
@@ -26,14 +26,6 @@
 
 namespace UTL
 {
-void subtractStringInQuatation(std::string& a_string)
-{
-    std::size_t pos = a_string.find_first_of("\"");
-    a_string.replace(a_string.begin(), a_string.begin() + pos + 1, "");
-    pos = a_string.find("\"");
-    a_string.replace(a_string.begin() + pos, a_string.end(), "");
-}
-
 double computePyramidVolume(double const* const p1, double const* const p2,
                             double const* const p3, double const* const p4,
                             double const* const p5)
@@ -99,10 +91,9 @@ bool isPointInElement(MeshLib::CElem const& element, const double x[3])
     return false;
 }
 
-VariableValues* createVariableValues(
-    const std::string& file_path,
-    const std::string& file_name,
-    FiniteElement::ShapeFunctionPool* linear_shapefunction_pool)
+VariableValues* createVariableValues(const std::string& file_path,
+                                     const std::string& output_path,
+                                     const std::string& file_name)
 {
     std::ifstream ins(file_name, std::ios::in);
     if (!ins.good())
@@ -134,10 +125,14 @@ VariableValues* createVariableValues(
         ins >> x[0] >> x[1] >> x[2];
         std::string point_name;
         ins >> point_name >> point_name >> std::ws;
-        specified_points.emplace_back(SpecifiedPoint(point_name, x));
+        specified_points.emplace_back(SpecifiedPoint(output_path + getDirSep() +
+                                                         pvd_file_name + "_" +
+                                                         point_name + ".txt",
+                                                     x));
     }
 
-    std::ifstream is_mesh(file_path + "/" + mesh_file_name, std::ios::in);
+    std::ifstream is_mesh(file_path + getDirSep() + mesh_file_name,
+                          std::ios::in);
 
     if (!is_mesh.good())
     {
@@ -197,7 +192,7 @@ VariableValues* createVariableValues(
     }
 
     // Read PVD file.
-    std::ifstream is_pvd(file_path + "/" + pvd_file_name, std::ios::in);
+    std::ifstream is_pvd(file_path + getDirSep() + pvd_file_name, std::ios::in);
 
     if (!is_pvd.good())
     {
@@ -241,7 +236,8 @@ VariableValues* createVariableValues(
                 }
                 ss.clear();
 
-                pvd_data.push_back(DataPVD(time, vtu_file_name));
+                pvd_data.push_back(
+                    DataPVD(time, file_path + getDirSep() + vtu_file_name));
             }
         }
     }
