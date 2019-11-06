@@ -21,6 +21,7 @@
 #include "fem_ele.h"
 #include "mathlib.h"
 #include "msh_mesh.h"
+#include "StringTools.h"
 
 #include "VariableValues.h"
 
@@ -141,7 +142,7 @@ VariableValues* createVariableValues(const std::string& file_path,
     }
 
     std::string s_buff;
-    std::getline(is_mesh, s_buff);
+    BaseLib::safeGetline(is_mesh, s_buff);
 
     MeshLib::CFEMesh* mesh = NULL;
     if (s_buff.find("#FEM_MSH") != std::string::npos)
@@ -204,12 +205,12 @@ VariableValues* createVariableValues(const std::string& file_path,
     while (!is_pvd.eof())
     {
         std::string line_buffer;
-        std::getline(is_pvd, line_buffer);
+        BaseLib::safeGetline(is_pvd, line_buffer);
         if (line_buffer.find("<Collection>") != std::string::npos)
         {
             for (;;)
             {
-                std::getline(is_pvd, line_buffer);
+                BaseLib::safeGetline(is_pvd, line_buffer);
                 if (line_buffer.find("</Collection>") != std::string::npos)
                 {
                     break;
