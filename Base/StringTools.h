@@ -106,6 +106,14 @@ std::string copyPathToFileName(const std::string& file_name,
  */
 void extractPath(std::string const& fname, std::string& path);
 
+/**
+ *  A function that gives a safe line  reading over platforms.
+ *  The source code was taken from
+ *  https://stackoverflow.com/questions/6089231/getting-std-ifstream-to-handle-lf-cr-and-crlf
+ *  with a modification to avoid compilation error under C++03
+ */
+std::istream& safeGetline(std::istream& is, std::string& t);
+
 }  // end namespace BaseLib
 
 #endif  // STRINGTOOLS_H
