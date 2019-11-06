@@ -65,7 +65,7 @@ public:
                    std::vector<DataPVD> const pvd_data);
     ~VariableValues();
 
-    void interpolate();
+    void interpolate(const std::string& output_path);
 
 private:
     MeshLib::CFEMesh const* _mesh;

@@ -14,13 +14,15 @@
 #include "VariableValues.h"
 
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 
+#include "FileTools.h"
+#include "StringTools.h"
 #include "display.h"
 #include "fem_ele.h"
 #include "msh_mesh.h"
-#include "StringTools.h"
 
 namespace UTL
 {
@@ -42,9 +44,10 @@ VariableValues::~VariableValues()
     delete _quadrature;
 }
 
-void VariableValues::interpolate()
+void VariableValues::interpolate(const std::string& output_path)
 {
     double shapefunction[27];
+    std::vector<std::string> variable_names;
     for (std::vector<UTL::DataPVD>::const_iterator it = _pvd_data.begin();
          it != _pvd_data.end();
          ++it)
@@ -61,7 +64,6 @@ void VariableValues::interpolate()
         Display::ScreenMessage("Processing data in %s ...\n",
                                (*it).vtu_file_name.data());
 
-        std::vector<std::string> variable_names;
         std::vector<std::vector<double> > interpolated_value_set;
         while (!ins_vtu.eof())
         {
@@ -131,7 +133,14 @@ void VariableValues::interpolate()
                             variable_values.emplace_back(component_values);
                         }
 
-                        std::vector<double> interpolated_values;
+                        std::vector<std::vector<double> > interpolated_values(
+                            ncomponents);
+                        for (int j = 0; j < ncomponents; j++)
+                        {
+                            interpolated_values[j].reserve(
+                                _specified_points.size());
+                        }
+
                         interpolated_values.reserve(_specified_points.size());
                         for (std::vector<UTL::SpecifiedPoint>::const_iterator
                                  it_spt = _specified_points.begin();
@@ -160,33 +169,37 @@ void VariableValues::interpolate()
                                             i)][k] *
                                         shapefunction[i];
                                 }
-                                interpolated_values.push_back(value);
+                                interpolated_values[k].emplace_back(value);
                             }
                         }
 
-                        interpolated_value_set.emplace_back(
-                            interpolated_values);
+                        for (int j = 0; j < ncomponents; j++)
+                        {
+                            interpolated_value_set.emplace_back(
+                                interpolated_values[j]);
+                        }
                     }
                 }
             }
         }
 
+        assert(interpolated_value_set.size() == variable_names.size());
         if (std::distance(_pvd_data.begin(), it) == 0)
         {
-            for (std::vector<UTL::SpecifiedPoint>::const_iterator it_spt =
-                     _specified_points.begin();
-                 it_spt != _specified_points.end();
-                 ++it_spt)
+            for (std::size_t i = 0; i < variable_names.size(); i++)
             {
-                const UTL::SpecifiedPoint& point_info = *it_spt;
-                std::ofstream ofs(point_info.name.data(), std::ios::trunc);
-
+                const std::string variable_file_name =
+                    output_path + getDirSep() + variable_names[i] + ".txt";
+                std::ofstream ofs(variable_file_name.data(), std::ios::trunc);
                 ofs << "Time";
 
                 const std::string delim = " ";
-                for (std::size_t i = 0; i < variable_names.size(); i++)
+                for (std::vector<UTL::SpecifiedPoint>::const_iterator it_spt =
+                         _specified_points.begin();
+                     it_spt != _specified_points.end();
+                     ++it_spt)
                 {
-                    ofs << delim << variable_names[i];
+                    ofs << delim << std::setw(20) << (*it_spt).name;
                 }
                 ofs << std::endl;
 
@@ -194,11 +207,14 @@ void VariableValues::interpolate()
                 ofs.precision(12);
                 ofs << (*it).time;
 
-                for (std::size_t i = 0; i < interpolated_value_set.size(); i++)
+                std::vector<double> const&
+                    interpolated_values_of_this_variable =
+                        interpolated_value_set[i];
+                for (std::size_t j = 0;
+                     j < interpolated_values_of_this_variable.size();
+                     j++)
                 {
-                    ofs << delim
-                        << interpolated_value_set[i][std::distance(
-                               _specified_points.begin(), it_spt)];
+                    ofs << delim << interpolated_values_of_this_variable[j];
                 }
                 ofs << std::endl;
 
@@ -207,26 +223,28 @@ void VariableValues::interpolate()
         }
         else
         {
-            for (std::vector<UTL::SpecifiedPoint>::const_iterator it_spt =
-                     _specified_points.begin();
-                 it_spt != _specified_points.end();
-                 ++it_spt)
+            for (std::size_t i = 0; i < variable_names.size(); i++)
             {
-                const UTL::SpecifiedPoint& point_info = *it_spt;
-                std::ofstream ofs(point_info.name.data(), std::ios::app);
+                const std::string variable_file_name =
+                    output_path + getDirSep() + variable_names[i] + ".txt";
+                std::ofstream ofs(variable_file_name.data(), std::ios::app);
 
                 ofs.setf(std::ios::scientific, std::ios::floatfield);
                 ofs.precision(12);
                 ofs << (*it).time;
 
                 const std::string delim = " ";
-                for (std::size_t i = 0; i < interpolated_value_set.size(); i++)
+                std::vector<double> const&
+                    interpolated_values_of_this_variable =
+                        interpolated_value_set[i];
+                for (std::size_t j = 0;
+                     j < interpolated_values_of_this_variable.size();
+                     j++)
                 {
-                    ofs << delim
-                        << interpolated_value_set[i][std::distance(
-                               _specified_points.begin(), it_spt)];
+                    ofs << delim << interpolated_values_of_this_variable[j];
                 }
                 ofs << std::endl;
+
                 ofs.close();
             }
         }
