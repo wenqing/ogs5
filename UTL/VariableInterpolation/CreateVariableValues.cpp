@@ -95,13 +95,12 @@ bool isPointInElement(MeshLib::CElem const& element, const double x[3])
 }
 
 VariableValues* createVariableValues(const std::string& file_path,
-                                     const std::string& output_path,
                                      const std::string& file_name)
 {
     std::ifstream ins(file_name, std::ios::in);
     if (!ins.good())
     {
-        Display::ScreenMessage("Can not open file %s \n", file_name);
+        Display::ScreenMessage("Can not open file %s \n", file_name.data());
         exit(1);
     }
 
@@ -111,7 +110,7 @@ VariableValues* createVariableValues(const std::string& file_path,
     ins >> pvd_file_name >> std::ws;
 
     std::string string_buff;
-    double tol = 1.0-10;
+    double tol = 1.0 - 10;
     ins >> string_buff >> tol;
 
     int num_points;
@@ -128,10 +127,7 @@ VariableValues* createVariableValues(const std::string& file_path,
         ins >> x[0] >> x[1] >> x[2];
         std::string point_name;
         ins >> point_name >> point_name >> std::ws;
-        specified_points.emplace_back(SpecifiedPoint(output_path + getDirSep() +
-                                                         pvd_file_name + "_" +
-                                                         point_name + ".txt",
-                                                     x));
+        specified_points.emplace_back(SpecifiedPoint(point_name, x));
     }
 
     std::ifstream is_mesh(file_path + getDirSep() + mesh_file_name,
@@ -139,7 +135,8 @@ VariableValues* createVariableValues(const std::string& file_path,
 
     if (!is_mesh.good())
     {
-        std::cout << "Cannot open mesh file " << mesh_file_name << std::endl;
+        Display::ScreenMessage("Cannot open mesh file %s \n",
+                               mesh_file_name.data());
         exit(1);
     }
 
@@ -157,7 +154,8 @@ VariableValues* createVariableValues(const std::string& file_path,
     }
     else
     {
-        Display::ScreenMessage("Can not open file %s \n", mesh_file_name);
+        Display::ScreenMessage("Can not open file %s \n",
+                               mesh_file_name.data());
 
         exit(1);
     }
@@ -205,7 +203,7 @@ VariableValues* createVariableValues(const std::string& file_path,
 
     if (!is_pvd.good())
     {
-        Display::ScreenMessage("Can not open file %s \n", pvd_file_name);
+        Display::ScreenMessage("Can not open file %s \n", pvd_file_name.data());
         exit(1);
     }
 

@@ -19,7 +19,6 @@ namespace UTL
 {
 class VariableValues;
 VariableValues* createVariableValues(const std::string& file_path,
-                                     const std::string& output_path,
                                      const std::string& file_name);
 }  // namespace UTL
 
