@@ -136,9 +136,9 @@ int main(int argc, char** argv)
     clock_t c_time = -clock();
 
     UTL::VariableValues* variable_values =
-        UTL::createVariableValues(file_path, o_path, file_name);
+        UTL::createVariableValues(file_path, file_name);
 
-    variable_values->interpolate();
+    variable_values->interpolate(o_path);
 
     c_time += clock();
 
