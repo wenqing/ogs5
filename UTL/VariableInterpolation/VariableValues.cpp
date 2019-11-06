@@ -53,8 +53,8 @@ void VariableValues::interpolate()
 
         if (!ins_vtu.good())
         {
-            std::cout << "Cannot open vtu file " << (*it).vtu_file_name.data()
-                      << std::endl;
+            Display::ScreenMessage("Can not open file %s \n",
+                                   (*it).vtu_file_name.data());
             exit(1);
         }
 

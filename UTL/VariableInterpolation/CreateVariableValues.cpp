@@ -18,10 +18,11 @@
 #include <sstream>
 
 #include "FileTools.h"
+#include "StringTools.h"
+#include "display.h"
 #include "fem_ele.h"
 #include "mathlib.h"
 #include "msh_mesh.h"
-#include "StringTools.h"
 
 #include "VariableValues.h"
 
@@ -84,8 +85,9 @@ bool isPointInElement(MeshLib::CElem const& element, const double x[3])
         break;
         default:
         {
-            std::cout << "Only HEXAHEDRON and TETRAHEDRON are supported to "
-                         "identify a point in it.\n";
+            Display::ScreenMessage(
+                "Only HEXAHEDRON and TETRAHEDRON are supported to "
+                "identify a point in it.\n");
             exit(1);
         }
     }
@@ -99,7 +101,7 @@ VariableValues* createVariableValues(const std::string& file_path,
     std::ifstream ins(file_name, std::ios::in);
     if (!ins.good())
     {
-        std::cout << "Can not open file " << file_name << "\n";
+        Display::ScreenMessage("Can not open file %s \n", file_name);
         exit(1);
     }
 
@@ -147,20 +149,25 @@ VariableValues* createVariableValues(const std::string& file_path,
     MeshLib::CFEMesh* mesh = NULL;
     if (s_buff.find("#FEM_MSH") != std::string::npos)
     {
+        Display::ScreenMessage("Reading mesh data ...\n");
+
         mesh = new MeshLib::CFEMesh(NULL, &mesh_file_name);
         mesh->Read(&is_mesh);
         mesh->ConstructGrid();
     }
     else
     {
-        std::cout << "Cannot find keyword #FEM_MSH in" << mesh_file_name
-                  << std::endl;
+        Display::ScreenMessage("Can not open file %s \n", mesh_file_name);
+
         exit(1);
     }
 
     FiniteElement::CElement* quadrature =
         new FiniteElement::CElement(mesh->GetCoordinateFlag());
     quadrature->setOrder(1);
+
+    Display::ScreenMessage(
+        "Finding the elements that cover the specified points ...\n");
 
     // Find elements and compute the local coordinates of the specified points
     const std::vector<MeshLib::CElem*>& elements = mesh->getElementVector();
@@ -193,11 +200,12 @@ VariableValues* createVariableValues(const std::string& file_path,
     }
 
     // Read PVD file.
+    Display::ScreenMessage("Reading PVD files ...\n");
     std::ifstream is_pvd(file_path + getDirSep() + pvd_file_name, std::ios::in);
 
     if (!is_pvd.good())
     {
-        std::cout << "Cannot open PVD file " << pvd_file_name << std::endl;
+        Display::ScreenMessage("Can not open file %s \n", pvd_file_name);
         exit(1);
     }
 
@@ -218,7 +226,7 @@ VariableValues* createVariableValues(const std::string& file_path,
 
                 std::stringstream ss;
                 ss.str(line_buffer);
-                double time;
+                double time = 0.0;
                 std::string vtu_file_name;
                 while (!ss.eof())
                 {
