@@ -20,6 +20,7 @@
 #include "display.h"
 #include "fem_ele.h"
 #include "msh_mesh.h"
+#include "StringTools.h"
 
 namespace UTL
 {
@@ -65,12 +66,12 @@ void VariableValues::interpolate()
         while (!ins_vtu.eof())
         {
             std::string line_buffer;
-            std::getline(ins_vtu, line_buffer);
+            BaseLib::safeGetline(ins_vtu, line_buffer);
             if (line_buffer.find("<PointData") != std::string::npos)
             {
                 for (;;)
                 {
-                    std::getline(ins_vtu, line_buffer);
+                    BaseLib::safeGetline(ins_vtu, line_buffer);
                     if (line_buffer.find("</PointData>") != std::string::npos)
                     {
                         break;
