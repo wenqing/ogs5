@@ -1881,14 +1881,13 @@ double CFiniteElementStd::CalCoefMass2(int dof_index)
                 dens_arg[1] = TG;
             }
             rho_ga = GasProp->Density(dens_arg);  // 28.05.2008. WW
-            val -= rho_ga * dSdp / rhow;
+            val -= dSdp;
             val *= poro;
             // WX:11.2012.storage
             if (SolidProp)
             {
                 if (SolidProp->Ks > MKleinsteZahl)
-                    val -= rho_ga / rhow *
-                           ((1 - Sw) * (SolidProp->biot_const - poro) /
+                    val -= ((1 - Sw) * (SolidProp->biot_const - poro) /
                             SolidProp->Ks * Sw);
             }
 
@@ -1902,16 +1901,16 @@ double CFiniteElementStd::CalCoefMass2(int dof_index)
             if (GasProp->density_model ==
                 2)  // dens_g/dp_g = drho_dp 02.2012. WX
                 val = (1.0 - Sw) * poro * GasProp->rho_0 * GasProp->drho_dp /
-                      rhow;
+                      rho_ga;
             else
                 val = (1.0 - Sw) * poro *
-                      (GasProp->Density(dens_arg) - rho_ga) / (pert * rhow);
+                      (GasProp->Density(dens_arg) - rho_ga) / (pert * rho_ga);
             // Storage WX:11.2012
             if (SolidProp)
             {
                 if (SolidProp->Ks > MKleinsteZahl)
                     val += (SolidProp->biot_const - poro) / SolidProp->Ks *
-                           (1 - Sw) * GasProp->Density(dens_arg) / rhow;
+                           (1 - Sw);
             }
 
             break;
@@ -2798,9 +2797,6 @@ void CFiniteElementStd::CalCoefLaplace2(bool Gravity, int dof_index)
     MediaProp->local_permeability = tensor[0];
     //
 
-    // WX: 11.05.2010
-    PG = interpolate(NodalVal1);
-    PG2 = interpolate(NodalVal_p2);
     // WX: cal factor for permeability 11.05.2010
     CFiniteElementStd* h_fem;
     h_fem = this;
@@ -2818,7 +2814,11 @@ void CFiniteElementStd::CalCoefLaplace2(bool Gravity, int dof_index)
     {
         case 0:
         {
+            // PG and PG2 are calculated in case 0, and are used in case 1, 2
+            // and 3 directly. Note: This is thread unsafe if only one instance
+            // of CFiniteElementStd is used in the multi-thread setting.
             PG = interpolate(NodalVal1);
+            PG2 = interpolate(NodalVal_p2);
             Sw = MediaProp->SaturationCapillaryPressureFunction(PG);
             //
             tensor = MediaProp->PermeabilityTensor(Index);
@@ -2827,10 +2827,10 @@ void CFiniteElementStd::CalCoefLaplace2(bool Gravity, int dof_index)
             for (size_t i = 0; i < dim * dim; i++)
                 mat[i] = -tensor[i] * mat_fac * time_unit_factor *
                          fac_perm;  // WX:05.2010
-            // For velocity caculation
+            // For velocity calculation
             if (!Gravity)
             {
-                dens_arg[0] = PG;  // Shdould be Pw in some cases
+                dens_arg[0] = PG;  // Should be Pw in some cases
                 if (diffusion)
                 {
                     TG = interpolate(NodalValC1);
@@ -2879,7 +2879,7 @@ void CFiniteElementStd::CalCoefLaplace2(bool Gravity, int dof_index)
                 PG = interpolate(NodalVal1);
                 PG2 = interpolate(NodalVal_p2);
                 Sw = MediaProp->SaturationCapillaryPressureFunction(PG);
-                dens_arg[0] = PG;  // Shdould be Pw in some cases
+                dens_arg[0] = PG;  // Should be Pw in some cases
                 if (diffusion)
                 {
                     TG = interpolate(NodalValC1);
@@ -2929,8 +2929,8 @@ void CFiniteElementStd::CalCoefLaplace2(bool Gravity, int dof_index)
         case 2:
             if (diffusion)
             {
-                D_ga =
-                    tort * Mw * GasProp->molar_mass * M_g * M_g * rho_g / rhow;
+                D_ga = tort * Mw * GasProp->molar_mass * M_g * M_g * rho_g /
+                       rho_ga;
                 D_ga *= time_unit_factor * rho_gw / (PG2 * rhow);
             }
             else
@@ -2939,27 +2939,23 @@ void CFiniteElementStd::CalCoefLaplace2(bool Gravity, int dof_index)
                 mat[i * dim + i] = D_ga;
             break;
         case 3:
-            // WX: for Cal_Velocity, rho_ga muss be calculated again before
-            // used. 11.05.2010
-            dens_arg[0] = PG2;
-            rho_ga = GasProp->Density(dens_arg);
             //
             tensor = MediaProp->PermeabilityTensor(Index);
-            mat_fac = rho_ga *
-                      MediaProp->PermeabilitySaturationFunction(Sw, 1) /
-                      (GasProp->Viscosity() * rhow);
-            //
-            if (Gravity)
-                //        mat_fac *= rhow/rho_ga;
-                mat_fac *= rho_ga / rhow;  // 29.04.2009 WW
+            mat_fac = MediaProp->PermeabilitySaturationFunction(Sw, 1) /
+                      GasProp->Viscosity();
+
             //
             for (size_t i = 0; i < dim * dim; i++)
                 mat[i] = tensor[i] * mat_fac * time_unit_factor *
                          fac_perm;  // WX:05.2010
             if ((!Gravity) && diffusion)
             {
-                D_ga =
-                    tort * rho_g * Mw * GasProp->molar_mass * M_g * M_g / rhow;
+                // WX: for Cal_Velocity, rho_ga muss be calculated again before
+                // used. 11.05.2010
+                dens_arg[0] = PG2;
+                rho_ga = GasProp->Density(dens_arg);
+                D_ga = tort * rho_g * Mw * GasProp->molar_mass * M_g * M_g /
+                       rho_ga;
                 D_ga *= p_gw / (PG2 * PG2);
                 for (size_t i = 0; i < dim; i++)
                     mat[i * dim + i] += D_ga * time_unit_factor;
