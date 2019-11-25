@@ -382,7 +382,7 @@ public:
     std::vector<long> bc_local_index_in_dom;      // WW for domain decomposition
     std::vector<long> rank_bc_node_value_in_dom;  // WW
 #endif  //#if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
-        // WW
+    // WW
     std::vector<long> bc_transient_index;  // WW/CB
     std::vector<long> st_transient_index;  // WW/CB...BG
     void UpdateTransientBC();              // WW/CB
@@ -401,7 +401,7 @@ public:
     std::vector<long> st_local_index_in_dom;      // WW for domain decomposition
     std::vector<long> rank_st_node_value_in_dom;  // WW
 #endif  //#if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
-        // WW
+    // WW
     void RecordNodeVSize(const int Size)  // WW
     {
         orig_size = Size;
@@ -412,7 +412,6 @@ public:
     }
 
     FiniteElement::CFiniteElementStd* getLinearFEMAssembler() { return fem; }
-
     int GetContinnumType() const { return continuum; }
     // const int number_continuum=1;
     std::vector<double> continuum_vector;
@@ -723,10 +722,11 @@ public:
     void hasConstrainedBC(const bool state) { _hasConstrainedBC = state; }
     void hasConstrainedST(const bool state) { _hasConstrainedST = state; }
 
+    bool isDensityScaling() const { return _density_scaling; }
+
     void setidxVx(int index) { _idxVx = index; }
     void setidxVy(int index) { _idxVy = index; }
     void setidxVz(int index) { _idxVz = index; }
-
     // ST
     void IncorporateSourceTerms(const int rank = -1);
 // WW void CheckSTGroup(); //OK
@@ -942,6 +942,9 @@ private:
     int _pcs_constant_model;
     double _pcs_constant_value;
     int _pcs_constant_curve;
+
+    // Flag to scale the governing equation with phase density
+    bool _density_scaling;
 };
 
 //========================================================================

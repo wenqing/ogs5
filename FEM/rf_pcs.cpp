@@ -265,7 +265,8 @@ CRFProcess::CRFProcess(void)
       array_Fu_JFNK(NULL),
 #endif
       number_of_steady_st_nodes(0),
-      ele_val_name_vector(std::vector<std::string>())
+      ele_val_name_vector(std::vector<std::string>()),
+      _density_scaling(true)
 {
     iter_lin = 0;
     iter_lin_max = 0;
@@ -2333,6 +2334,19 @@ std::ios::pos_type CRFProcess::Read(std::ifstream* pcs_file)
                 std::cout << "-> CONSTAT is activated." << std::endl;
             continue;
         }
+
+        if (line_string.find("$NON_DENSITY_SCALING_OF_THE_LAST_PHASE") !=
+            string::npos)
+        {
+            _density_scaling = false;
+
+            Display::ScreenMessage(
+                "\nThe balance equation is not scaled with density. Please "
+                "make sure that the Neumann conditions are properly set "
+                "accordingly if there are such conditions being applied\n");
+            continue;
+        }
+
         //....................................................................
     }
     //----------------------------------------------------------------------

@@ -1891,6 +1891,11 @@ double CFiniteElementStd::CalCoefMass2(int dof_index)
                             SolidProp->Ks * Sw);
             }
 
+            if (!pcs->isDensityScaling())
+            {
+                val *= rho_ga;
+            }
+
             break;
         case 3:  //
             // Approximation of d dens_g/dp_g 16.08.2011. WW
@@ -1913,6 +1918,10 @@ double CFiniteElementStd::CalCoefMass2(int dof_index)
                            (1 - Sw);
             }
 
+            if (!pcs->isDensityScaling())
+            {
+                val *= rho_ga;
+            }
             break;
     }
     return val;
@@ -2929,12 +2938,18 @@ void CFiniteElementStd::CalCoefLaplace2(bool Gravity, int dof_index)
         case 2:
             if (diffusion)
             {
-                D_ga = tort * Mw * GasProp->molar_mass * M_g * M_g * rho_g /
-                       rho_ga;
+                D_ga = tort * Mw * GasProp->molar_mass * M_g * M_g * rho_g;
+
+                if (pcs->isDensityScaling())
+                {
+                    D_ga /= rho_ga;
+                }
+
                 D_ga *= time_unit_factor * rho_gw / (PG2 * rhow);
             }
             else
                 D_ga = 0.;
+
             for (size_t i = 0; i < dim; i++)
                 mat[i * dim + i] = D_ga;
             break;
@@ -2960,6 +2975,13 @@ void CFiniteElementStd::CalCoefLaplace2(bool Gravity, int dof_index)
                 for (size_t i = 0; i < dim; i++)
                     mat[i * dim + i] += D_ga * time_unit_factor;
             }
+
+            if (!pcs->isDensityScaling() && (!Gravity))
+            {
+                for (size_t i = 0; i < dim; i++)
+                    mat[i * dim + i] *= rho_ga;
+            }
+
             break;
             //------------------------------------------------------------------
     }
