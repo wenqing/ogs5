@@ -40,8 +40,11 @@ struct SpecifiedPoint
         }
     }
 
+    // For some members of std containers, e.g. std::vector::erase();
+    SpecifiedPoint& operator=(const SpecifiedPoint& specified_point);
+
     MeshLib::CElem* element_coverred_point;
-    const std::string name;
+    std::string name;
     double x[3];
 };
 
