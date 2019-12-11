@@ -13,6 +13,7 @@
 
 #include "CreateVariableValues.h"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -196,6 +197,26 @@ VariableValues* createVariableValues(const std::string& file_path,
             }
         }
     }
+
+    struct hasNullElement
+    {
+        bool operator()(const SpecifiedPoint& sp)
+        {
+            if (sp.element_coverred_point == NULL)
+            {
+                Display::ScreenMessage(
+                    "\t*** Point %s (%g, %g ,%g) is not in the domain\n",
+                    sp.name.data(), sp.x[0], sp.x[1], sp.x[2]);
+                return true;
+            }
+
+            return false;
+        }
+    };
+    specified_points.erase(
+        std::remove_if(specified_points.begin(), specified_points.end(),
+                       hasNullElement()),
+        specified_points.end());
 
     // Read PVD file.
     Display::ScreenMessage("Reading PVD files ...\n");
