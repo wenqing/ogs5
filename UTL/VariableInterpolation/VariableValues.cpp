@@ -26,6 +26,19 @@
 
 namespace UTL
 {
+SpecifiedPoint& SpecifiedPoint::operator=(const SpecifiedPoint& specified_point)
+{
+    element_coverred_point = specified_point.element_coverred_point;
+    name = specified_point.name;
+
+    for (int i = 0; i < 3; i++)
+    {
+        x[i] = specified_point.x[i];
+    }
+
+    return *this;
+}
+
 VariableValues::VariableValues(
     MeshLib::CFEMesh const* mesh,
     FiniteElement::CElement* quadrature,
