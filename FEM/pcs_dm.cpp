@@ -1133,29 +1133,7 @@ void CRFProcessDeformation::InitGauss(void)
 
             for (gp = 0; gp < NGS; gp++)
             {
-                if (ccounter > 0)
-                {
-                    fem_dm->getShapefunctValues(gp, 2);
-                    fem_dm->RealCoordinates(xyz);
-                    for (j = 0; j < NS; j++)
-                    {
-                        m_ic = stress_ic[j];
-                        if (!m_ic)
-                            continue;
-                        n_dom = m_ic->GetNumDom();
-                        for (k = 0; k < n_dom; k++)
-                        {
-                            if (MatGroup != m_ic->GetDomain(k))
-                                continue;
-                            (*eleV_DM->Stress)(j, gp) =
-                                m_ic->getLinearFunction()->getValue(
-                                    k, xyz[0], xyz[1], xyz[2]);
-                            (*eleV_DM->Stress0)(j, gp) =
-                                (*eleV_DM->Stress)(j, gp);
-                        }
-                    }
-                }
-                else
+                if (ccounter <= 0)
                 {
                     switch (PModel)
                     {
@@ -1227,12 +1205,67 @@ void CRFProcessDeformation::InitGauss(void)
     }
     // Reload the stress results of the previous simulation
     if (_init_domain_data_type == FiniteElement::READ ||
-        _init_domain_data_type == FiniteElement::READ_WRITE)
+        _init_domain_data_type == FiniteElement::READ_WRITE ||
+        _init_domain_data_type == FiniteElement::READ_WITH_IC ||
+        _init_domain_data_type == FiniteElement::READ_WITH_IC_AND_WRITE)
     {
         ReadGaussPointStress();
         if (type == 41)  // mono-deformation-liquid
             ReadSolution();
+
+        if (_init_domain_data_type == FiniteElement::READ ||
+            _init_domain_data_type == FiniteElement::READ_WRITE)
+        {
+            ccounter = 0;
+            _has_initial_stress_data = false;
+        }
     }
+
+    if (ccounter > 0)
+    {
+        for (i = 0; i < m_msh->ele_vector.size(); i++)
+        {
+            elem = m_msh->ele_vector[i];
+            if (elem->GetMark())  // Marked for use
+            {
+                MatGroup = elem->GetPatchIndex();
+                SMat = msp_vector[MatGroup];
+                elem->SetOrder(true);
+                eleV_DM = ele_value_dm[i];
+
+                fem_dm->ConfigElement(elem);
+                fem_dm->setOrder(2);
+                fem_dm->SetIntegrationPointNumber(elem->GetElementType());
+                NGS = fem_dm->GetNumGaussPoints();
+                //
+
+                for (gp = 0; gp < NGS; gp++)
+                {
+                    fem_dm->getShapefunctValues(gp, 2);
+                    fem_dm->RealCoordinates(xyz);
+                    for (j = 0; j < NS; j++)
+                    {
+                        m_ic = stress_ic[j];
+                        if (!m_ic)
+                            continue;
+                        n_dom = m_ic->GetNumDom();
+                        for (k = 0; k < n_dom; k++)
+                        {
+                            if (MatGroup != m_ic->GetDomain(k))
+                                continue;
+                            (*eleV_DM->Stress)(j, gp) =
+                                m_ic->getLinearFunction()->getValue(
+                                    k, xyz[0], xyz[1], xyz[2]);
+                            (*eleV_DM->Stress0)(j, gp) =
+                                (*eleV_DM->Stress)(j, gp);
+                        }
+                    }
+                }
+                elem->SetOrder(false);
+            }
+        }
+    }
+
     // For excavation simulation. Moved here on 05.09.2007 WW
     if (num_type_name.find("EXCAVATION") != 0)
         Extropolation_GaussValue();
