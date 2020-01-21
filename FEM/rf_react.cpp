@@ -4879,7 +4879,7 @@ void REACT::ExeUserDefPropChange(std::vector<CRFProcess*> transport_processes)
 				}
 			}
 		} // end if output file good
-		_sleep(1000);  //pause for 1 sec
+		//_sleep(1000);  //pause for 1 sec
 		if(tmp_counter > 600)
 			break;
 		result.close();

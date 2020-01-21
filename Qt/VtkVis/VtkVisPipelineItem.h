@@ -8,7 +8,7 @@
 #define VTKVISPIPELINEITEM_H
 
 // ** INCLUDES **
-#include "Configure.h"
+
 #include "TreeItem.h"
 
 #include <QList>

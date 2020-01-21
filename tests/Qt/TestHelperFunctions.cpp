@@ -6,7 +6,7 @@
 // ** INCLUDES **
 #include "TestHelperFunctions.h"
 
-#include "Configure.h"
+
 
 #include <QFile>
 #include <QString>

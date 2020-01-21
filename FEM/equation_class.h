@@ -7,7 +7,7 @@
 #ifndef eqs_class_INC
 #define eqs_class_INC
 
-#include "Configure.h"
+
 
 // NEW_EQS To be removed
 #ifdef NEW_EQS                                    //1.11.2007 WW

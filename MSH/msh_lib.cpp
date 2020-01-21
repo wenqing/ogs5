@@ -13,6 +13,8 @@
 // FileIO
 #include "MeshIO/GMSHInterface.h"
 
+#include "gs_project.h"
+
 // GEOLib
 #include "files0.h"
 #include "geo_lib.h"
@@ -27,7 +29,7 @@
 extern void ConfigRenumberProperties(void);
 #endif
 extern int ReadRFIFile(std::string g_strFileNameBase);
-#include "gs_project.h"
+
 #include "rf_pcs.h"
 
 std::vector<MeshLib::CFEMesh*>fem_msh_vector;

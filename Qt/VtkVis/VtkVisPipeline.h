@@ -9,7 +9,7 @@
 
 // ** INCLUDES **
 #include "Color.h"
-#include "Configure.h"
+
 #include "FEMCondition.h"
 #include "GeoType.h"
 #include "MSHEnums.h"

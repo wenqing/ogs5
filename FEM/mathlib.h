@@ -14,7 +14,7 @@
 #define mathlib_INC
 /* Schutz gegen mehrfaches Einfuegen */
 
-#include "Configure.h"
+
 #include <cstddef>
 
 #define noTESTMATH

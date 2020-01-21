@@ -1,4 +1,4 @@
-#include "Configure.h"
+
 #include "makros.h"
 #include "tricommon.h"
 #include <stdio.h>

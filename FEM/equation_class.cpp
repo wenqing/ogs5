@@ -16,7 +16,7 @@
 #include <mpi.h>
 #endif
 
-#include "Configure.h"
+
 #include "makros.h"
 
 #include <cfloat>

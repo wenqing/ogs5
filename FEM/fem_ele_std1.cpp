@@ -2,7 +2,7 @@
    The definitions of members of class CFiniteElementStd.
  */
 
-#include "Configure.h"
+
 
 // C++ STL
 #include <cfloat>

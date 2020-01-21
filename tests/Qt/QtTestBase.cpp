@@ -6,7 +6,7 @@
 // ** INCLUDES **
 #include "QtTestBase.h"
 
-#include "Configure.h"
+
 
 #include <QFile>
 #include <QString>

@@ -6,7 +6,7 @@
  */
 
 // ** INCLUDES **
-#include "Configure.h"
+
 #include "Output.h"
 
 #include <fstream>
@@ -15,7 +15,7 @@
 
 #include <cfloat> // DBL_EPSILON
 
-#include "Configure.h"
+
 
 #include "FEMIO/GeoIO.h"
 #include "GEOObjects.h"
@@ -2063,7 +2063,7 @@ void COutput::WriteRFOHeader(fstream &rfo_file)
 	rfo_file << "#0#0#0#1#";
 	rfo_file << _time;
 	rfo_file << "#0#";
-	rfo_file << OGS_VERSION;
+	rfo_file << BuildInfo::OGS_VERSION;
 	rfo_file << "###########################################";
 	rfo_file << "\n";
 }

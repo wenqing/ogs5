@@ -5,7 +5,7 @@
    06/2004 OK Implementation
    last modified:
 **************************************************************************/
-#include "Configure.h"
+
 #include "makros.h"
 // C++ STL
 #include <cfloat>
@@ -18,6 +18,7 @@
 using namespace std;
 
 // Base
+#include "BuildInfo.h"
 #include "StringTools.h"
 
 // FEM-Makros
@@ -144,7 +145,7 @@ bool OUTRead(const std::string& file_base_name,
 
 			if(output_version) //// 02.2011. WW
 			{
-				std::string VersionStr = OGS_VERSION; //02.2011 WX
+				std::string VersionStr =  BuildInfo::OGS_VERSION; //02.2011 WX
 				int curPos = 0;
 				int pos = 0;
 				while((pos = VersionStr.find("/",curPos)) != -1)

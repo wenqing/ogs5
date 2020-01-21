@@ -7,7 +7,7 @@
 #ifndef break_RWPT                                //OK
 #define break_RWPT                                //OK
 
-#include "Configure.h"
+
 //#include <math.h>
 //#include "mathlib.h"
 //#include "fem_ele.h"

@@ -6,7 +6,7 @@
 #include "ProjectData.h"
 #include "XMLInterface.h"
 
-#include "Configure.h"
+
 
 #include <QCryptographicHash>
 #include <QFileInfo>

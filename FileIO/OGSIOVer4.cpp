@@ -8,8 +8,6 @@
 #include <iomanip>
 #include <sstream>
 
-#include "Configure.h"
-
 // FileIO
 #include "GMSHInterface.h"
 #include "OGSIOVer4.h"
@@ -34,8 +32,6 @@
 #include "AnalyticalGeometry.h"
 #include "EarClippingTriangulation.h"
 
-// Qt/Base
-#include "OGSError.h"
 
 using namespace GEOLIB;
 

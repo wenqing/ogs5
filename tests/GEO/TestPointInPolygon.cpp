@@ -5,7 +5,7 @@
  */
 
 // ** INCLUDES **
-#include "Configure.h"
+
 #include "gtest.h"
 
 #include <string>

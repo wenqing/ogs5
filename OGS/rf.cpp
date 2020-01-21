@@ -17,7 +17,7 @@
 /**
  * the preprocessor directive RFW_FRACTURE is only useable until version 4.11 of OGS
  * */
-#include "Configure.h"
+
 
 #if defined(USE_MPI) || defined(USE_MPI_PARPROC) || defined(USE_MPI_REGSOIL) || \
         defined(USE_MPI_GEMS) || defined(USE_MPI_KRC) 
@@ -30,11 +30,13 @@
 #endif
 
 
-
 #include "BuildInfo.h"
 
 /* Preprozessor-Definitionen */
 #include "makros.h"
+#include "display.h"
+#include "memory.h"
+#include "ogs_display.h"
 #define TEST
 /* Benutzte Module */
 #include "break.h"
@@ -110,25 +112,22 @@ int main ( int argc, char* argv[] )
 		}
 		if( anArg == "--build-info" || anArg == "-b" )
 		{
-			std::cout << "ogs version: " << OGS_VERSION << "\n"
-			          << "ogs date: " << OGS_DATE << "\n";
+			std::cout << "ogs version: " <<  BuildInfo::OGS_VERSION << "\n";
+//			          << "ogs date: " << OGS_DATE << "\n";
 #ifdef CMAKE_CMD_ARGS
 			std::cout << "cmake command line arguments: " << CMAKE_CMD_ARGS << "\n";
 #endif // CMAKE_CMD_ARGS
 #ifdef GIT_COMMIT_INFO
-			std::cout << "git commit info: " << GIT_COMMIT_INFO << "\n";
+			std::cout << "git commit info: " << BuildInfo::GIT_COMMIT_INFO << "\n";
 #endif // GIT_COMMIT_INFO
-#ifdef SVN_REVISION
-			std::cout << "subversion info: " << SVN_REVISION << "\n";
-#endif // SVN_REVISION
 #ifdef BUILD_TIMESTAMP
-			std::cout << "build timestamp: " << BUILD_TIMESTAMP << "\n";
+			std::cout << "build timestamp: " << BuildInfo::BUILD_TIMESTAMP << "\n";
 #endif // BUILD_TIMESTAMP
 			continue;
 		}
 		if( anArg == "--version" )
 		{
-			std::cout << OGS_VERSION << "\n";
+			std::cout << BuildInfo::OGS_VERSION << "\n";
 			continue;
 		}
 		if( anArg == "--model-root" || anArg == "-m" )

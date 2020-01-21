@@ -20,7 +20,7 @@
 // FileIO
 #include "OGSIOVer4.h"
 
-#include "Configure.h"
+
 
 TEST(GEO, PointInPolygon)
 {

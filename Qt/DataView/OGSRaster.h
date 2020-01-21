@@ -7,7 +7,7 @@
 #define OGSRASTER_H
 
 #include <fstream>
-#include "Configure.h"
+
 
 class QImage;
 class QPointF;

@@ -9,7 +9,7 @@
 
 #define par_dd_INC
 
-#include "Configure.h"
+
 
 // C++ STL
 #include <fstream>

@@ -2,7 +2,7 @@
    The members of class Element definitions.
  */
 
-#include "Configure.h"
+
 
 // C++ STL
 #include <cfloat>

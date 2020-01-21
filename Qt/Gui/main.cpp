@@ -1,4 +1,4 @@
-#include "Configure.h"
+
 #include "mainwindow.h"
 #include <QtGui/QApplication>
 #ifdef OGS_USE_OPENSG

@@ -10,7 +10,7 @@
 
 // Base
 #include "swap.h"
-#include "Configure.h"
+
 #include "BuildInfo.h"
 
 // FileIO
@@ -145,7 +145,7 @@ void GMSHInterface::readGMSHMesh(std::string const& fname, MeshLib::CFEMesh* mes
 
 int GMSHInterface::write(std::ostream& out)
 {
-	out << "// GMSH input file created by OpenGeoSys " << OGS_VERSION << " built on ";
+	out << "// GMSH input file created by OpenGeoSys " << BuildInfo::OGS_VERSION << " built on ";
 #ifdef BUILD_TIMESTAMP
 	out << BUILD_TIMESTAMP;
 #endif
