@@ -1,4 +1,13 @@
 /**
+ * \copyright
+ * Copyright (c) 2020, OpenGeoSys Community (http://www.opengeosys.org)
+ *            Distributed under a Modified BSD License.
+ *              See accompanying file LICENSE.txt or
+ *              http://www.opengeosys.org/project/license
+ *
+ */
+
+/**
  * \file Test_Base.cpp
  * 29/4/2010 LB Initial implementation
  * 

@@ -1,4 +1,22 @@
 /**
+ * \copyright
+ * Copyright (c) 2020, OpenGeoSys Community (http://www.opengeosys.org)
+ *            Distributed under a Modified BSD License.
+ *              See accompanying file LICENSE.txt or
+ *              http://www.opengeosys.org/project/license
+ *
+ */
+
+/**
+ * \copyright
+ * Copyright (c) 2020, OpenGeoSys Community (http://www.opengeosys.org)
+ *            Distributed under a Modified BSD License.
+ *              See accompanying file LICENSE.txt or
+ *              http://www.opengeosys.org/project/license
+ *
+ */
+
+/**
  * \file RapidXMLInterface.h
  * 2012/08/16 KR Initial implementation
  */

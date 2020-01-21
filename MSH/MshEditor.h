@@ -1,4 +1,13 @@
 /**
+ * \copyright
+ * Copyright (c) 2020, OpenGeoSys Community (http://www.opengeosys.org)
+ *            Distributed under a Modified BSD License.
+ *              See accompanying file LICENSE.txt or
+ *              http://www.opengeosys.org/project/license
+ *
+ */
+
+/**
  * \file MshEditor.h
  * 2011/06/15 KR Initial implementation
  */

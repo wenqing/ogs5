@@ -1,3 +1,12 @@
+/**
+ * \copyright
+ * Copyright (c) 2020, OpenGeoSys Community (http://www.opengeosys.org)
+ *            Distributed under a Modified BSD License.
+ *              See accompanying file LICENSE.txt or
+ *              http://www.opengeosys.org/project/license
+ *
+ */
+
 //1. Eclipse starten (die Files liegen alle vorbereitet vor
 //2. Daten auslesen -> Tool ecl2gs
 //3. Datenumwandeln (Uebertragung auf Knoten, Geschwindigkeit berechnen)

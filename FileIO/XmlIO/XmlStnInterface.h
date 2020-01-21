@@ -1,4 +1,22 @@
 /**
+ * \copyright
+ * Copyright (c) 2020, OpenGeoSys Community (http://www.opengeosys.org)
+ *            Distributed under a Modified BSD License.
+ *              See accompanying file LICENSE.txt or
+ *              http://www.opengeosys.org/project/license
+ *
+ */
+
+/**
+ * \copyright
+ * Copyright (c) 2020, OpenGeoSys Community (http://www.opengeosys.org)
+ *            Distributed under a Modified BSD License.
+ *              See accompanying file LICENSE.txt or
+ *              http://www.opengeosys.org/project/license
+ *
+ */
+
+/**
  * \file XmlStnInterface.h
  * 2011/11/23 KR as derived class from XMLInterface
  */
