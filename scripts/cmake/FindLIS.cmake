@@ -5,39 +5,32 @@
 #  LIS_INCLUDE_DIRS
 #  LIS_LIBRARIES
 
-if (NOT LIS_FOUND)
+find_path( LIS_INCLUDE_DIR
+    NAMES lis.h
+    PATHS ${OGS_PRECOMPILED_LIBS_DIR_FOUND})
 
-	include(LibFindMacros)
-
-	find_path( LIS_INCLUDE_DIR
-		NAMES lis.h
-		PATHS ${CMAKE_SOURCE_DIR}/../Libs/precompiled)
-
-	if ( UNIX )
-		# Tell if the unix system is on 64-bit base
-		if(CMAKE_SIZEOF_VOID_P MATCHES "8")
-			find_library(LIS_LIBRARIES
-				NAMES lis-64
-				PATHS ${CMAKE_SOURCE_DIR}/../Libs/precompiled )
-		else ()
-			find_library(LIS_LIBRARIES
-				NAMES lis-32
-				PATHS ${CMAKE_SOURCE_DIR}/../Libs/precompiled )
-		endif ()
-	else ()
-		find_library(LIS_LIBRARIES
-			NAMES lisomp
-			PATHS ${CMAKE_SOURCE_DIR}/../Libs/precompiled )
-	endif ()
-
-	# Set the include dir variables and the libraries and let libfind_process do the rest.
-	# NOTE: Singular variables for this library, plural for libraries this this lib depends on.
-	if (NOT LIS_LIBRARIES STREQUAL "LIS_LIBRARIES-NOTFOUND" AND NOT LIS_INCLUDE_DIR STREQUAL "LIS_INCLUDE_DIR-NOTFOUND")
-		set(LIS_PROCESS_INCLUDES LIS_INCLUDE_DIR)
-		set(LIS_PROCESS_LIBS LIS_LIBRARIES)
-		libfind_process(LIS)
-	else ()
-		message (STATUS "Warning: LIS not found!")
-	endif ()
-
+if ( UNIX )
+    # Tell if the unix system is on 64-bit base
+    if(CMAKE_SIZEOF_VOID_P MATCHES "8")
+        find_library(LIS_LIBRARIES
+            NAMES lis-64
+            PATHS ${OGS_PRECOMPILED_LIBS_DIR_FOUND}
+        )
+    else ()
+        find_library(LIS_LIBRARIES
+            NAMES lis-32
+            PATHS ${OGS_PRECOMPILED_LIBS_DIR_FOUND}
+        )
+    endif ()
+else ()
+    find_library(LIS_LIBRARIES
+        NAMES lisomp
+        PATHS ${OGS_PRECOMPILED_LIBS_DIR_FOUND}
+    )
 endif ()
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(LIS
+    REQUIRED_VARS LIS_INCLUDE_DIR LIS_LIBRARIES
+    FOUND_VAR LIS_FOUND
+)

@@ -1,7 +1,9 @@
 # Source files
 set( HEADERS
 	binarySearch.h
+	BuildInfo.h
 	Configure.h.in
+        display.h
 	DateTools.h
 	FileFinder.h
 	FileTools.h
@@ -17,8 +19,10 @@ set( HEADERS
 set( SOURCES
 	DateTools.cpp
 	MemWatch.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/BuildInfo.cpp
 	StringTools.cpp
 	binarySearch.cpp
+        display.cpp
 )
 
 # Create the library
@@ -28,17 +32,9 @@ set_target_properties(Base PROPERTIES LINKER_LANGUAGE CXX)
 
 include_directories(
 	${CMAKE_SOURCE_DIR}/Base
-	${CMAKE_SOURCE_DIR}/GEO
-	${CMAKE_SOURCE_DIR}/MathLib
 )
 
-#target_link_libraries (
-#        Base
-#        GEO
-#)
-
-
-IF(OGS_BUILD_CORRECT_SCIENTIFIC)
+if(OGS_BUILD_CORRECT_SCIENTIFIC)
 	# Create utility executable
 	add_executable( correctScientificNotation CorrectScientificNotationMain.cpp )
-ENDIF(OGS_BUILD_CORRECT_SCIENTIFIC)
+endif()

@@ -10,22 +10,10 @@ endif ()
 # Collect build information such as revision/commit and timestamp
 if (OGS_BUILD_INFO)
 	if(GIT_FOUND)
-		# Get git commit
-		execute_process(
-			COMMAND ${GIT_EXECUTABLE} "log" "--name-status" "HEAD^..HEAD"
-			COMMAND ${GREP_TOOL_PATH} "-m" "1" "commit"
-			WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-			OUTPUT_VARIABLE GIT_COMMIT_INFO
-			OUTPUT_STRIP_TRAILING_WHITESPACE
-		)
-	endif() # GIT_FOUND
-
-	find_path(HIDDEN_SVN_DIR entries ${CMAKE_SOURCE_DIR}/.svn)
-	if(Subversion_FOUND AND HIDDEN_SVN_DIR)
-		Subversion_WC_INFO(${PROJECT_SOURCE_DIR} Project)
-		set(SVN_REVISION ${Project_WC_REVISION})
-	endif() # Subversion_FOUND AND HIDDEN_SVN_DIR
-	unset(HIDDEN_SVN_DIR)
+		include(GetGitRevisionDescription)
+		GET_GIT_HEAD_REVISION(GIT_REFSPEC GIT_SHA1)
+		string(SUBSTRING ${GIT_SHA1} 0 8 GIT_SHA1_SHORT)
+	endif()
 
 	execute_process(
 		COMMAND ${DATE_TOOL_PATH} "+%Y-%m-%d" # %H:%M:%S"
@@ -37,3 +25,42 @@ endif () # OGS_BUILD_INFO
 
 # This is for Configure.h which is generated later
 include_directories( ${PROJECT_BINARY_DIR}/Base )
+
+# Check for number of processors
+if (NOT DEFINED PROCESSOR_COUNT)
+	include(ProcessorCount)
+	ProcessorCount(PROCESSOR_COUNT)
+endif()
+if(PROCESSOR_COUNT EQUAL 0)
+	message(WARNING "Processor count could not be detected. Setting to one processor.")
+	set(PROCESSOR_COUNT 1)
+else()
+	message(STATUS "Number of processors: ${PROCESSOR_COUNT}")
+endif()
+
+# Release and git info
+include(GetGitRevisionDescription)
+GET_GIT_HEAD_REVISION(GIT_REFSPEC GIT_SHA1)
+string(SUBSTRING ${GIT_SHA1} 0 8 GIT_SHA1_SHORT)
+
+if($ENV{CI})
+	set(OGS_VERSION 5.x.x) # Dummy version for CI-environment (Travis) or subproject
+elseif(IS_SUBPROJECT)
+	set(OGS_VERSION x.x.x)
+else()
+	GIT_GET_TAG(GIT_DESCRIBE)
+	if(GIT_DESCRIBE)
+		string(REGEX MATCH ^[0-9|\\.]+ GIT_TAG ${GIT_DESCRIBE})
+		set(OGS_VERSION ${GIT_TAG})
+		set(OGS_IS_RELEASE FALSE)
+		if(GIT_DESCRIBE MATCHES ".*-.*-.*")
+			# Commit is not a tag
+			set(OGS_VERSION ${GIT_DESCRIBE})
+		else()
+			set(OGS_IS_RELEASE TRUE)
+		endif()
+		message(STATUS "OGS version: ${OGS_VERSION}")
+	else()
+		message(WARNING "Git repository contains no tags! Please run: git fetch --tags")
+	endif()
+endif()

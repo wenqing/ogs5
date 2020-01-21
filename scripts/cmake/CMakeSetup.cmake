@@ -3,18 +3,6 @@
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/scripts/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/scripts/cmake/cmake")
 
-if(CMAKE_VERSION VERSION_GREATER 3.1)
-	cmake_policy(SET CMP0054 NEW)
-endif()
-
-# Suppress warning on setting policies
-cmake_policy(SET CMP0011 OLD)
-
-# Suppress warning on add_subdirectory(dir) where dir contains no CMakeLists.txt
-if (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} GREATER 2.7)
-	cmake_policy(SET CMP0014 OLD)
-endif ()
-
 # Load addional modules
 include(UseBackportedModules)
 include(OptionRequires)

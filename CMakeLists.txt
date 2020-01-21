@@ -1,405 +1,356 @@
 #### OGS-5 Project ####
 
 # Specify minimum CMake version
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.3)
+cmake_minimum_required(VERSION 2.8.3)
+
+if(CMAKE_VERSION VERSION_GREATER 3.1)
+	cmake_policy(SET CMP0054 NEW)
+endif()
+cmake_policy(SET CMP0011 NEW)
 
 # Project name
-PROJECT(OGS)
-
+project(OGS-5)
 
 ###############
 ### Options ###
 ###############
 
-# Configurations
-OPTION(OGS_FEM "Default configuration" OFF)
-OPTION(OGS_FEM_SP "Sparse matrix configuration" OFF)
-OPTION(OGS_FEM_JFNK "Jacobi free Newton-Krylov method for H2M problem" OFF)
-OPTION(OGS_FEM_PETSC "Use PETSc parallel solver" OFF)
-OPTION(OGS_FEM_PETSC_GEMS "GEMS with PETSc parallel solver" OFF)
-OPTION(OGS_FEM_GEMS "GEMS configuration" OFF)
-OPTION(OGS_FEM_PQC "Phreeqc configuration" OFF)
-OPTION(OGS_FEM_BRNS "BRNS configuration" OFF)
-OPTION(OGS_FEM_CHEMAPP "CHEMAPP configuration" OFF)
-OPTION(OGS_USE_QT "User interface configuration" OFF)
-OPTION(OGS_FEM_LIS "Library of Iterative Solvers for Linear Systems configuration" OFF)
-OPTION(OGS_FEM_CAP "CAP configuration" OFF)
-OPTION(OGS_FEM_MKL "Math kernel library configuration" OFF)
-OPTION(BLUE_G "Blue/G optimization" OFF)
+# Chemical solver
+set(OGS_CHEMSOLVER "DEFAULT" CACHE STRING "OpenGeoSys geochemical solver")
+set_property(CACHE OGS_CHEMSOLVER PROPERTY STRINGS
+	DEFAULT # Default
+	NONE
+	GEMS
+	IPQC
+	PQC
+	BRNS
+	CAP
+)
 
-# supported on Linux and Windows
-OPTION(OGS_FEM_MPI "Message passing interface configuration" OFF)
-# needs to be set of MPI and GEMS is used
-OPTION(PARALLEL_USE__MPI "Message passing interface configuration also for GEMS coupling" OFF)
+# Linear solver
+set(OGS_LSOLVER "DEFAULT" CACHE STRING "OpenGeoSys linear solver type")
+set_property(CACHE OGS_LSOLVER PROPERTY STRINGS
+	DEFAULT # Default
+	RF      # RF
+	SP      # New sparse solver
+	PETSC   # PETSc
+)
 
+# Other options
+option(BLUE_G "Blue/G optimization" OFF)
+option(PARALLEL_USE_MPI "Use MPI parallization" OFF)
+option(OGS_USE_JFNK "Use Jacobain free method for solving H2M" OFF)
+option(OGS_USE_LIS "Use LIS solver" OFF)
+option(OGS_USE_MKL "Use PARDISO in MKL" OFF)
+option(OGS_USE_CVODE "Use sundials cvode for TNEQ/TES" OFF)
+set(OGS_CPU_ARCHITECTURE "native" CACHE STRING "Processor architecture, defaults to native.")
+option(OGS_PYTHON "Enable python scripting interface" OFF)
+option(OGS_BUILD_UTILITIES "Build additional utility programs?" OFF)
+option(OGS_CMAKE_DEBUG "Show additional cmake debug information" OFF)
+option(OGS_ONE_BIG_GTEST "Should all gtests be collected to one ctest" ON)
+option(OGS_BUILD_INFO "Should build information be generated" ON)
+option(OGS_BUILD_TESTS "Enables building of tests." OFF)
+option(OGS_NO_EXTERNAL_LIBS "Builds OGS without any external dependencies." OFF)
+option(OGS_DELETE_EDGES_AFTER_INIT "Delete mesh edges after initialization if possible" OFF)
+option(OGS_OUTPUT_TIME_ALLPCS "Output clock time for all processes" OFF)
 
-### CMake setup ###
-INCLUDE(CMakeConfiguration/CMakeSetup.cmake)
+##########################
+### Configuration type ###
+##########################
+set(OGS_CONFIG "FEM" CACHE STRING "OpenGeoSys configuration")
+set_property(CACHE OGS_CONFIG PROPERTY STRINGS
+	FEM  # RF
+	SP   # SP
+	JFNK # SP + JFNK
+	GEMS # SP + GEMS
+	IPQC # RF + IPQC
+	PQC  # SP + PQC
+	BRNS # SP + BRNS
+	CAP  # RF + CAP
+	LIS  # SP + LIS
+	MKL  # SP + LIS + MKL
+	MPI  # SP(MPI)
+	PETSC # PETSC(MPI)
+	PETSC_GEMS # PETSC(MPI) + GEMS
+)
 
-### Compiler setup ###
-INCLUDE(CMakeConfiguration/CompilerSetup.cmake)
+# default setting for each configuration
+set(OGS_CONFIG_DEFAULT_LSOLVER "RF" CACHE INTERNAL "OGS default linear solver type for the given configuration")
+set(OGS_CONFIG_DEFAULT_CHEMSOLVER "NONE" CACHE INTERNAL "OGS default geochemical solver library")
 
+if (OGS_CONFIG STREQUAL SP)
+	set(OGS_CONFIG_DEFAULT_LSOLVER "SP" CACHE INTERNAL "" FORCE)
+elseif (OGS_CONFIG STREQUAL JFNK)
+	set(OGS_CONFIG_DEFAULT_LSOLVER "SP" CACHE INTERNAL "" FORCE)
+elseif (OGS_CONFIG STREQUAL GEMS)
+	set(OGS_CONFIG_DEFAULT_LSOLVER "SP" CACHE INTERNAL "" FORCE)
+	set(OGS_CONFIG_DEFAULT_CHEMSOLVER "GEMS" CACHE INTERNAL "" FORCE)
+elseif (OGS_CONFIG STREQUAL IPQC)
+	set(OGS_CONFIG_DEFAULT_CHEMSOLVER "IPQC" CACHE INTERNAL "" FORCE)
+	if(PARALLEL_USE_MPI)
+		set(OGS_CONFIG_DEFAULT_LSOLVER "SP" CACHE INTERNAL "" FORCE)
+	endif()
+elseif (OGS_CONFIG STREQUAL PQC)
+	set(OGS_CONFIG_DEFAULT_LSOLVER "SP" CACHE INTERNAL "" FORCE)
+	set(OGS_CONFIG_DEFAULT_CHEMSOLVER "PQC" CACHE INTERNAL "" FORCE)
+elseif (OGS_CONFIG STREQUAL BRNS)
+	set(OGS_CONFIG_DEFAULT_LSOLVER "SP" CACHE INTERNAL "" FORCE)
+	set(OGS_CONFIG_DEFAULT_CHEMSOLVER "BRNS" CACHE INTERNAL "" FORCE)
+elseif (OGS_CONFIG STREQUAL CAP)
+	set(OGS_CONFIG_DEFAULT_CHEMSOLVER "CAP" CACHE INTERNAL "" FORCE)
+elseif (OGS_CONFIG STREQUAL LIS)
+	set(OGS_CONFIG_DEFAULT_LSOLVER "SP" CACHE INTERNAL "" FORCE)
+elseif (OGS_CONFIG STREQUAL MKL)
+	set(OGS_CONFIG_DEFAULT_LSOLVER "SP" CACHE INTERNAL "" FORCE)
+elseif (OGS_CONFIG STREQUAL MPI)
+	set(OGS_CONFIG_DEFAULT_LSOLVER "SP" CACHE INTERNAL "" FORCE)
+elseif (OGS_CONFIG STREQUAL PETSC)
+	set(OGS_CONFIG_DEFAULT_LSOLVER "PETSC" CACHE INTERNAL "" FORCE)
+elseif (OGS_CONFIG STREQUAL PETSC_GEMS)
+	set(OGS_CONFIG_DEFAULT_LSOLVER "PETSC" CACHE INTERNAL "" FORCE)
+	set(OGS_CONFIG_DEFAULT_CHEMSOLVER "GEMS" CACHE INTERNAL "" FORCE)
+endif()
 
-### Find directories and libraries ###
-INCLUDE (CMakeConfiguration/Find.cmake)
+# overwrite options if necessary
+if (OGS_LSOLVER STREQUAL DEFAULT OR NOT OGS_CONFIG EQUAL OGS_CONFIG_old)
+	set(OGS_LSOLVER ${OGS_CONFIG_DEFAULT_LSOLVER} CACHE STRING "" FORCE)
+endif()
+if (OGS_CHEMSOLVER STREQUAL DEFAULT OR NOT OGS_CONFIG EQUAL OGS_CONFIG_old)
+	set(OGS_CHEMSOLVER ${OGS_CONFIG_DEFAULT_CHEMSOLVER} CACHE STRING "" FORCE)
+endif()
+set(OGS_CONFIG_old ${OGS_CONFIG} CACHE INTERNAL "Copy of OGS_CONFIG")
 
-### General project setup ###
-INCLUDE(CMakeConfiguration/GeneralProjectSetup.cmake)
+if (OGS_CONFIG STREQUAL JFNK)
+	set(OGS_USE_JFNK ON)
+elseif (OGS_CONFIG STREQUAL LIS)
+	set(OGS_USE_LIS ON)
+elseif (OGS_CONFIG STREQUAL MKL)
+	set(OGS_USE_LIS ON)
+	set(OGS_USE_MKL ON)
+elseif (OGS_CONFIG STREQUAL MPI)
+	set(PARALLEL_USE_MPI ON)
+elseif (OGS_CONFIG STREQUAL PETSC)
+	set(PARALLEL_USE_MPI ON)
+elseif (OGS_CONFIG STREQUAL PETSC_GEMS)
+	set(PARALLEL_USE_MPI ON)
+endif()
 
-IF(BLUE_G)
-	ADD_DEFINITIONS ( "-O3 -qstrict -qarch=qp -qtune=qp" )
-ENDIF()
+#########################
+### Finding libraries ###
+#########################
 
-# Set default configuration when no other config is given
-IF (NOT (OGS_FEM OR OGS_FEM_SP OR OGS_FEM_GEMS OR OGS_FEM_PETSC_GEMS OR OGS_FEM_PQC OR OGS_FEM_BRNS OR OGS_FEM_CHEMAPP OR OGS_FEM_LIS OR OGS_FEM_MKL OR OGS_FEM_MPI OR OGS_USE_QT OR OGS_FEM_PETSC OR OGS_FEM_CAP))
-	MESSAGE (STATUS "No configuration specified. Default confuguration is used.")
-	SET (OGS_FEM ON)
-ENDIF ()
+if (OGS_CHEMSOLVER STREQUAL GEMS)
+	# need to set this before Find.cmake
+	set(OGS_USE_BOOST ON CACHE INTERNAL "Use Boost library")
+endif()
 
-# Check if a valid OGS configuration is given (see Macros.cmake)
-CHECK_CONFIG()
+include(scripts/cmake/CMakeSetup.cmake)
+include(scripts/cmake/CompilerSetup.cmake)
+include(scripts/cmake/Find.cmake)
+include(scripts/cmake/SubmoduleSetup.cmake)
+include(scripts/cmake/GeneralProjectSetup.cmake)
 
-# Additional options
-OPTION(OGS_PACKAGING "Creating installers / packages" OFF)
-OPTION_REQUIRES(OGS_PACKAGING_ZIP "Do you want to package as zip?" OGS_PACKAGING)
-OPTION(OGS_PYTHON "Enable python scripting interface" OFF)
-OPTION(OGS_BUILD_UTILITIES "Build additional utility programs?" OFF)
-OPTION(OGS_BUILD_FILECONVERTER "Build the OGS-5 / 6 fileconverter?" OFF)
-OPTION(OGS_CMAKE_DEBUG "Show additional cmake debug information" OFF)
-OPTION(OGS_ONE_BIG_GTEST "Should all gtests be collected to one ctest" ON)
-OPTION_REQUIRES(OGS_USE_OPENSG "VTK to OpenSG converter" OGS_USE_QT)
-OPTION_REQUIRES(OGS_USE_VRPN "Use VRPN for head tracking (experimental)" OGS_USE_QT)
-OPTION_REQUIRES(OGS_VRED_PLUGIN "Enable the Vred plugin (far from experimental)" OGS_USE_QT)
-OPTION(OGS_BUILD_INFO "Should build information be generated" ON)
-OPTION(CMAKE_CMD_ARGS "Build ogs5 storing the CMake command line args (hint: use cmake.ogs.sh" OFF )
-IF(GCC)
-	IF(GPROF_PATH)
-		OPTION(OGS_PROFILE "Enables compiling with flags set for profiling with gprof." OFF)
-		IF(OGS_PROFILE AND DOT_TOOL_PATH)
-			OPTION(OGS_OUTPUT_PROFILE "Enables pdf output of profiling results." OFF)
-		ENDIF() # OGS_PROFILE AND DOT_TOOL_PATH
-	ENDIF() # GPROF_PATH
+if(GCC)
+	if(GPROF_PATH)
+		option(OGS_PROFILE "Enables compiling with flags set for profiling with gprof." OFF)
+		if(OGS_PROFILE AND DOT_TOOL_PATH)
+			option(OGS_OUTPUT_PROFILE "Enables pdf output of profiling results." OFF)
+		endif()
+	endif()
 
 	OPTION_REQUIRES(OGS_COVERAGE "Enables code coverage measurements with gcov/lcov." OGS_BUILD_TESTS)
-ENDIF() # GCC
-OPTION (OGS_BUILD_TESTS "Enables building of tests." OFF)
-OPTION (OGS_NO_EXTERNAL_LIBS "Builds OGS without any external dependencies."
-OFF)
-OPTION (OGS_DELETE_EDGES_AFTER_INIT "Delete mesh edges after initialization if possible" OFF)
+endif()
 
-MARK_AS_ADVANCED(FORCE OGS_PYTHON OGS_CMAKE_DEBUG OGS_ONE_BIG_GTEST OGS_BUILD_INFO CMAKE_CMD_ARGS OGS_DELETE_EDGES_AFTER_INIT)
+mark_as_advanced(FORCE OGS_PYTHON OGS_CMAKE_DEBUG OGS_ONE_BIG_GTEST OGS_BUILD_INFO CMAKE_CMD_ARGS OGS_DELETE_EDGES_AFTER_INIT)
 
 ###########################################################################
-### OGS version information. Adjust these if you release a new version. ###
+### OGS version information is now obtained from Git tags. Adjust authors & date.
 ###########################################################################
-SET (OGS_VERSION_MAJOR 5)
-SET (OGS_VERSION_MINOR 5)
-SET (OGS_VERSION_PATCH 4)
-SET (OGS_RELEASE_PERSONS "WW")
-#SET (OGS_VERSION "${OGS_VERSION_MAJOR}.${OGS_VERSION_MINOR}.${OGS_VERSION_PATCH}(${OGS_RELEASE_PERSONS})")
-SET (OGS_VERSION "${OGS_VERSION_MAJOR}.${OGS_VERSION_MINOR}(${OGS_RELEASE_PERSONS})")
-# should we use ISO dates: 2010-12-31 ?
-SET (OGS_DATE "22.05.2014")
+set (OGS_RELEASE_PERSONS "")
+set (OGS_DATE "21.12.2018")
 
-# Check for number of processors
-INCLUDE(ProcessorCount)
-ProcessorCount(PROCESSOR_COUNT)
-IF(PROCESSOR_COUNT EQUAL 0)
-	MESSAGE(WARNING "Processor count could not be detected. Setting to one processor.")
-	SET(PROCESSOR_COUNT 1)
-ELSE()
-	MESSAGE(STATUS "Number of processors: ${PROCESSOR_COUNT}")
-ENDIF() # PROCESSOR_COUNT
+###################
+### Fem configs ###
+###################
+message (STATUS	"OGS_CONFIG: ${OGS_CONFIG}" )
+message (STATUS	"OGS_CHEMSOLVER: ${OGS_CHEMSOLVER}" )
+message (STATUS	"OGS_LSOLVER: ${OGS_LSOLVER}" )
 
-IF(OGS_FEM)
-	 MESSAGE (STATUS	"Configuring for FEM command line" )
-ENDIF(OGS_FEM)
+# chemical solvers
+if(OGS_CHEMSOLVER STREQUAL GEMS)
+	add_definitions(-DNO_ERROR_CONTROL -DGEM_REACT -DGEMlib -DIPMGEMPLUGIN )
+	if (MSVC)
+		set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+		set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+	endif ()
 
-IF(OGS_FEM_SP)
-	MESSAGE (STATUS	"Configuring for FEM command line with new sparse matrix" )
-	ADD_DEFINITIONS(-DNEW_EQS)
-ENDIF(OGS_FEM_SP)
+	include_directories( ${Boost_INCLUDE_DIR} )
+	link_directories( ${Boost_LIBRARY_DIR} )
 
-IF(OGS_FEM_JFNK)
-	MESSAGE (STATUS "Configuring for Jacobi free Newton-Krylov method for H2M problem" )
-	ADD_DEFINITIONS(-DNEW_EQS -DJFNK_H2M)
-ENDIF(OGS_FEM_JFNK)
+elseif(OGS_CHEMSOLVER STREQUAL IPQC)
+	add_definitions( -DOGS_FEM_IPQC )
 
-IF(OGS_FEM_PETSC)
-	MESSAGE (STATUS "Configuring for PETSc" )
+elseif(OGS_CHEMSOLVER STREQUAL PQC)
+	add_definitions(-DLIBPHREEQC -D_POSIX_SOURCE -DNO_ERROR_CONTROL)
+	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+		add_definitions ( "-DMDL_DEBUG" )
+	endif() # Debug
 
-	SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/findPETSC)
+elseif(OGS_CHEMSOLVER STREQUAL BRNS)
+	if (UNIX)
+		find_package(LAPACK)
+	endif()
+	add_definitions(-DBRNS -DNO_ERROR_CONTROL -D_POSIX_SOURCE)
 
-	FIND_PACKAGE(PETSc REQUIRED QUIET)
+elseif(OGS_CHEMSOLVER STREQUAL CAP)
+	set( PRJ_EXT "-CAP" )
+	add_definitions(-DOGS_FEM_CAP)
+	if (UNIX) # Only supported on Linux
+		include_directories(/usr/lib64)
+		link_directories(/usr/lib64)
+	endif ()
 
-	IF(PETSC_VERSION VERSION_GREATER 3.3)
-			 ADD_DEFINITIONS(-DUSEPETSC34 -DUSE_PETSC)
-        		 MESSAGE(STATUS "found version greater 3.3, version is ${PETSC_VERSION}")
-	ELSE(PETSC_VERSION VERSION_GREATER 3.3)
-			   ADD_DEFINITIONS(-DUSE_PETSC)
-	ENDIF(PETSC_VERSION VERSION_GREATER 3.3)
+endif()
 
+# linear solvers
+if(OGS_USE_JFNK)
+	set(OGS_LSOLVER "SP")
+	add_definitions(-DJFNK_H2M)
+endif()
 
-	INCLUDE_DIRECTORIES( ${PETSC_INCLUDES} )
-	FIND_PACKAGE(MPI)
-	IF(MPI_FOUND)
-	  SET(CMAKE_C_COMPILER ${MPI_COMPILER})
-	  SET(CMAKE_CXX_COMPILER ${MPI_COMPILER})
-	ELSE(MPI_FOUND)
-	  MESSAGE (FATAL_ERROR "Aborting: MPI implementation is not found!")
-	ENDIF(MPI_FOUND)
-ENDIF(OGS_FEM_PETSC)
+if(OGS_USE_LIS)
+	set(OGS_LSOLVER "SP")
+	add_definitions(-DIPMGEMPLUGIN -DLIS)
+	set(PARALLEL_USE_OPENMP ON CACHE INTERNAL "Use Open Multi-Processing")
+	set(LIS ON CACHE INTERNAL "Use Library of Iterative Solvers")
+endif()
 
-IF(OGS_FEM_PETSC_GEMS)
-	MESSAGE (STATUS "Configuring for GEMS with PETSc" )
+if(OGS_USE_MKL)
+	set(OGS_LSOLVER "SP")
+	add_definitions(-DNO_ERROR_CONTROL -DMKL -DIPMGEMPLUGIN)
+	set(PARALLEL_USE_OPENMP ON CACHE INTERNAL "Use Open Multi-Processing")
+	set(MKL ON INTERNAL "Use Math Kernel Library")
+endif()
 
-        INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
-        LINK_DIRECTORIES( ${Boost_LIBRARY_DIR} )
-	SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/findPETSC)
+if(OGS_LSOLVER STREQUAL RF)
+	set(SOLVER_PKG_NAME "Default")
 
-	FIND_PACKAGE(PETSc REQUIRED QUIET)
+elseif(OGS_LSOLVER STREQUAL SP)
+	add_definitions(-DNEW_EQS)
+	if(PARALLEL_USE_MPI)
+		add_definitions(-DUSE_MPI)
+	endif()
+	set(SOLVER_PKG_NAME "Alternative linear solver package (NEW_EQS)")
 
-	IF(PETSC_VERSION VERSION_GREATER 3.3)
-			 ADD_DEFINITIONS(-DUSEPETSC34 -DUSE_PETSC -DNO_ERROR_CONTROL -DGEM_REACT -DGEMlib -DIPMGEMPLUGIN)
-        		 MESSAGE(STATUS "found version greater 3.3, version is ${PETSC_VERSION}")
-	ELSE(PETSC_VERSION VERSION_GREATER 3.3)
-			   ADD_DEFINITIONS(-DUSE_PETSC -DNO_ERROR_CONTROL -DGEM_REACT -DGEMlib -DIPMGEMPLUGIN)
-	ENDIF(PETSC_VERSION VERSION_GREATER 3.3)
+elseif(OGS_LSOLVER STREQUAL PETSC)
+	message(STATUS "Configuring for PETSc")
 
-	INCLUDE_DIRECTORIES( ${PETSC_INCLUDES} )
-	FIND_PACKAGE(MPI)
-	IF(MPI_FOUND)
-	  SET(CMAKE_C_COMPILER ${MPI_COMPILER})
-	  SET(CMAKE_CXX_COMPILER ${MPI_COMPILER})
-	ELSE(MPI_FOUND)
-	  MESSAGE (FATAL_ERROR "Aborting: MPI implementation is not found!")
-	ENDIF(MPI_FOUND)
+	option(FORCE_PETSC_EXECUTABLE_RUNS "Force CMake to accept a given PETSc configuration" ON)
 
-	IF (MSVC)
-		SET (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-		SET (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-	ENDIF (MSVC)
+	##Force CMake to accept a given PETSc configuration in case the failure of MPI tests
+	##This may cause the compilation broken.
+	if(FORCE_PETSC_EXECUTABLE_RUNS)
+		set(PETSC_EXECUTABLE_RUNS YES)
+	endif()
 
-ENDIF(OGS_FEM_PETSC_GEMS)
+	set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/scripts/cmake/cmake/findPETSC)
 
-IF(OGS_FEM_MPI)
-	MESSAGE (STATUS "Configuring for FEM command line with MPI" )
-	IF (UNIX)
-		STRING (REGEX MATCH mpi MPI_COMPILER_SET ${CMAKE_CXX_COMPILER})
-		IF (NOT MPI_COMPILER_SET)
-			MESSAGE (FATAL_ERROR "Aborting. Make sure that you specified the mpi c and c++ compiler on the command line. E.g. cmake -DOGS_FEM_MPI=ON -DCMAKE_C_COMPILER=/opt/openmpi-1.4.1/bin/mpicc -DCMAKE_CXX_COMPILER=/opt/openmpi-1.4.1/bin/mpic++ ..")
-		ENDIF ()
-	ENDIF (UNIX)
-        OPTION(OGS_FEM_MPI_KRC "KinReact mpi config." OFF)
+	find_package(PETSc REQUIRED QUIET)
+	message(STATUS "PETSc version is ${PETSC_VERSION}")
+	include_directories( ${PETSC_INCLUDES} )
+	add_definitions(-DUSE_PETSC)
+	add_definitions(-DPETSC_VERSION_NUMBER=PETSC_VERSION_MAJOR*1000+PETSC_VERSION_MINOR*10)
+	set(SOLVER_PKG_NAME "PETSc linear solver package")
+endif()
 
-	SET(PARALLEL_USE_MPI ON CACHE BOOL "Use Message Passing Interface")
-	MARK_AS_ADVANCED(PARALLEL_USE_MPI)
-	ADD_DEFINITIONS(-DUSE_MPI -DNEW_EQS)
-ENDIF(OGS_FEM_MPI)
+### End fem configs ###
 
-IF(OGS_FEM_GEMS)
-	MESSAGE (STATUS	"Configuring for FEM command line with GEMS" )
-	ADD_DEFINITIONS( -DNEW_EQS -DNO_ERROR_CONTROL -DGEM_REACT -DGEMlib -DIPMGEMPLUGIN )
-	IF (MSVC)
-		SET (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-		SET (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-	ENDIF (MSVC)
+if(PARALLEL_USE_MPI)
+	message(STATUS "Enabling MPI")
+	find_package(MPI REQUIRED)
+	include_directories(${MPI_CXX_INCLUDE_PATH})
+endif()
 
-        INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
-        LINK_DIRECTORIES( ${Boost_LIBRARY_DIR} )
+if(PARALLEL_USE_OPENMP)
+	find_package( OpenMP REQUIRED )
+	set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}" )
+	set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}" )
+	set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgomp" )
+endif()
 
-	IF(PARALLEL_USE_MPI)
-		ADD_DEFINITIONS(-DUSE_MPI -DUSE_MPI_GEMS)
-	ENDIF(PARALLEL_USE_MPI)
-ENDIF(OGS_FEM_GEMS)
+if(OGS_DELETE_EDGES_AFTER_INIT)
+	add_definitions(-DOGS_DELETE_EDGES_AFTER_INIT)
+endif()
 
-IF(OGS_FEM_PQC)
-	MESSAGE (STATUS "Configuring for FEM command line with PQC" )
-	MESSAGE (STATUS "Configuration: g++ and LIBPHREEQC")
-	ADD_DEFINITIONS(-DLIBPHREEQC -D_POSIX_SOURCE -DNO_ERROR_CONTROL -DNEW_EQS)
-	ADD_SUBDIRECTORY ( PQC )
-	IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
-		ADD_DEFINITIONS ( "-DMDL_DEBUG" )
-	ENDIF() # Debug
-ENDIF(OGS_FEM_PQC)
-
-IF(OGS_FEM_BRNS)
-	MESSAGE (STATUS	"Configuring for FEM command line with BRNS" )
-	IF (UNIX)
-		FIND_PACKAGE(BLAS)
-		FIND_PACKAGE(LAPACK)
-	ENDIF()
-	ADD_DEFINITIONS(-DNEW_EQS -DBRNS -DNO_ERROR_CONTROL -D_POSIX_SOURCE)
-	IF(PARALLEL_USE_MPI)
-			ADD_DEFINITIONS(-DUSE_MPI_BRNS)
-	ENDIF(PARALLEL_USE_MPI)
-ENDIF(OGS_FEM_BRNS)
-
-IF(PARALLEL_USE_MPI)
-        IF(OGS_FEM_MPI_KRC)
-            ADD_DEFINITIONS(-DUSE_MPI -DUSE_MPI_KRC)
-        ELSE(OGS_FEM_MPI_KRC)
-            ADD_DEFINITIONS(-DUSE_MPI)
-        ENDIF(OGS_FEM_MPI_KRC)
-	# ADD_DEFINITIONS(-DNEW_EQS)
-ENDIF(PARALLEL_USE_MPI)
-
-IF(OGS_FEM_LIS)
-	MESSAGE (STATUS "Configuring for FEM command line with LIS" )
-	ADD_DEFINITIONS(-DNEW_EQS -DIPMGEMPLUGIN -DLIS)
-	SET(PARALLEL_USE_OPENMP ON CACHE BOOL "Use Library of Iterative Solvers")
-	SET(LIS ON CACHE BOOL "Use Library of Iterative Solvers")
-	MARK_AS_ADVANCED(PARALLEL_USE_OPENMP LIS)
-ENDIF(OGS_FEM_LIS)
-
-IF(OGS_FEM_MKL)
-	MESSAGE (STATUS	"Configuring for FEM command line with MKL" )
-	ADD_DEFINITIONS(-DNO_ERROR_CONTROL -DNEW_EQS -DMKL -DLIS)
-	SET(PARALLEL_USE_OPENMP ON CACHE BOOL "Use Library of Iterative Solvers")
-	SET(LIS ON CACHE BOOL "Use Library of Iterative Solvers")
-	SET(MKL ON CACHE BOOL "Use Math Kernel Library")
-	MARK_AS_ADVANCED(PARALLEL_USE_OPENMP LIS MKL)
-ENDIF(OGS_FEM_MKL)
-
-IF(OGS_FEM_CHEMAPP)
-	MESSAGE (STATUS	"Configuring for FEM command line with CHEMAPP" )
-	ADD_DEFINITIONS(-DCHEMAPP)
-ENDIF(OGS_FEM_CHEMAPP)
-
-IF(OGS_FEM_CAP)
-	MESSAGE (STATUS  "Configuring for FEM command line with CAP" )
-    SET( PRJ_EXT "-CAP" )
-	ADD_DEFINITIONS(-DOGS_FEM_CAP)
-        IF (UNIX) # Only supported on Linux
-	    INCLUDE_DIRECTORIES(/usr/lib64)
-	    LINK_DIRECTORIES(/usr/lib64)
-        ENDIF (UNIX)
-ENDIF(OGS_FEM_CAP)
-
-
-IF(OGS_VRED_PLUGIN)
-	ADD_DEFINITIONS(-DOGS_VRED_PLUGIN)
-ENDIF() # OGS_VRED_PLUGIN
-
-IF(OGS_PYTHON)
-	ADD_DEFINITIONS(-DOGS_PYTHON)
-ENDIF() # OGS_PYTHON
-
-IF(MSVC)
-	ADD_DEFINITIONS(-DMSVC)
-ENDIF() # MSVC
-
-IF(OGS_USE_OPENSG)
-	ADD_DEFINITIONS(-DOGS_USE_OPENSG)
-ENDIF() # OGS_USE_OPENSG
-
-IF(OGS_USE_VRPN)
-	ADD_DEFINITIONS(-DOGS_USE_VRPN)
-ENDIF() # OGS_USE_VRPN
-
-IF(OGS_USE_QT)
-	ADD_DEFINITIONS(-DOGS_USE_QT)
-ENDIF(OGS_USE_QT)
-
-IF(OGS_DELETE_EDGES_AFTER_INIT)
-	ADD_DEFINITIONS(-DOGS_DELETE_EDGES_AFTER_INIT)
-ENDIF()
+if(OGS_OUTPUT_TIME_ALLPCS)
+	add_definitions(-DOUTPUT_TIME_FOR_ALLPCS)
+endif()
 
 # Add subdirectories with the projects
-ADD_SUBDIRECTORY( Base )
-ADD_SUBDIRECTORY( MathLib )
-ADD_SUBDIRECTORY( GEO )
-ADD_SUBDIRECTORY( MSH )
-ADD_SUBDIRECTORY( MSHGEOTOOLS )
-ADD_SUBDIRECTORY( FEM )
-ADD_SUBDIRECTORY( GCC )
-IF(OGS_FEM_GEMS OR OGS_FEM_PETSC_GEMS)
-	ADD_SUBDIRECTORY( GEM )
-ENDIF(OGS_FEM_GEMS OR OGS_FEM_PETSC_GEMS)
-IF(OGS_FEM_CHEMAPP)
-	ADD_SUBDIRECTORY( EQL )
-	LINK_DIRECTORIES( ${CMAKE_SOURCE_DIR}/EQL )
-ENDIF(OGS_FEM_CHEMAPP)
-IF (OGS_FEM_CAP)
-   ADD_SUBDIRECTORY( CMP )
-ENDIF (OGS_FEM_CAP)
-ADD_SUBDIRECTORY( FileIO )
-ADD_SUBDIRECTORY( OGSProject )
-ADD_SUBDIRECTORY( OGS )
-ADD_SUBDIRECTORY( Qt )
+add_subdirectory( ThirdParty )
+include_directories (SYSTEM ${PROJECT_SOURCE_DIR}/ThirdParty)
+if(OGS_USE_CVODE)
+	add_definitions(-DOGS_USE_CVODE)
+	include_directories (SYSTEM
+		${PROJECT_SOURCE_DIR}/ThirdParty/cvode/include
+		${PROJECT_BINARY_DIR}/ThirdParty/cvode/include
+	)
+endif()
+
+add_subdirectory( Base )
+add_subdirectory( MathLib )
+add_subdirectory( GEO )
+add_subdirectory( MSH )
+add_subdirectory( MSHGEOTOOLS )
+add_subdirectory( FEM )
+add_subdirectory( GCC )
+if (OGS_CONFIG STREQUAL CAP)
+	add_subdirectory( CMP )
+endif ()
+add_subdirectory( FileIO )
+add_subdirectory( OGS )
+add_subdirectory( OGSProject )
 
 
 # Create Configure.h
-CONFIGURE_FILE (Base/Configure.h.in ${PROJECT_BINARY_DIR}/Base/Configure.h)
-CONFIGURE_FILE (Base/BuildInfo.h.in ${PROJECT_BINARY_DIR}/Base/BuildInfo.h)
+configure_file (Base/BuildInfo.cpp.in ${PROJECT_BINARY_DIR}/Base/BuildInfo.cpp)
 
-IF (BENCHMARK_DIR_FOUND OR GTEST_FOUND)
-	ENABLE_TESTING()
-ENDIF (BENCHMARK_DIR_FOUND OR GTEST_FOUND)
+if (EXAMPLEDATA_DIR_FOUND)
+	install (DIRECTORY ${EXAMPLEDATA_DIR_FOUND} DESTINATION . PATTERN .svn EXCLUDE)
+endif ()
 
-IF (EXAMPLEDATA_DIR_FOUND)
-	INSTALL (DIRECTORY ${EXAMPLEDATA_DIR_FOUND} DESTINATION . PATTERN .svn EXCLUDE)
-ENDIF (EXAMPLEDATA_DIR_FOUND)
+include(scripts/cmake/test/Test.cmake)
+if (OGS_BUILD_TESTS)
+	add_subdirectory(tests)
+endif ()
 
-IF (OGS_BUILD_TESTS)
-	ADD_SUBDIRECTORY(tests)
-ENDIF (OGS_BUILD_TESTS)
+include(scripts/cmake/packaging/Pack.cmake)
 
-IF (OGS_PACKAGING)
-	# Add packaging configuration
-	MESSAGE (STATUS "Enabling packaging")
-	INCLUDE( CMakeConfiguration/Pack.cmake)
-ENDIF (OGS_PACKAGING)
+if (OGS_CONFIG STREQUAL FEM OR OGS_CONFIG STREQUAL SP)
+    set(OGS_BUILD_UTILITIES ON)
+endif ()
 
-IF (OGS_CMAKE_DEBUG)
-	INCLUDE(ListAllCMakeVariableValues)
-	list_all_cmake_variable_values()
-ENDIF (OGS_CMAKE_DEBUG)
-
-IF (BENCHMARK_DIR_FOUND)
-	SET(BENCHMARK_TIMEOUT 1800) # in s, 30 minutes timeout on normal benchmarks
-	SET(EXCEEDING_BENCHMARK_TIMEOUT 86400) # 1 day timeout on exceeding benchmarks
-	STRING (COMPARE EQUAL "$ENV{HOSTNAME}" "dev2.intern.ufz.de" HOST_IS_DEV2)
-	IF (${HOST_IS_DEV2})
-		MESSAGE (STATUS "On dev2: file comparing enabled")
-	ENDIF (${HOST_IS_DEV2})
-
-	FILE (GLOB BENCHMARK_CONFIGS "${PROJECT_SOURCE_DIR}/../benchmarks/*.cmake")
-	FOREACH (BENCHMARK_CONFIG ${BENCHMARK_CONFIGS})
-		INCLUDE ("${BENCHMARK_CONFIG}")
-	ENDFOREACH(BENCHMARK_CONFIG)
-
-	UNSET (COPY_BENCHMARKS_TO_REF CACHE)
-ENDIF (BENCHMARK_DIR_FOUND)
-
-IF (OGS_BUILD_UTILITIES)
-	ADD_SUBDIRECTORY (UTL/MSHGEOTOOLS/)
-	ADD_SUBDIRECTORY (UTL/FileConverter/)
-	ADD_SUBDIRECTORY (UTL/GIS2FEM/)
-ENDIF (OGS_BUILD_UTILITIES)
-
-IF(OGS_BUILD_FILECONVERTER)
-	ADD_SUBDIRECTORY (UTL/FileConverter/OGSFileConverter)
-ENDIF()
+if (OGS_BUILD_UTILITIES)
+	add_subdirectory (UTL/MSHGEOTOOLS/)
+endif ()
 
 ## Documentation ##
-IF(DOXYGEN_FOUND)
-	OPTION(DOCS_GENERATE_DIAGRAMS "Use the DOT tool to generate class diagrams." OFF)
-	OPTION(DOCS_GENERATE_CALL_GRAPHS "Generate call dependency graphs." OFF)
-	OPTION(DOCS_GENERATE_COLLABORATION_GRAPHS "Generate collaboration graphs." OFF)
-	IF(DOT_TOOL_PATH AND DOCS_GENERATE_DIAGRAMS)
-		SET(DOT_FOUND "YES" CACHE INTERNAL "")
-	ENDIF() # DOT_TOOL_PATH AND DOCS_GENERATE_DIAGRAMS
-	IF(DOCS_GENERATE_CALL_GRAPHS)
-		SET(DOCS_GENERATE_CALL_GRAPHS_STRING "YES" CACHE INTERNAL "")
-	ENDIF() # DOCS_GENERATE_CALL_GRAPHS
-	IF(DOCS_GENERATE_COLLABORATION_GRAPHS)
-		SET(DOCS_GENERATE_COLLABORATION_GRAPHS_STRING "YES" CACHE INTERNAL "")
-	ENDIF() # DOCS_GENERATE_COLLABORATION_GRAPHS
-	GET_FILENAME_COMPONENT(DOT_TOOL_PATH_ONLY ${DOT_TOOL_PATH} PATH)
-	CONFIGURE_FILE(scripts/doxygen/Doxyfile.in ${PROJECT_BINARY_DIR}/Doxyfile)
-	ADD_CUSTOM_TARGET(doc ${DOXYGEN_EXECUTABLE} ${PROJECT_BINARY_DIR}/Doxyfile
+if(DOXYGEN_FOUND)
+	option(DOCS_GENERATE_DIAGRAMS "Use the DOT tool to generate class diagrams." OFF)
+	option(DOCS_GENERATE_CALL_GRAPHS "Generate call dependency graphs." OFF)
+	option(DOCS_GENERATE_COLLABORATION_GRAPHS "Generate collaboration graphs." OFF)
+	if(DOT_TOOL_PATH AND DOCS_GENERATE_DIAGRAMS)
+		set(DOT_FOUND "YES" CACHE INTERNAL "")
+	endif() # DOT_TOOL_PATH AND DOCS_GENERATE_DIAGRAMS
+	if(DOCS_GENERATE_CALL_GRAPHS)
+		set(DOCS_GENERATE_CALL_GRAPHS_STRING "YES" CACHE INTERNAL "")
+	endif() # DOCS_GENERATE_CALL_GRAPHS
+	if(DOCS_GENERATE_COLLABORATION_GRAPHS)
+		set(DOCS_GENERATE_COLLABORATION_GRAPHS_STRING "YES" CACHE INTERNAL "")
+	endif() # DOCS_GENERATE_COLLABORATION_GRAPHS
+	get_filename_component(DOT_TOOL_PATH_ONLY ${DOT_TOOL_PATH} PATH)
+	configure_file(scripts/doxygen/Doxyfile.in ${PROJECT_BINARY_DIR}/Doxyfile)
+	add_custom_target(doc ${DOXYGEN_EXECUTABLE} ${PROJECT_BINARY_DIR}/Doxyfile
 		WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
 		COMMENT "Generating source code documentation with Doxygen." VERBATIM)
-ENDIF() # DOXYGEN_FOUND
-
+endif() # DOXYGEN_FOUND

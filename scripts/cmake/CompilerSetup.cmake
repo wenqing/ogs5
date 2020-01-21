@@ -22,32 +22,34 @@ elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
 endif() # CMAKE_CXX_COMPILER_ID
 
 if (WIN32)
-	if (COMPILER_IS_MSVC)
+	if (MSVC)
+		# enable parallel compilation
+		# specify Exception Handling Model in msvc
+		# disable unknown pragma warning (4068)
+		# disable unsafe function warning (4996)
+		# disable decorated name length exceeded, name was truncated (4503)
+		# disable conversion from 'size_t' to 'type', possible loss of data (4267)
+		# disable qualifier applied to function type has no meaning; ignored (4180)
+		# disable C++ exception specification ignored except to indicate a function is not __declspec(nothrow) (4290)
+		# disable conversion from 'type1' to 'type2', possible loss of data (4244)
+		# disable forcing value to bool 'true' or 'false' (performance warning) (4800)
+		# define miniupnp static library
+		add_compile_options(/MP /EHsc /wd4068 /wd4996 /wd4503 /wd4267 /wd4180 /wd4290 /wd4244 /wd4800)
+
 		add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS
 			-D_CRT_XNONSTDC_NO_WARNINGS)
 		# Sets warning level 3 and ignores some warnings
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /wd4290 /wd4267")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3")
 		set(GCC OFF)
 
 		DisableCompilerFlag(DEBUG /RTC1)
-
-		# Set $PATH to Visual Studio bin directory. Needed for finding dumpbin.exe
-		if(MSVC80)
-			set(ENV{PATH} "$ENV{PATH};$ENV{VS80COMNTOOLS}..\\..\\VC\\bin")
-		endif ()
-		if(MSVC90)
-			set(ENV{PATH} "$ENV{PATH};$ENV{VS90COMNTOOLS}..\\..\\VC\\bin")
-		endif ()
-		if(MSVC10)
-			set(ENV{PATH} "$ENV{PATH};$ENV{VS100COMNTOOLS}..\\..\\VC\\bin")
-		endif ()
 	endif ()
 endif ()
 
 if(COMPILER_IS_GCC)
 	set(GCC ON)
 	if( NOT CMAKE_BUILD_TYPE STREQUAL "Debug" )
-		if (OGS_FEM_PETSC_GEMS)
+		if (OGS_CHEMSOLVER STREQUAL GEMS)
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -DNDEBUG")
 		else()
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -DNDEBUG")
@@ -63,7 +65,6 @@ if(COMPILER_IS_GCC)
 	  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-local-typedefs") # suppress warnings in Eigen
 	endif()
 
-	# would be cool: -Woverloaded-virtual, would be overkill: -Weffc++
 	add_definitions(-DGCC)
 
 	if (OGS_PROFILE)
