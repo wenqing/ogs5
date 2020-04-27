@@ -518,6 +518,18 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
                 in >> dmy_dp;
                 viscosity_pcs_name_vector.push_back("PRESSURE1");
             }
+            // my(p) = my_0*(1+gamma_p*(p-p_0)+gamma_T*(T-T_0))
+            if (viscosity_model == 22)
+            {
+                in >> my_0;
+                in >> p_0;
+                in >> dmy_dp;
+                in >> T_0;
+                in >> dmy_dT;
+                T_0 += TemperatureUnitOffset();
+                viscosity_pcs_name_vector.push_back("PRESSURE1");
+                viscosity_pcs_name_vector.push_back("TEMPERATURE1");
+            }
             if (viscosity_model == 3)  // my(T), Yaws et al. (1976)
             {  // optional: read reference temperature for viscosity model
                 viscosity_pcs_name_vector.push_back(
@@ -1834,6 +1846,13 @@ double CFluidProperties::Viscosity(double* variables)
             viscosity =
                 my_0 * (1. + dmy_dp * (max(primary_variable[0], 0.0) - p_0));
             break;
+        case 22:  // my(p) = my_0*(1+gamma_p*(p-p_0))
+        {
+            return viscosity =
+                       my_0 *
+                       (1. + dmy_dp * (max(primary_variable[0], 0.0) - p_0) +
+                        dmy_dT * (max(primary_variable[1], 0.0) - T_0));
+        }
         case 3:  // my^l(T), Yaws et al. (1976)
         {
             CRFProcess* m_pcs = PCSGet("MULTI_COMPONENTIAL_FLOW");
