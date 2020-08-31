@@ -5656,9 +5656,6 @@ void CFiniteElementStd::CalcRHS_by_ThermalDiffusion()
         Sw = MediaProp->SaturationCapillaryPressureFunction(-PG);
         poro = MediaProp->Porosity(Index, pcs->m_num->ls_theta);
         tort = MediaProp->TortuosityFunction(Index, unit, pcs->m_num->ls_theta);
-        beta = poro *
-               MediaProp->StorageFunction(Index, unit, pcs->m_num->ls_theta) *
-               Sw;
         humi = exp(PG / (SpecificGasConstant::WaterVapour * TG * rhow));
         Dv = MediaProp->base_heat_diffusion_coefficient * tort * (1 - Sw) *
              poro * pow(TG / PhysicalConstant::CelsiusZeroInKelvin, 1.8);
@@ -5673,6 +5670,7 @@ void CFiniteElementStd::CalcRHS_by_ThermalDiffusion()
         //---------------------------------------------------------
         // Calculate a Laplace
         for (i = 0; i < nnodes; i++)
+        {
             for (j = 0; j < nnodes; j++)
             {
                 if (j > i)
@@ -5680,9 +5678,10 @@ void CFiniteElementStd::CalcRHS_by_ThermalDiffusion()
                 for (size_t k = 0; k < dim; k++)
                     (*Laplace)(i, j) += fkt * Dtv * dshapefct[k * nnodes + i] *
                                         dshapefct[k * nnodes + j];
-                (*Mass)(i, j) += fkt * poro * (beta + (1.0 - Sw) * drdT) *
-                                 shapefct[i] * shapefct[j];
+                (*Mass)(i, j) +=
+                    fkt * poro * (1.0 - Sw) * drdT * shapefct[i] * shapefct[j];
             }
+        }
     }
     // Symmetry
     for (i = 0; i < nnodes; i++)
