@@ -131,6 +131,7 @@ std::ios::pos_type CSolidProperties::Read(std::ifstream* msp_file)
             if (SwellingPressureType == 1 || SwellingPressureType == 2)
             {
                 in_sd >> Max_SwellingPressure;
+                in_sd >> initial_saturation;
                 in_sd.clear();
             }
             // 10.03.2008 WW

@@ -2442,15 +2442,22 @@ void CFiniteElementVec::LocalAssembly_continuum(const int update)
         {
             dS = -interpolate(_nodal_S0, 1);
             dS += _wettingS;
-            for (i = 0; i < 3; i++)
-                dstress[i] -= 2.0 * _wettingS * dS * smat->Max_SwellingPressure;
+            if (_wettingS > smat->initial_saturation)
+            {
+                for (i = 0; i < 3; i++)
+                    dstress[i] -=
+                        2.0 * _wettingS * dS * smat->Max_SwellingPressure;
+            }
         }
         else if (smat->SwellingPressureType == 2)  // LBNL's model
         {
             dS = -interpolate(_nodal_S0, 1);
             dS += _wettingS;
-            for (i = 0; i < 3; i++)
-                dstress[i] -= dS * smat->Max_SwellingPressure;
+            if (_wettingS > smat->initial_saturation)
+            {
+                for (i = 0; i < 3; i++)
+                    dstress[i] -= dS * smat->Max_SwellingPressure;
+            }
         }
         /*
            else if(smat->SwellingPressureType==3||smat->SwellingPressureType==4)
