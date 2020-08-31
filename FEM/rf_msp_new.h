@@ -250,6 +250,7 @@ private:
     // Swelling pressure
     int SwellingPressureType;
     double Max_SwellingPressure;
+    double initial_saturation;
     //
     std::string CurveVariable_Conductivity;
     int CurveVariableType_Conductivity;
