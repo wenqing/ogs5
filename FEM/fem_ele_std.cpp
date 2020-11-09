@@ -9496,6 +9496,7 @@ void CFiniteElementStd::Assembly()
             // Multi-phase flow 24.02.2007 WW
             AssembleParabolicEquation();
             Assemble_Gravity();
+            Assemble_RHS_LIQUIDFLOW();
             if (cpl_pcs && MediaProp->heat_diffusion_model == 1)
                 Assemble_RHS_T_MPhaseFlow();
             if (dm_pcs)
@@ -11026,7 +11027,9 @@ void CFiniteElementStd::Assemble_RHS_LIQUIDFLOW()
         if (FluidProp->density_model > 7 && FluidProp->density_model < 15)
         {
             double arg[2];
-            arg[0] = interpolate(NodalVal1);   // p
+            arg[0] = std::max(0.0, (PcsType == EPT_MULTIPHASE_FLOW)? 
+                  interpolate(NodalVal2) - interpolate(NodalVal1):
+                 interpolate(NodalVal1));  // p
             arg[1] = interpolate(NodalValC1);  // T
             alpha_T_l = -FluidProp->drhodT(arg) / FluidProp->Density();
         }
@@ -11035,18 +11038,23 @@ void CFiniteElementStd::Assemble_RHS_LIQUIDFLOW()
                 -FluidProp
                      ->drho_dT;  // negative sign is required due to OGS input
 
-        if (PcsType == EPT_RICHARDS_FLOW)
+        if (PcsType == EPT_RICHARDS_FLOW || PcsType == EPT_MULTIPHASE_FLOW)
         {
-            // for Richards:
             PG = interpolate(NodalVal1);
-            if (PG < 0.0)
+            double p_c = 0.0;
+            if (PcsType == EPT_RICHARDS_FLOW)
+            {
+                PG = -PG; 
+            }
+            if (PG > 0.0)
             {
                 if (FluidProp->drho_dT_unsaturated)
-                    Sw = MediaProp->SaturationCapillaryPressureFunction(-PG);
+                    Sw = MediaProp->SaturationCapillaryPressureFunction(PG);
                 else
                     alpha_T_l = alpha_T_s = 0.0;
             }
         }
+
         const double eff_thermal_expansion =
             (SolidProp->biot_const - poro) * alpha_T_s + poro * Sw * alpha_T_l;
         //---------------------------------------------------------

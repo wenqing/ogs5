@@ -385,6 +385,8 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
                 in >> p_0;
                 in >> drho_dp;
                 in >> T_0;
+                compressibility_model_temperature = 6;
+                compressibility_model_pressure = 6;
                 T_0 += TemperatureUnitOffset();
                 in >> drho_dT;
                 density_pcs_name_vector.push_back("PRESSURE1");
