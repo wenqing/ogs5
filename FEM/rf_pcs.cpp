@@ -1359,18 +1359,20 @@ void CRFProcess::WriteSolution()
     if ((aktueller_zeitschritt % nwrite_restart) > 0)
         return;
 
+    const std::string component_name =
+        pcs_component_number >= 0 ? "_" + number2str(pcs_component_number) : "";
     std::string pcs_type_name(
         convertProcessTypeToString(this->getProcessType()));
 #if defined(USE_PETSC)  //|| defined(other parallel libs)//03.3012. WW
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     std::string m_file_name = FileName + "_" + pcs_type_name + "_" +
-                              pcs_primary_function_name[0] + "_primary_value_" +
-                              number2str(rank) + ".asc";
+                              pcs_primary_function_name[0] + component_name +
+                              "_primary_value_" + number2str(rank) + ".asc";
 
 #else
     std::string m_file_name = FileName + "_" + pcs_type_name + "_" +
-                              pcs_primary_function_name[0] +
+                              pcs_primary_function_name[0] + component_name +
                               "_primary_value.asc";
 #endif
     std::ofstream os(m_file_name.c_str(), ios::trunc | ios::out);
@@ -1412,18 +1414,20 @@ void CRFProcess::WriteSolution()
 **************************************************************************/
 void CRFProcess::ReadSolution()
 {
+    const std::string component_name =
+        pcs_component_number >= 0 ? "_" + number2str(pcs_component_number) : "";
+
     std::string pcs_type_name(
         convertProcessTypeToString(this->getProcessType()));
 #if defined(USE_PETSC)
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     std::string m_file_name = FileName + "_" + pcs_type_name + "_" +
-                              pcs_primary_function_name[0] + "_primary_value_" +
-                              number2str(rank) + ".asc";
-
+                              pcs_primary_function_name[0] + component_name +
+                              "_primary_value_" + number2str(rank) + ".asc";
 #else
     std::string m_file_name = FileName + "_" + pcs_type_name + "_" +
-                              pcs_primary_function_name[0] +
+                              pcs_primary_function_name[0] + component_name +
                               "_primary_value.asc";
 #endif
     std::ifstream is(m_file_name.c_str(), ios::in);
