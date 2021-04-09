@@ -2511,8 +2511,9 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
                     mat[i * dim + i] = SolidProp->Heat_Conductivity(TG);
             }
             // DECOVALEX THM1 or Curce 12.09. WW
-            else if (SolidProp->GetConductModel() % 3 == 0 ||
-                     SolidProp->GetConductModel()  == 31 ||
+            else if ((SolidProp->GetConductModel() != 0 &&
+                      SolidProp->GetConductModel() % 3 == 0) ||
+                     SolidProp->GetConductModel() == 31 ||
                      SolidProp->GetConductModel() == 4)
             {
                 // WW
