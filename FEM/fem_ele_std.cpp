@@ -806,6 +806,11 @@ void CFiniteElementStd::ConfigureCoupling(CRFProcess* pcs, const int* Shift,
                 idx_c0 = cpl_pcs->GetNodeValueIndex("HEAD");
                 idx_c1 = idx_c0 + 1;
             }
+            if (cpl_pcs)
+            {
+                idx_c0 = cpl_pcs->GetNodeValueIndex("DEFORMATION_FLOW");
+                idx_c1 = idx_c0 + 1;
+            }
             else
             {
                 cpl_pcs = PCSGet("LIQUID_FLOW");
