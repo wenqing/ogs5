@@ -65,7 +65,7 @@ if(COMPILER_IS_GCC)
 	  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-local-typedefs") # suppress warnings in Eigen
 	endif()
 
-	add_definitions(-DGCC)
+	add_definitions(-DGCC -std=gnu++11)
 
 	if (OGS_PROFILE)
 		if( NOT CMAKE_BUILD_TYPE STREQUAL "Release" )
