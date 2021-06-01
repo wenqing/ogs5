@@ -1956,7 +1956,7 @@ double CSolidProperties::getYoungsModulus(const long element_id,
             return CalulateValue(data_Youngs, reference);
         case 1:
             return (*data_Youngs)(0);
-        case 999:
+        case 9999:
             assert(_element_youngs_moduli);
             return _element_youngs_moduli->getParameterAtElement(element_id);
     }
