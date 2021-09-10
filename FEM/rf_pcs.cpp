@@ -6569,6 +6569,7 @@ void CRFProcess::SetSTWaterGemSubDomain(int myrank)
 void CRFProcess::dectivateConditionInExcavatedSubDomain(const int material_ID)
 {
     int rank = -1;
+#if !defined(USE_PETSC)  // && !defined(other parallel libs)//03~04.3012. WW
     if (dom_vector.size() > 0)
     {
 #if defined(USE_MPI)
@@ -6577,6 +6578,7 @@ void CRFProcess::dectivateConditionInExcavatedSubDomain(const int material_ID)
         rank = 0;
 #endif
     }
+#endif
 
     long begin = 0;
     long end = 0;
