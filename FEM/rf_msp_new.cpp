@@ -633,7 +633,8 @@ std::ios::pos_type CSolidProperties::Read(
                 in_sd.clear();
             }
             if (line_string.find("BGRA") != string::npos &&
-                line_string.find("IMPLICIT") == string::npos)
+                line_string.find("IMPLICIT") == string::npos &&
+                line_string.find("REFERENCE_STRESS") == string::npos)
             {
                 Creep_mode = 2;
                 /*! \subsection Temperature dependent creep model by BGR */
@@ -649,6 +650,27 @@ std::ios::pos_type CSolidProperties::Read(
                 in_sd >> (*data_Creep)(0);
                 in_sd >> (*data_Creep)(1);
                 in_sd >> (*data_Creep)(2);
+                in_sd.clear();
+            }
+            if (line_string.find("BGRA") != string::npos &&
+                line_string.find("REFERENCE_STRESS") != string::npos)
+            {
+                Creep_mode = 2;
+                /*! \subsection Temperature dependent creep model by BGR */
+                /*!
+                 * \f$\dot\epsilon_s=A\exp^{-Q/RT}\left(\frac{\sigma_v}{\sigma^\ast}\right)^n\f$
+                 */
+                // data_Creep:
+                //  0: A,   coefficient
+                //  1: n,   exponential
+                //  2: Q,   activation energy
+                //  3: sigma_f,  reference stress
+                data_Creep = new Matrix(4);
+                in_sd.str(GetLineFromFile1(msp_file));
+                in_sd >> (*data_Creep)(0);
+                in_sd >> (*data_Creep)(1);
+                in_sd >> (*data_Creep)(2);
+                in_sd >> (*data_Creep)(3);
                 in_sd.clear();
             }
             if (line_string.find("BGRA_IMPLICIT") != string::npos)
@@ -9328,10 +9350,14 @@ void CSolidProperties::AddStain_by_Creep(const int ns, double* stress_n,
         case 2:
             // gas constant = R = 8.314472(15) J ?K-1 ?mol-1
             // ec= A*exp(-G/RT)s^n
-            fac = 1.5 * dt * (*data_Creep)(0) *
-                  exp(-(*data_Creep)(2) /
-                      (PhysicalConstant::IdealGasConstant * temperature)) *
-                  pow(norn_S, (*data_Creep)(1));
+            {
+                const double sigma_f =
+                    (*data_Creep).Size() == 4 ? (*data_Creep)(3) : 1.0;
+                fac = 1.5 * dt * (*data_Creep)(0) *
+                      exp(-(*data_Creep)(2) /
+                          (PhysicalConstant::IdealGasConstant * temperature)) *
+                      pow(norn_S / sigma_f, (*data_Creep)(1));
+            }
             break;
         // TN: BGRb
         case 3:
