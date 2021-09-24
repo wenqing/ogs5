@@ -849,6 +849,21 @@ std::ios::pos_type CSolidProperties::Read(
                          // bishop_parameter=0.0;  else -> bishop_parameter=1.0
                     in_sd >> bishop_model_value;
                     break;
+                case 4:  // model 4:    if S<bishop_model_value ->
+                    in_sd >> bishop_model_value;
+                    if (bishop_model_value < 0.0 || bishop_model_value > 1.0)
+                    {
+                        {
+                            Display::ScreenMessage(
+                                "The parameter of Bishop model 4 is "
+                                "the cutoff of the effective saturation, and "
+                                "it must be in the range of [0:1]."
+                                "However its input value is %g ",
+                                bishop_model_value);
+                            abort();
+                        }
+                    }
+                    break;
                 default:
                     break;
             }
@@ -9755,10 +9770,12 @@ double CSolidProperties::getBishopCoefficient(const double effectiveS,
             return std::pow(effectiveS, bishop_model_value);
         case 3:
             return p < bishop_model_value ? 0.0 : 1.0;
+        case 4:
+            return effectiveS < bishop_model_value ? 0.0 : 1.0;
         default:
-            return p;
+            return 1.0;
     }
-    return p;
+    return 1.0;
 }
 
 double CSolidProperties::getBulkModulus() const
