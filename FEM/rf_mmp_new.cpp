@@ -3005,7 +3005,8 @@ double* CMediumProperties::HeatConductivityTensor(int number)
                 heat_conductivity_fluids =
                     Fem_Ele_Std->FluidProp->HeatConductivity();
 
-            if (cpl_pcs && cpl_pcs->type != 1)
+            // neither liquid, nor ground water flow, nor deformation_flow.
+            if (cpl_pcs && (!(cpl_pcs->type == 1 || cpl_pcs->type == 41)))
             {
                 double PG = Fem_Ele_Std->interpolate(
                     Fem_Ele_Std->NodalValC1);  // Capillary pressure

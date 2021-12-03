@@ -2479,7 +2479,8 @@ double MFPCalcFluidsHeatCapacity(CFiniteElementStd* assem)
         heat_capacity_fluids = assem->FluidProp->Density() *
                                assem->FluidProp->SpecificHeatCapacity();
 
-        if (m_pcs && m_pcs->type != 1)  // neither liquid nor ground water flow
+        if (m_pcs && (!(m_pcs->type == 1 || m_pcs->type == 41)))
+        // neither liquid, nor ground water flow, nor deformation_flow.
         {
             //  pressure
             PG = assem->interpolate(assem->NodalValC1);
