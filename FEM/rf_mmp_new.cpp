@@ -4637,7 +4637,8 @@ CMediumProperties::PorosityEffectiveConstrainedSwellingConstantIonicStrength(
    last modification:
    10/2010 TF changed access to process type
 **************************************************************************/
-double* CMediumProperties::PermeabilityTensor(const long index, const int gp)
+double* CMediumProperties::PermeabilityTensor(const long index, const int gp,
+                                              const double S)
 {
     static double tensor[9];
 

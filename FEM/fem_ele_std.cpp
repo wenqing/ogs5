@@ -2629,7 +2629,7 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
                 fac_perm *=
                     MediaProp->PermeabilityFunctionStrain(Index, nnodes, h_fem);
 
-            tensor = MediaProp->PermeabilityTensor(Index, ip);
+            tensor = MediaProp->PermeabilityTensor(Index, ip, Sw);
 
             if (MediaProp->unconfined_flow_group ==
                 2)  // 3D unconfined GW JOD, 5.3.07
@@ -2833,7 +2833,7 @@ void CFiniteElementStd::CalCoefLaplace2(const bool Gravity, const int dof_index,
             PG = interpolate(NodalVal1);
             Sw = MediaProp->SaturationCapillaryPressureFunction(PG);
             //
-            tensor = MediaProp->PermeabilityTensor(Index, ip);
+            tensor = MediaProp->PermeabilityTensor(Index, ip, Sw);
             mat_fac = MediaProp->PermeabilitySaturationFunction(Sw, 0) /
                       FluidProp->Viscosity();
             for (size_t i = 0; i < dim * dim; i++)
@@ -2912,7 +2912,7 @@ void CFiniteElementStd::CalCoefLaplace2(const bool Gravity, const int dof_index,
                 rho_ga = GasProp->Density(dens_arg);
                 rho_g = rho_ga + rho_gw;
             }
-            tensor = MediaProp->PermeabilityTensor(Index, ip);
+            tensor = MediaProp->PermeabilityTensor(Index, ip, Sw);
             mat_fac = MediaProp->PermeabilitySaturationFunction(Sw, 0) /
                       FluidProp->Viscosity();
             m_fac = 0.;
@@ -2956,7 +2956,7 @@ void CFiniteElementStd::CalCoefLaplace2(const bool Gravity, const int dof_index,
             dens_arg[0] = PG2;
             rho_ga = GasProp->Density(dens_arg);
             //
-            tensor = MediaProp->PermeabilityTensor(Index, ip);
+            tensor = MediaProp->PermeabilityTensor(Index, ip, Sw);
             mat_fac = rho_ga *
                       MediaProp->PermeabilitySaturationFunction(Sw, 1) /
                       (GasProp->Viscosity() * rhow);

@@ -6464,7 +6464,7 @@ int CECLIPSEData::WriteDataBackToEclipse(CRFProcess* m_pcs, std::string folder)
                 tempstring3 += " ";  // 1lz
                 if (eclipse_ele_active_flag[i])
                 {
-                    tensor = mmp_vector[0]->PermeabilityTensor(count);
+                    tensor = mmp_vector[0]->PermeabilityTensor(count, 0);
                     // x
                     sstream << fixed << scientific
                             << tensor[0] / 9.869233e-16;  // m²->mD

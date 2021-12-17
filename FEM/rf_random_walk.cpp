@@ -708,7 +708,7 @@ void RandomWalk::InterpolateVelocityOfTheParticleByInverseDistance(Particle* A)
     CMediumProperties* MediaProp = mmp_vector[m_ele->GetPatchIndex()];
     // OK411 int phase = 0;
     CFluidProperties* FluidProp = mfp_vector[0];
-    double* kTensor = MediaProp->PermeabilityTensor(A->elementIndex);
+    double* kTensor = MediaProp->PermeabilityTensor(A->elementIndex, 0);
     double k = kTensor[0];
 
     A->K = k * FluidProp->Density() * 9.81 / FluidProp->Viscosity();
@@ -914,7 +914,7 @@ void RandomWalk::InterpolateVelocityOfTheParticleByBilinear(int option,
             // Let's get the hydraulic conductivity first.
             CMediumProperties* MediaProp = mmp_vector[m_ele->GetPatchIndex()];
             CFluidProperties* FluidProp = mfp_vector[0];
-            double* kTensor = MediaProp->PermeabilityTensor(eleIndex);
+            double* kTensor = MediaProp->PermeabilityTensor(eleIndex, 0);
             double k = kTensor[0];
 
             A->K = k * FluidProp->Density() * 9.81 / FluidProp->Viscosity();
@@ -1545,7 +1545,7 @@ double* RandomWalk::InterpolateLocationOfTheParticleByBilinear(Particle* A,
         CMediumProperties* MediaProp = mmp_vector[m_ele->GetPatchIndex()];
         // OK411 int phase = 0;
         CFluidProperties* FluidProp = mfp_vector[0];
-        double* kTensor = MediaProp->PermeabilityTensor(eleIndex);
+        double* kTensor = MediaProp->PermeabilityTensor(eleIndex, 0);
         double k = kTensor[0];
 
         A->K = k * FluidProp->Density() * 9.81 / FluidProp->Viscosity();

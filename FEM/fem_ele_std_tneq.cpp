@@ -271,7 +271,7 @@ void CFiniteElementStd::CalCoefLaplaceTNEQ(const int dof_index)
             T = ipol(T0, T1, theta, this);
             X = ipol(X0, X1, theta, this);
 
-            double* tensor = MediaProp->PermeabilityTensor(Index);
+            double* tensor = MediaProp->PermeabilityTensor(Index, 0);
             double k_rel = 1.0;
             if (MediaProp->flowlinearity_model > 0)
             {
@@ -799,7 +799,7 @@ double CFiniteElementStd::CalCoef_RHS_TNEQ(const int dof_index)
                 // HS, implementing the friction term here.
 
                 const double* tensor = MediaProp->PermeabilityTensor(
-                    Index);          // pointer to permeability tensor;
+                    Index, 0);       // pointer to permeability tensor;
                 double k_rel = 1.0;  // relative permeability;
 
                 // HS, added to get viscosity------------

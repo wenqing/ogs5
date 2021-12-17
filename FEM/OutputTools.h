@@ -29,7 +29,7 @@ struct ELEMENT_MMP_VALUES
                 mat_value = mmp->Porosity(i_e, theta);
                 break;
             case 1:
-                mat_value = mmp->PermeabilityTensor(i_e)[0];
+                mat_value = mmp->PermeabilityTensor(i_e, 0)[0];
                 break;
             case 2:
                 mat_value = mmp->StorageFunction(i_e, gp, theta);

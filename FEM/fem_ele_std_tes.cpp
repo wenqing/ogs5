@@ -275,7 +275,7 @@ void CFiniteElementStd::CalCoefLaplaceTES(const int dof_index)
             T = ipol(T0, T1, theta, this);
             X = ipol(X0, X1, theta, this);
 
-            double* tensor = MediaProp->PermeabilityTensor(Index);
+            double* tensor = MediaProp->PermeabilityTensor(Index, 0);
             double k_rel = 1.0;
             if (MediaProp->flowlinearity_model > 0)
             {

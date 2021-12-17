@@ -1089,7 +1089,8 @@ void LegacyVtkInterface::WriteVTKDataArrays(fstream& vtk_file) const
                     // KG44 22.2.2013 this is not working as expected...we need
                     // to differenciate for type of permeability_tensor
                     for (size_t i = 0; i < 9; i++)
-                        vtk_file << MediaProp->PermeabilityTensor(j)[i] << " ";
+                        vtk_file << MediaProp->PermeabilityTensor(j, 0)[i]
+                                 << " ";
                     // KG44 this is buggy
                     // MediaProp->PermeabilityTensor(j)[i * 3 + i] << " ";
                     vtk_file << "\n";
