@@ -923,6 +923,12 @@ std::ios::pos_type CMediumProperties::Read(
                     permeability_tensor[1] = permeability_tensor[2] =
                         permeability_tensor[0];
                     break;
+                case 'D':  // dual porosity isotropic
+                    permeability_tensor_type = 0;
+                    permeability_model = 11;
+                    in >> permeability_tensor[0];  // k0
+                    in >> permeability_tensor[1];  // beta
+                    break;
                 case 'O':  // orthotropic
                     permeability_tensor_type = 1;
                     if (geo_dimension == 0)
@@ -4919,6 +4925,18 @@ double* CMediumProperties::PermeabilityTensor(const long index, const int gp,
             idx_k = m_pcs_tmp->GetElementValueIndex("PERMEABILITY");
             tensor[0] = m_pcs_tmp->GetElementValue(index, idx_k + 1);
         }
+        // dual porosity model
+        else if (permeability_model == 11)
+        {
+            const double n0 = Porosity(index, 1.0);
+            const double k0 = permeability_tensor[0];
+            const double beta = permeability_tensor[1];
+            const double nM = n0 * std::exp(-beta * S);
+            const double fac1 = (1 - n0) / (1 - nM);
+            const double fac2 = nM / n0;
+
+            tensor[0] = k0 * fac1 * fac1 * std::pow(fac2, 3.0);
+        }
         // end of K-C
         // relationship-----------------------------------------------------------------------------------
     }
@@ -7574,7 +7592,7 @@ double CMediumProperties::NonlinearFlowFunction(long index, int gp,
         double v_mag = MBtrgVec(vel, 3);
         if (v_mag != 0.0)
         {
-            double* k_tensor = assem->MediaProp->PermeabilityTensor(index);
+            double* k_tensor = assem->MediaProp->PermeabilityTensor(index, 0);
             double k0 = k_tensor[0];
             k_rel = 1.0 / (1.0 + forchheimer_a2 * k0 * v_mag);
         }
