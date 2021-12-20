@@ -2830,7 +2830,6 @@ void CFiniteElementStd::CalCoefLaplace2(const bool Gravity, const int dof_index,
     {
         case 0:
         {
-            PG = interpolate(NodalVal1);
             Sw = MediaProp->SaturationCapillaryPressureFunction(PG);
             //
             tensor = MediaProp->PermeabilityTensor(Index, ip, Sw);
@@ -2888,8 +2887,6 @@ void CFiniteElementStd::CalCoefLaplace2(const bool Gravity, const int dof_index,
         case 1:
             if (Gravity)
             {
-                PG = interpolate(NodalVal1);
-                PG2 = interpolate(NodalVal_p2);
                 Sw = MediaProp->SaturationCapillaryPressureFunction(PG);
                 dens_arg[0] = PG;  // Shdould be Pw in some cases
                 if (diffusion)
@@ -10060,13 +10057,15 @@ void CFiniteElementStd::CalcSaturation(MeshLib::CElem& elem)
         if (i > nnodes)
             continue;
         getShapefunctValues(gp, 1);
+
+        PG = interpolate(NodalVal0);
+        NodalVal_Sat[i] = MediaProp->SaturationCapillaryPressureFunction(PG);
         //
         // CB_merge_0513 in case of het K, store local K
         // CB_merge_0513
-        double* tens = MediaProp->PermeabilityTensor(Index, gp);
+        double* tens =
+            MediaProp->PermeabilityTensor(Index, gp, NodalVal_Sat[i]);
         MediaProp->local_permeability = tens[0];
-        PG = interpolate(NodalVal0);
-        NodalVal_Sat[i] = MediaProp->SaturationCapillaryPressureFunction(PG);
     }
 
     CalcXi_p();
@@ -10218,12 +10217,19 @@ void CFiniteElementStd::CalcNodeMatParatemer(MeshLib::CElem& elem)
 
         getShapefunctValues(gp, 1);
         PG = interpolate(NodalVal1);
+        // Richards flow
+        if (pcs->type == 14 || pcs->type == 22)
+        {
+            PG *= -1.0;
+        }
+
         //
         if ((pcs->additioanl2ndvar_print > 0) &&
             (pcs->additioanl2ndvar_print < 3))
         {
+            const double S = MediaProp->SaturationCapillaryPressureFunction(PG);
             double* tensor =
-                MediaProp->PermeabilityTensor(MeshElement->index, gp);
+                MediaProp->PermeabilityTensor(MeshElement->index, gp, S);
             // Modified LBNL model
             if (MediaProp->permeability_stress_mode == 2 ||
                 MediaProp->permeability_stress_mode == 3)
