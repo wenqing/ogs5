@@ -854,11 +854,11 @@ std::ios::pos_type CMediumProperties::Read(
                     break;
                 case 7:  // RW/WW
                 {
-                    if (!PCSGet("DEFORMATION"))
+                    if (!(PCSGet("DEFORMATION") || PCSGet("DEFORMATION_FLOW")))
                     {
                         ScreenMessage(
                             "Error: Porosity model 7 must be combined with "
-                            "deformation process");
+                            "DEFORMATION or DEFORMATION_FLOW process");
                         exit(EXIT_FAILURE);
                     }
                 }
