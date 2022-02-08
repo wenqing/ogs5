@@ -778,7 +778,8 @@ std::ios::pos_type CMediumProperties::Read(
         //------------------------------------------------------------------------
 
         // subkeyword found
-        if (line_string.find("$STORAGE") != std::string::npos)
+        if (line_string.find("$STORAGE") != std::string::npos &&
+            line_string.find("_") == std::string::npos)
         {
             in.str(GetLineFromFile1(mmp_file));
             in >> storage_model;
