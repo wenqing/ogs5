@@ -202,17 +202,17 @@ void VariableValues::interpolate(const std::string& output_path)
             for (std::size_t i = 0; i < variable_names.size(); i++)
             {
                 const std::string variable_file_name =
-                    output_path + getDirSep() + variable_names[i] + ".txt";
+                    output_path + getDirSep() + variable_names[i] + ".csv";
                 std::ofstream ofs(variable_file_name.data(), std::ios::trunc);
                 ofs << "Time";
 
-                const std::string delim = " ";
+                const std::string delim = ",";
                 for (std::vector<UTL::SpecifiedPoint>::const_iterator it_spt =
                          _specified_points.begin();
                      it_spt != _specified_points.end();
                      ++it_spt)
                 {
-                    ofs << delim << std::setw(20) << (*it_spt).name;
+                    ofs << delim << (*it_spt).name;
                 }
                 ofs << std::endl;
 
@@ -239,14 +239,14 @@ void VariableValues::interpolate(const std::string& output_path)
             for (std::size_t i = 0; i < variable_names.size(); i++)
             {
                 const std::string variable_file_name =
-                    output_path + getDirSep() + variable_names[i] + ".txt";
+                    output_path + getDirSep() + variable_names[i] + ".csv";
                 std::ofstream ofs(variable_file_name.data(), std::ios::app);
 
                 ofs.setf(std::ios::scientific, std::ios::floatfield);
                 ofs.precision(12);
                 ofs << (*it).time;
 
-                const std::string delim = " ";
+                const std::string delim = ",";
                 std::vector<double> const&
                     interpolated_values_of_this_variable =
                         interpolated_value_set[i];
