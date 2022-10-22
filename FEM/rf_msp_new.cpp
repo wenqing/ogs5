@@ -16,7 +16,7 @@
 **************************************************************************/
 
 // C++ STL
-//#include <math.h>
+//#include <cmath>
 //#include <string>
 //#include <fstream>
 //#include <iostream>
@@ -341,6 +341,15 @@ std::ios::pos_type CSolidProperties::Read(std::ifstream* msp_file)
                     capacity_pcs_name_vector.push_back("SATURATION1");
                     break;
                 case 31:  // k = k_dry * (1-S) + k_wet * S
+                    // 0. dry conductivity
+                    // 1. wet conductivity
+                    data_Conductivity = new Matrix(2);
+                    for (i = 0; i < 2; i++)
+                        in_sd >> (*data_Conductivity)(i);
+                    in_sd.clear();
+                    capacity_pcs_name_vector.push_back("SATURATION1");
+                    break;
+                case 32:  // k = k_dry * (1-sqrt(S)) + k_wet * sqrt(S)
                     // 0. dry conductivity
                     // 1. wet conductivity
                     data_Conductivity = new Matrix(2);
@@ -1749,6 +1758,15 @@ double CSolidProperties::Heat_Conductivity(double reference)
             //		k_T[0]: dry one
             //  k_T[1]: wet one
             return k_T[0] * (1.0 - reference) + k_T[1] * reference;
+        }
+        break;
+        case 32:  // K_dry *(1-sqrt(S)) + K_wet * sqrt(S)
+        {
+            const double* k_T = data_Conductivity->getEntryArray();
+            const double sqrt_S = std::sqrt(reference);
+            //	k_T[0]: dry one
+            //  k_T[1]: wet one
+            return k_T[0] * (1.0 - sqrt_S) + k_T[1] * sqrt_S;
         }
         break;
         case 4:  // 21.12.2009. WW
