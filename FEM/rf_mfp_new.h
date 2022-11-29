@@ -29,6 +29,7 @@ namespace MaterialLib
 namespace Fluid
 {
 class WaterDensityIAPWSIF97Region1;
+double LinearWaterVapourLatentHeat(double const T);
 }
 }  // namespace MaterialLib
 /*!
@@ -138,6 +139,8 @@ public:
         Fem_Ele_Std = fem;
     }
 
+    bool useLatentHeat() const { return _use_latent_heat; }
+
 private:
     int fluid_id;  // specification of substance (NB JUN 09)
     std::string name;
@@ -246,6 +249,8 @@ private:
 
     const double _reference_temperature;
 
+    bool _use_latent_heat;
+
     // State variables
     double p_0;
     /**
@@ -310,6 +315,8 @@ private:
                                   int phase_number,
                                   const bool for_output);
     friend void MMPCalcSecondaryVariablesNew(CRFProcess*, bool);
+    friend double MFPCalcFluidsHeatCapacity(
+        const int gp, FiniteElement::CFiniteElementStd* assem);
 };
 
 extern std::vector<CFluidProperties*> mfp_vector;
@@ -318,7 +325,7 @@ extern void MFPWrite(std::string);
 #define MFP_FILE_EXTENSION ".mfp"
 
 extern double MFPCalcFluidsHeatCapacity(
-    FiniteElement::CFiniteElementStd* assem = NULL);
+    const int gp, FiniteElement::CFiniteElementStd* assem = NULL);
 extern double MFPCalcFluidsHeatConductivity(
     long index,
     double* gp,

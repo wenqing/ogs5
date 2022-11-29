@@ -17,6 +17,7 @@
 #ifndef fem_std_INC
 #define fem_std_INC
 
+#include <vector>
 //#include "FEMEnums.h"
 
 #include "fem_ele.h"
@@ -86,6 +87,19 @@ using Math_Group::Matrix;
 using Math_Group::SymMatrix;
 using Math_Group::Vec;
 using process::CRFProcessDeformation;
+
+struct VaporVariableBuffer
+{
+    double L0;
+    double rho_w;
+    double S_w = 1.0;
+    double Dvp;
+    double rho_gw;
+    double drho_gw_dp;
+    double drho_gw_dT;
+    double p_ip;
+    double T_ip;
+};
 
 class CFiniteElementStd : public CElement
 {
@@ -273,6 +287,8 @@ public:
     // void Set_ctx_(long ele_index, double val, int gaussp, int i_dim);
     // double Get_ctx_(long ele_index, int gaussp, int i_dim);
 
+    std::vector<VaporVariableBuffer> vapor_variable_buffer;
+
 private:
     bool newton_raphson;  // 24.05.2007 WW
     long index;
@@ -348,12 +364,13 @@ private:
     // Primary as water head
     bool HEAD_Flag;
     //
+
 public:
     void Config();
 
 protected:
     //
-    double CalCoefMass();
+    double CalCoefMass(const int gp);
     // 25.2.2007 WW
     double CalCoefMass2(const int dof_index, const int gp);
     double CalCoefMasstneq(int dof_index);
@@ -401,7 +418,7 @@ protected:
     // AKS
     double CalCoef_RHS_AIR_FLOW(int dof_index);
     // AKS
-    double CalCoef_RHS_HEAT_TRANSPORT(int dof_index);
+    double CalCoef_RHS_HEAT_TRANSPORT(const int dof_index);
     // AKS
     double CalCoef_RHS_HEAT_TRANSPORT2(const int dof_index, const int ip);
     void CalNodalEnthalpy();
@@ -457,6 +474,7 @@ protected:
     void Assemble_RHS_Pc();               // 03.2009 PCH
     void Assemble_RHS_AIR_FLOW();         // AKS
     void Assemble_RHS_HEAT_TRANSPORT();   // AKS
+    void Assemble_RHS_LATENT_HEAT_TRANSPORT();
     void Assemble_RHS_TNEQ();             // AKS
     void Assemble_RHS_TES();              // AKS
     void Assemble_RHS_HEAT_TRANSPORT2();  // AKS
@@ -480,7 +498,8 @@ protected:
     friend class SolidProp::CSolidProperties;
     friend class ::CFluidProperties;
     // Friend functions. WW
-    friend double ::MFPCalcFluidsHeatCapacity(CFiniteElementStd* assem);
+    friend double ::MFPCalcFluidsHeatCapacity(const int gp,
+                                              CFiniteElementStd* assem);
 
     // Auxillarary vectors for node values
     // Vector of local node values, e.g. pressure, temperature.

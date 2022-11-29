@@ -52,6 +52,17 @@ using namespace PhysicalConstant;
 using namespace std;
 using namespace Display;
 
+namespace MaterialLib
+{
+namespace Fluid
+{
+double LinearWaterVapourLatentHeat(double const T)
+{
+    return 2.501e+6 - 2369.2 * (T - PhysicalConstant::CelsiusZeroInKelvin);
+}
+}  // namespace Fluid
+}  // namespace MaterialLib
+
 //==========================================================================
 std::vector<CFluidProperties*> mfp_vector;
 
@@ -71,6 +82,7 @@ double TemperatureUnitOffset()
 CFluidProperties::CFluidProperties()
     : name("WATER"),
       _reference_temperature(PhysicalConstant::CelsiusZeroInKelvin + 20.0),
+      _use_latent_heat(false),
       densityIAPWS(NULL)
 {
     phase = 0;
@@ -117,7 +129,6 @@ CFluidProperties::CFluidProperties()
     cmpN = 0;
 
     fluid_id = 1;  // Water
-
 #ifdef MFP_TEST  // WW
     scatter_data = NULL;
 #endif
@@ -653,6 +664,13 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
             in.clear();
             continue;
         }
+        // subkeyword found
+        if (line_string.find("$USE_LATENT_HEAT") != string::npos)
+        {
+            _use_latent_heat = true;
+            continue;
+        }
+
         //....................................................................
         // subkeyword found
         if (line_string.find("$SPECIFIC_HEAT_CAPACITY") != string::npos)
@@ -2442,31 +2460,32 @@ double CFluidProperties::PhaseChange()
    Programing:
    02/2007 WW MFP implementation based on MATCalcFluidHeatCapacity (OK)
 **************************************************************************/
-double MFPCalcFluidsHeatCapacity(CFiniteElementStd* assem)
+double MFPCalcFluidsHeatCapacity(const int gp, CFiniteElementStd* assem)
 {
     double heat_capacity_fluids = 0.0;
-    double PG = 0.0, Sw = 0.0, TG, rhow, rho_gw, p_gw, dens_aug[3], rho_g;
-    CFluidProperties* m_mfp = NULL;
-    CRFProcess* m_pcs = assem->cpl_pcs;
+    CRFProcess const* m_pcs = assem->cpl_pcs;
     // if (m_pcs->pcs_type_name.find("MULTI_PHASE_FLOW")!=string::npos)
     if (m_pcs && m_pcs->type == 1212)  // non-isothermal multi-phase flow
     {
         // Capillary pressure
-        PG = assem->interpolate(assem->NodalValC1);
-        Sw = assem->MediaProp->SaturationCapillaryPressureFunction(PG);
-        double PG2 = assem->interpolate(assem->NodalVal_p2);
-        TG = assem->interpolate(assem->NodalVal1);
-        rhow = assem->FluidProp->Density();
-        rho_gw = assem->FluidProp->vaporDensity(TG) *
-                 exp(-PG / (rhow * SpecificGasConstant::WaterVapour * TG));
-        p_gw = rho_gw * SpecificGasConstant::WaterVapour * TG;
+        const double PG = assem->interpolate(assem->NodalValC1);
+        const double Sw =
+            assem->MediaProp->SaturationCapillaryPressureFunction(PG);
+        const double PG2 = assem->interpolate(assem->NodalVal_p2);
+        const double TG = assem->interpolate(assem->NodalVal1);
+        const double rhow = assem->FluidProp->Density();
+        const double rho_gw =
+            assem->FluidProp->vaporDensity(TG) *
+            exp(-PG / (rhow * SpecificGasConstant::WaterVapour * TG));
+        const double p_gw = rho_gw * SpecificGasConstant::WaterVapour * TG;
+        double dens_aug[3];
         dens_aug[0] = PG2 - p_gw;
         dens_aug[1] = TG;
-        m_mfp = mfp_vector[1];
+        CFluidProperties* m_mfp_g = mfp_vector[1];
         // 2 Dec 2010 AKS
-        rho_g = rho_gw + m_mfp->Density(dens_aug);
+        const double rho_g = rho_gw + m_mfp_g->Density(dens_aug);
         //
-        m_mfp = mfp_vector[0];
+        CFluidProperties* m_mfp = mfp_vector[0];
         heat_capacity_fluids =
             Sw * m_mfp->Density() * m_mfp->SpecificHeatCapacity();
         m_mfp = mfp_vector[1];
@@ -2476,24 +2495,83 @@ double MFPCalcFluidsHeatCapacity(CFiniteElementStd* assem)
 
     else
     {
-        heat_capacity_fluids = assem->FluidProp->Density() *
-                               assem->FluidProp->SpecificHeatCapacity();
+        CFluidProperties* m_mfp0 = assem->FluidProp;
+        const double rhow = m_mfp0->Density();
+        heat_capacity_fluids = rhow * m_mfp0->SpecificHeatCapacity();
+        assem->vapor_variable_buffer[gp].S_w = 1.0;
 
         if (m_pcs && m_pcs->type != 1)  // neither liquid nor ground water flow
         {
             //  pressure
-            PG = assem->interpolate(assem->NodalValC1);
+            const double PG = assem->interpolate(assem->NodalValC1);
 
             if (PG < 0.0)
             {
-                Sw = assem->MediaProp->SaturationCapillaryPressureFunction(-PG);
+                const double Sw =
+                    assem->MediaProp->SaturationCapillaryPressureFunction(-PG);
                 heat_capacity_fluids *= Sw;
                 if (assem->GasProp != 0)
                     heat_capacity_fluids +=
                         (1. - Sw) * assem->GasProp->Density() *
                         assem->GasProp->SpecificHeatCapacity();
-                heat_capacity_fluids +=
-                    (1. - Sw) * assem->FluidProp->PhaseChange();
+
+                if (m_mfp0->useLatentHeat() &&
+                    assem->MediaProp->heat_diffusion_model == 1)
+                {
+                    const double TG = assem->interpolate(assem->NodalVal1);
+                    const double humi = exp(
+                        PG / (SpecificGasConstant::WaterVapour * TG * rhow));
+                    const double rho_gw_rel = m_mfp0->vaporDensity(TG);
+                    const double rho_gw = humi * rho_gw_rel;
+                    const double drho_gw_dT =
+                        m_mfp0->vaporDensity_derivative(TG) * humi -
+                        rho_gw * PG /
+                            (SpecificGasConstant::WaterVapour * rhow * TG * TG);
+
+                    double alpha_T_l;  // (drho_w/dT)/rho_w
+                    if (m_mfp0->density_model > 7 && m_mfp0->density_model < 15)
+                    {
+                        double arg[2];
+                        arg[0] = 0.0;  // p = 0 of p < 0
+                        arg[1] = TG;   // T
+                        alpha_T_l = -m_mfp0->drhodT(arg) / m_mfp0->Density();
+                    }
+                    else
+                    {
+                        alpha_T_l = -m_mfp0->drho_dT;  // negative sign is
+                                                       // required due to OGS
+                                                       // input
+                    }
+
+                    const double L0 =
+                        MaterialLib::Fluid::LinearWaterVapourLatentHeat(TG);
+
+                    heat_capacity_fluids += L0 *
+                                            (drho_gw_dT - rho_gw * alpha_T_l) *
+                                            (1.0 - Sw) / rhow;
+
+                    FiniteElement::VaporVariableBuffer& gw_val_gp =
+                        assem->vapor_variable_buffer[gp];
+                    gw_val_gp.p_ip = PG;
+                    gw_val_gp.T_ip = TG;
+                    gw_val_gp.L0 = L0;
+                    gw_val_gp.rho_w = rhow;
+                    gw_val_gp.S_w = Sw;
+                    gw_val_gp.rho_gw = rho_gw;
+                    gw_val_gp.drho_gw_dT = drho_gw_dT;
+                    gw_val_gp.drho_gw_dp =
+                        rho_gw_rel * humi /
+                        (SpecificGasConstant::WaterVapour * TG * rhow);
+
+                    gw_val_gp.Dvp =
+                        assem->MediaProp->base_heat_diffusion_coefficient *
+                        (1 - Sw) *
+                        std::pow(TG / PhysicalConstant::CelsiusZeroInKelvin,
+                                 1.8);
+                }
+
+                // heat_capacity_fluids +=
+                //    (1. - Sw) * assem->FluidProp->PhaseChange();
             }
         }
     }

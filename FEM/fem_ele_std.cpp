@@ -15,6 +15,7 @@
 
 // C++ STL
 #include <cfloat>
+#include <cmath>
 //#include <iostream>
 //#include <limits>	// PCH to better use system max and min
 #include "memory.h"
@@ -154,6 +155,9 @@ CFiniteElementStd::CFiniteElementStd(CRFProcess* Pcs, const int C_Sys_Flad,
     NodalVal_t2_1 = new double[size_m];  // for TEMPERATURE2 current time step
     NodalVal_X0 = new double[size_m];    // for CONCENTRATION previous time step
     NodalVal_X1 = new double[size_m];
+
+    vapor_variable_buffer.resize(27);
+
     // NW
     switch (C_Sys_Flad / 10)
     {
@@ -1571,7 +1575,7 @@ void CFiniteElementStd::CalNodalEnthalpy()
    11/2005 CMCD Heat capacity function included in mmp
    01/2007 OK Two-phase flow
 **************************************************************************/
-double CFiniteElementStd::CalCoefMass()
+double CFiniteElementStd::CalCoefMass(const int gp)
 {
     const int Index = MeshElement->GetIndex();
     double val = 0.0;
@@ -1697,7 +1701,8 @@ double CFiniteElementStd::CalCoefMass()
         //....................................................................
         case EPT_HEAT_TRANSPORT:  // Heat transport
             TG = interpolate(NodalVal1);
-            val = MediaProp->HeatCapacity(Index, pcs->m_num->ls_theta, this);
+            val =
+                MediaProp->HeatCapacity(gp, Index, pcs->m_num->ls_theta, this);
             val /= time_unit_factor;
             break;
         //....................................................................
@@ -2531,6 +2536,21 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
                 for (size_t i = 0; i < dim * dim; i++)
                     mat[i] = 0.0;
                 mat_fac = SolidProp->Heat_Conductivity(Sw);
+
+                if (MediaProp->heat_diffusion_model == 1 &&
+                    FluidProp->useLatentHeat() && Sw < 1.0)
+                {
+                    const VaporVariableBuffer gw_val_ip =
+                        vapor_variable_buffer[ip];
+                    const double L0 = gw_val_ip.L0;
+                    const double drho_gw_dT = gw_val_ip.drho_gw_dT;
+                    poro = MediaProp->Porosity(Index, pcs->m_num->ls_theta);
+                    tort = MediaProp->TortuosityFunction(Index, unit,
+                                                         pcs->m_num->ls_theta);
+                    const double Dv = tort * poro * gw_val_ip.Dvp;
+                    mat_fac += L0 * Dv * drho_gw_dT;
+                }
+
                 for (size_t i = 0; i < dim; i++)
                     mat[i * dim + i] = mat_fac;
             }
@@ -2549,6 +2569,7 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
                 for (size_t i = 0; i < dim * dim; i++)
                     mat[i] = tensor[i];  // mat[i*dim+i] = tensor[i];
             }
+
             break;
         case EPT_MASS_TRANSPORT:  // Mass transport
             mat_fac =
@@ -3812,7 +3833,7 @@ void CFiniteElementStd::CalcMass()
             getGradShapefunctValues(gp, 1);   // Linear interpolation function
 
         // Material
-        mat_fac = CalCoefMass();
+        mat_fac = CalCoefMass(gp);
         // if(Index < 0) cout << "mat_fac in CalCoeffMass: " << mat_fac << "\n";
         // GEO factor
         mat_fac *= fkt;
@@ -4633,7 +4654,7 @@ void CFiniteElementStd::CalcLumpedMass()
         vol = MeshElement->GetVolume() * MeshElement->GetFluxArea();
     // Center of the reference element
     getShapeFunctionCentroid();
-    factor = CalCoefMass();
+    factor = CalCoefMass(gp);
     // ElementVolumeMultiplyer
     factor *= MediaProp->ElementVolumeMultiplyer;
     pcs->timebuffer = factor;  // Tim Control "Neumann"
@@ -5638,7 +5659,6 @@ void CFiniteElementStd::CalcRHS_by_ThermalDiffusion()
     double humi = 1.0;
     double rhov = 0.0;
     double drdT = 0.0;
-    double beta = 0.0;
     // 12.12.2007 WW
     long cshift = 0;
     if (pcs->dof > 1)
@@ -9446,6 +9466,13 @@ void CFiniteElementStd::Assembly()
             //    CalNodalEnthalpy();
             // CMCD4213
             AssembleMixedHyperbolicParabolicEquation();
+
+            if (MediaProp->heat_diffusion_model == 1 &&
+                FluidProp->useLatentHeat())
+            {
+                Assemble_RHS_LATENT_HEAT_TRANSPORT();
+            }
+
             if (FluidProp->density_model == 14 &&
                 MediaProp->heat_diffusion_model == 1 && cpl_pcs)
                 Assemble_RHS_HEAT_TRANSPORT();  // This include when need
@@ -10745,7 +10772,7 @@ double CFiniteElementStd::CalCoef_RHS_AIR_FLOW(int dof_index)
    last modification:
 **************************************************************************/
 
-double CFiniteElementStd::CalCoef_RHS_HEAT_TRANSPORT(int dof_index)
+double CFiniteElementStd::CalCoef_RHS_HEAT_TRANSPORT(const int dof_index)
 {
     double val = 0.0, rho_g = 0.0, rho_0 = 0.0;
     int Index = MeshElement->GetIndex();
@@ -11321,6 +11348,100 @@ void CFiniteElementStd::Assemble_RHS_AIR_FLOW()
 #endif
             (*RHS)[i + LocalShift + ii_sh] -= NodalVal[i + ii_sh];
         }
+    }
+}
+
+void CFiniteElementStd::Assemble_RHS_LATENT_HEAT_TRANSPORT()
+{
+    // ---- Gauss integral
+    int gp_r = 0, gp_s = 0, gp_t = 0;
+    double args[3];
+    double grad_p[3];
+
+    //----------------------------------------------------------------------
+    for (int i = 0; i < nnodes; i++)
+        NodalVal[i] = 0.0;
+    //======================================================================
+    // Loop over Gauss points
+    int non_computed_gp_counter = 0;
+    for (int gp = 0; gp < nGaussPoints; gp++)
+    {
+        if (!(vapor_variable_buffer[gp].S_w < 1.0))
+        {
+            non_computed_gp_counter++;
+            continue;
+        }
+        //---------------------------------------------------------
+        //  Get local coordinates and weights
+        //  Compute Jacobian matrix and its determinate
+        //---------------------------------------------------------
+        const double fkt = GetGaussData(gp, gp_r, gp_s, gp_t);
+        getGradShapefunctValues(gp, 1);
+        getShapefunctValues(gp, 1);
+
+        // Material
+        const VaporVariableBuffer vvar_buffer = vapor_variable_buffer[gp];
+        const double S_w = vvar_buffer.S_w;
+        const double dSdpc = MediaProp->PressureSaturationDependency(Sw, true);
+        const double dp_dt = (vvar_buffer.p_ip - interpolate(NodalValC)) /
+                             (dt * time_unit_factor);
+        const double rho_w = vvar_buffer.rho_w;
+
+        args[0] = std::max(0.0, vvar_buffer.p_ip);
+        args[1] = std::max(0.0, vvar_buffer.T_ip);
+        args[2] = 0.0;
+
+        const double drhow_dp = (FluidProp->compressibility_model_pressure > 0)
+                                    ? FluidProp->drhodP(args)
+                                    : FluidProp->drho_dp;
+        const double poro = MediaProp->Porosity(Index, pcs->m_num->ls_theta);
+
+        const double mass_ratio = vvar_buffer.rho_gw / rho_w;
+        const double fac =
+            vvar_buffer.L0 * poro *
+            (mass_ratio * dSdpc +
+             (1 - S_w) * (vvar_buffer.drho_gw_dp - mass_ratio * drhow_dp) /
+                 rho_w) *
+            dp_dt;
+
+        for (int i = 0; i < nnodes; i++)
+            NodalVal[i] += fac * fkt * shapefct[i];
+
+        for (size_t i = 0; i < dim; i++)
+        {
+            grad_p[i] = 0.0;
+            for (int j = 0; j < nnodes; j++)
+            {
+                grad_p[i] += NodalValC1[j] * dshapefct[i * nnodes + j];
+            }
+        }
+
+        tort = MediaProp->TortuosityFunction(Index, unit, pcs->m_num->ls_theta);
+        const double Dv = tort * poro * vvar_buffer.Dvp;
+
+        const double fac_gw =
+            vvar_buffer.L0 * tort * poro * vvar_buffer.drho_gw_dp * Dv;
+        for (size_t k = 0; k < dim; k++)
+        {
+            for (int i = 0; i < nnodes; i++)
+            {
+                NodalVal[i] +=
+                    fac_gw * fkt * dshapefct[k * nnodes + i] * grad_p[k];
+            }
+        }
+    }
+
+    if (non_computed_gp_counter == nGaussPoints)
+    {
+        return;
+    }
+
+    for (int i = 0; i < nnodes; i++)
+    {
+#if !defined(USE_PETSC)  // && !defined(other parallel libs)//03~04.3012. WW
+        eqs_rhs[eqs_number[i]] -= NodalVal[i];
+#endif
+        (*RHS)[i] -= NodalVal[i];
     }
 }
 

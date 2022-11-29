@@ -2747,7 +2747,7 @@ double CMediumProperties::PermeabilitySaturationFunction(
    10/2005 YD/OK: general concept for heat capacity
    10/2010 TF changed access to process type
 **************************************************************************/
-double CMediumProperties::HeatCapacity(long number, double theta,
+double CMediumProperties::HeatCapacity(const int gp, long number, double theta,
                                        CFiniteElementStd* assem)
 {
     SolidProp::CSolidProperties* m_msp = NULL;
@@ -2786,7 +2786,7 @@ double CMediumProperties::HeatCapacity(long number, double theta,
             if (FLOW)
             {
                 porosity = assem->MediaProp->Porosity(number, theta);
-                heat_capacity_fluids = MFPCalcFluidsHeatCapacity(assem);
+                heat_capacity_fluids = MFPCalcFluidsHeatCapacity(gp, assem);
             }
             else
             {
@@ -2832,9 +2832,10 @@ double CMediumProperties::HeatCapacity(long number, double theta,
             break;
         case 3:  // D_THM1 - Richards model //WW
             T1 = assem->TG;
-            heat_capacity = assem->SolidProp->Heat_Capacity(T1) *
-                                fabs(assem->SolidProp->Density()) +
-                            Porosity(assem) * MFPCalcFluidsHeatCapacity(assem);
+            heat_capacity =
+                assem->SolidProp->Heat_Capacity(T1) *
+                    fabs(assem->SolidProp->Density()) +
+                Porosity(assem) * MFPCalcFluidsHeatCapacity(gp, assem);
             break;
         //....................................................................
         default:
@@ -5577,7 +5578,6 @@ double CMediumProperties::Density(long element, double* gp, double theta)
 
     int no_phases = (int)mfp_vector.size();
     double density = 0.0;
-    int i;
     CFluidProperties* m_mfp = NULL;
     // OK411 CSolidProperties* m_msp = NULL;
     char saturation_name[15];
@@ -5587,7 +5587,7 @@ double CMediumProperties::Density(long element, double* gp, double theta)
         density = Porosity(element, theta) * m_mfp->Density();
     }
     else
-        for (i = 0; i < no_phases; i++)
+        for (unsigned i = 0; i < static_cast<unsigned>(no_phases); i++)
         {
             m_mfp = mfp_vector[i];
             sprintf(saturation_name, "SATURATION%i", i + 1);
