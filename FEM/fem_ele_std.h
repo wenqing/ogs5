@@ -92,13 +92,18 @@ struct VaporVariableBuffer
 {
     double L0;
     double rho_w;
+    double fluid_thermal_expansivity;
     double S_w = 1.0;
     double Dvp;
+    double Dv;
     double rho_gw;
+    double humidity;
     double drho_gw_dp;
     double drho_gw_dT;
-    double p_ip;
-    double T_ip;
+    double p;
+    double T;
+    double poro;
+    double tort;
 };
 
 class CFiniteElementStd : public CElement
@@ -142,6 +147,7 @@ public:
     void CalcStrainCoupling(int phase = 0);
     // 6. Thermal coupling
     void CalcRHS_by_ThermalDiffusion();
+    void CalcValuesAtIntegrationPoint(const bool is_pressure_primary_variable);
     // 7. Advection matrix
     void CalcAdvection();
     void CalcAdvectionMCF();

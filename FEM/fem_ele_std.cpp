@@ -1729,10 +1729,13 @@ double CFiniteElementStd::CalCoefMass(const int gp)
             val = 1.0;
             break;
         case EPT_RICHARDS_FLOW:  // Richards
-        {
+        {  // Since there might be mass lumping, the IP data have to be
+           // calculated.
             Sw = 1.0;
             dSdp = 0.;
             PG = interpolate(NodalVal1);  // 12.02.2007.  Important! WW
+            TG = cpl_pcs ? interpolate(NodalValC)
+                         : PhysicalConstant::CelsiusZeroInKelvin + 20.0;
 
             if (PG <
                 0.0)  // JM skip to call these two functions in saturated case
@@ -1743,21 +1746,13 @@ double CFiniteElementStd::CalCoefMass(const int gp)
             }
 
             poro = MediaProp->Porosity(Index, pcs->m_num->ls_theta);
-            rhow = FluidProp->Density();
+            double density_args[] = {std::max(PG, 0.0), TG, 0.0};
+            rhow = FluidProp->Density(density_args);
 
-            double drho_dp_rho = 0.0;
-            if (FluidProp->compressibility_model_pressure > 0)
-            {  // drho_dp from rho-p-T relation
-                double arg[2];
-                arg[0] = PG;
-                if (cpl_pcs)
-                     arg[1] = interpolate(NodalValC1);
-                else
-                     arg[1] = PhysicalConstant::CelsiusZeroInKelvin + 20.0;
-                drho_dp_rho = FluidProp->drhodP(arg) / rhow;
-            }
-            else
-                drho_dp_rho = FluidProp->drho_dp;
+            const double drho_dp_rho =
+                FluidProp->compressibility_model_pressure > 0
+                    ? FluidProp->drhodP(density_args) / rhow
+                    : FluidProp->drho_dp;
 
             // Storativity
             val =
@@ -1773,8 +1768,6 @@ double CFiniteElementStd::CalCoefMass(const int gp)
             // WW
             if (MediaProp->heat_diffusion_model == 1)
             {
-                //           PG = fabs(interpolate(NodalVal1));
-                TG = interpolate(NodalValC);
                 const double humi =
                     exp(PG / (SpecificGasConstant::WaterVapour * TG * rhow));
                 const double rhov = humi * FluidProp->vaporDensity(TG);
@@ -2216,7 +2209,6 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
     double Dpv = 0.0;
     double poro = 0.0;
     double tort = 0.0;
-    double humi = 1.0;
     double rhow = 0.0;
     double* tensor = NULL;
     double Hav, manning, chezy, expp, chezy4, Ss, arg;
@@ -2641,10 +2633,15 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
             break;
         //------------------------------------------------------------------
         case EPT_RICHARDS_FLOW:  // Richards flow
+        {
+            VaporVariableBuffer const val_ip = vapor_variable_buffer[ip];
             // The following line only applies when Fluid Momentum is on
-            PG = interpolate(NodalVal1);  // 05.01.07 WW
+            PG = val_ip.p;  // interpolate(NodalVal1);  // 05.01.07 WW
+            TG = val_ip.T;
             // 05.01.07 WW
-            Sw = MediaProp->SaturationCapillaryPressureFunction(-PG);
+            Sw =
+                val_ip
+                    .S_w;  // MediaProp->SaturationCapillaryPressureFunction(-PG);
 
             if (MediaProp->permeability_pressure_model > 0)  // 12.2012. WX
                 fac_perm = MediaProp->PermeabilityFunctionPressure(Index, PG);
@@ -2666,10 +2663,6 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
             // Modified LBNL model WW
             if (MediaProp->permeability_stress_mode > 1)
             {
-                if (cpl_pcs)
-                    TG = interpolate(NodalValC1);
-                else
-                    TG = PhysicalConstant::CelsiusZeroInKelvin + 20.0;
                 MediaProp->CalStressPermeabilityFactor(w, TG);
                 for (size_t i = 0; i < dim; i++)
                     tensor[i * dim + i] *= w[i];
@@ -2680,22 +2673,23 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
 
             if (MediaProp->heat_diffusion_model == 1 && !Gravity)
             {
-                rhow = FluidProp->Density();
-                // PG = fabs(interpolate(NodalVal1));
-                TG = interpolate(NodalValC);
-                poro = MediaProp->Porosity(Index, pcs->m_num->ls_theta);
-                tort = MediaProp->TortuosityFunction(Index, unit,
-                                                     pcs->m_num->ls_theta);
-                humi = exp(PG / (SpecificGasConstant::WaterVapour * TG * rhow));
+                rhow = val_ip.rho_w;  // FluidProp->Density();
+                poro = val_ip.poro;   // MediaProp->Porosity(Index,
+                                     // pcs->m_num->ls_theta);
+                tort =
+                    val_ip.tort;  // MediaProp->TortuosityFunction(Index, unit,
+                                  //                  pcs->m_num->ls_theta);
                 //
-                Dpv = MediaProp->base_heat_diffusion_coefficient * tort *
-                      (1 - Sw) * poro *
-                      pow(TG / PhysicalConstant::CelsiusZeroInKelvin, 1.8);
-                Dpv *= time_unit_factor * FluidProp->vaporDensity(TG) * humi /
+                Dpv = val_ip.Dv;
+                // MediaProp->base_heat_diffusion_coefficient * tort *
+                //       (1 - Sw) * poro *
+                //       pow(TG / PhysicalConstant::CelsiusZeroInKelvin, 1.8);
+                Dpv *= time_unit_factor * val_ip.rho_gw /
                        (SpecificGasConstant::WaterVapour * rhow * TG);
                 for (size_t i = 0; i < dim; i++)
                     mat[i * dim + i] += Dpv / rhow;
             }
+        }
             break;
         //------------------------------------------------------------------
         case EPT_GAS_FLOW:  // Air flow
@@ -5637,6 +5631,63 @@ void CFiniteElementStd::CalCoefContentMCF()
                 FluidProp->lambda[in - 2];
     }
 }
+
+void CFiniteElementStd::CalcValuesAtIntegrationPoint(
+    const bool is_pressure_primary_variable)
+{
+    double args[3];
+    // Loop over Gauss points
+    for (int gp = 0; gp < nGaussPoints; gp++)
+    {
+        VaporVariableBuffer& val_ip = vapor_variable_buffer[gp];
+        //---------------------------------------------------------
+        getShapefunctValues(gp, 1);
+        if (is_pressure_primary_variable)
+        {
+            val_ip.p = interpolate(NodalVal1);
+            val_ip.T = cpl_pcs ? interpolate(NodalValC)
+                               : PhysicalConstant::CelsiusZeroInKelvin + 20.0;
+        }
+        else
+        {
+            val_ip.T = interpolate(NodalVal1);
+            val_ip.p = cpl_pcs ? interpolate(NodalValC) : 0.0;
+        }
+
+        args[0] = std::max(0.0, val_ip.p);
+        args[1] = std::max(0.0, val_ip.T);
+        args[2] = 0.0;
+
+        val_ip.rho_w = FluidProp->Density(args);
+
+        val_ip.fluid_thermal_expansivity =
+            FluidProp->compressibility_model_pressure > 0
+                ? FluidProp->drhodP(args) / rhow
+                : FluidProp->drho_dp;
+
+        val_ip.S_w = val_ip.p < 0.0
+                         ? MediaProp->SaturationCapillaryPressureFunction(-PG)
+                         : 1.0;
+
+        if (MediaProp->heat_diffusion_model != 1)
+        {
+            return;
+        }
+
+        val_ip.poro = MediaProp->Porosity(Index, pcs->m_num->ls_theta);
+        val_ip.tort =
+            MediaProp->TortuosityFunction(Index, unit, pcs->m_num->ls_theta);
+        val_ip.humidity = exp(std::min(PG, 0.0) /
+                              (SpecificGasConstant::WaterVapour * TG * rhow));
+
+        val_ip.Dvp = MediaProp->base_heat_diffusion_coefficient * (1 - Sw) *
+                     std::pow(TG / PhysicalConstant::CelsiusZeroInKelvin, 1.8);
+
+        val_ip.Dv = tort * poro * val_ip.Dvp;
+        val_ip.rho_gw = val_ip.humidity * FluidProp->vaporDensity(TG);
+    }
+}
+
 /***************************************************************************
    GeoSys - Funktion:
            CFiniteElementStd:: CalcAdvection
@@ -5652,13 +5703,7 @@ void CFiniteElementStd::CalcRHS_by_ThermalDiffusion()
     int gp_r = 0, gp_s = 0, gp_t;
     gp = 0;
     double fkt;
-    double Dv = 0.0;
-    double Dtv = 0.0;
-    double poro = 0.0;
-    double tort = 0.0;
-    double humi = 1.0;
-    double rhov = 0.0;
-    double drdT = 0.0;
+
     // 12.12.2007 WW
     long cshift = 0;
     if (pcs->dof > 1)
@@ -5681,22 +5726,29 @@ void CFiniteElementStd::CalcRHS_by_ThermalDiffusion()
         getGradShapefunctValues(gp, 1);  // Linear interpolation function
         //---------------------------------------------------------
         getShapefunctValues(gp, 1);
-        double rhow = FluidProp->Density();
-        PG = interpolate(NodalVal1);
-        TG = interpolate(NodalValC);
+
+        VaporVariableBuffer const val_ip = vapor_variable_buffer[gp];
+
+        const double rhow = val_ip.rho_w;  // FluidProp->Density();
+        const double PG = val_ip.p;        // interpolate(NodalVal1);
+        const double TG = val_ip.T;        // interpolate(NodalValC);
         // WW
-        Sw = MediaProp->SaturationCapillaryPressureFunction(-PG);
-        poro = MediaProp->Porosity(Index, pcs->m_num->ls_theta);
-        tort = MediaProp->TortuosityFunction(Index, unit, pcs->m_num->ls_theta);
-        humi = exp(PG / (SpecificGasConstant::WaterVapour * TG * rhow));
-        Dv = MediaProp->base_heat_diffusion_coefficient * tort * (1 - Sw) *
-             poro * pow(TG / PhysicalConstant::CelsiusZeroInKelvin, 1.8);
-        rhov = humi * FluidProp->vaporDensity(TG);
-        drdT =
+        const double Sw =
+            val_ip.S_w;  // MediaProp->SaturationCapillaryPressureFunction(-PG);
+        const double humi =
+            val_ip.humidity;  // exp(PG / (SpecificGasConstant::WaterVapour * TG
+                              // * rhow));
+        const double Dv = val_ip.Dv;
+        // MediaProp->base_heat_diffusion_coefficient * tort * (1 - Sw) *
+        //      poro * pow(TG / PhysicalConstant::CelsiusZeroInKelvin, 1.8);
+        const double rho_gw =
+            val_ip.rho_gw;  // humi * FluidProp->vaporDensity(TG);
+        const double drdT =
             (FluidProp->vaporDensity_derivative(TG) * humi -
-             rhov * PG / (SpecificGasConstant::WaterVapour * rhow * TG * TG)) /
+             rho_gw * PG /
+                 (SpecificGasConstant::WaterVapour * rhow * TG * TG)) /
             rhow;
-        Dtv = time_unit_factor * Dv * drdT;
+        const double Dtv = time_unit_factor * Dv * drdT;
 
         //    }
         //---------------------------------------------------------
@@ -9505,6 +9557,7 @@ void CFiniteElementStd::Assembly()
             break;
         //....................................................................
         case EPT_RICHARDS_FLOW:  // Richards flow
+            CalcValuesAtIntegrationPoint(true);
             if (MediaProp->heat_diffusion_model == 1)
                 CalcRHS_by_ThermalDiffusion();
             AssembleParabolicEquation();  // OK
@@ -11383,12 +11436,12 @@ void CFiniteElementStd::Assemble_RHS_LATENT_HEAT_TRANSPORT()
         const VaporVariableBuffer vvar_buffer = vapor_variable_buffer[gp];
         const double S_w = vvar_buffer.S_w;
         const double dSdpc = MediaProp->PressureSaturationDependency(Sw, true);
-        const double dp_dt = (vvar_buffer.p_ip - interpolate(NodalValC)) /
-                             (dt * time_unit_factor);
+        const double dp_dt =
+            (vvar_buffer.p - interpolate(NodalValC)) / (dt * time_unit_factor);
         const double rho_w = vvar_buffer.rho_w;
 
-        args[0] = std::max(0.0, vvar_buffer.p_ip);
-        args[1] = std::max(0.0, vvar_buffer.T_ip);
+        args[0] = std::max(0.0, vvar_buffer.p);
+        args[1] = std::max(0.0, vvar_buffer.T);
         args[2] = 0.0;
 
         const double drhow_dp = (FluidProp->compressibility_model_pressure > 0)
