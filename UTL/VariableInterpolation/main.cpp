@@ -54,7 +54,8 @@ void DisplayOption()
     std::string opt =
         "Options:\n"
         "    --help:     display help info.\n"
-        "    -o: set output directory.\n";
+        "    -p: Name of partition info file (optional).\n"
+        "    -o: set output directory (optional).\n";
     std::cout << opt << std::endl;
 }
 
@@ -95,6 +96,7 @@ int main(int argc, char** argv)
 
     std::string file_name;
     std::string o_path;
+    std::string file_partition_info;
     for (std::size_t i = 0; i < arg_strings.size(); i++)
     {
         const std::string anArg = arg_strings[i];
@@ -118,6 +120,17 @@ int main(int argc, char** argv)
                 o_path = path;
             continue;
         }
+        if (anArg == "-p")
+        {
+            if (i + 1 >= arg_strings.size())
+            {
+                std::cerr << "Error: Parameter " << anArg
+                          << " needs a file name for parition info data."
+                          << std::endl;
+                std::exit(EXIT_FAILURE);
+            }
+            file_partition_info = arg_strings[++i];
+        }
         else
         {
             file_name = arg_strings[i];
@@ -136,7 +149,7 @@ int main(int argc, char** argv)
     clock_t c_time = -clock();
 
     UTL::VariableValues* variable_values =
-        UTL::createVariableValues(file_path, file_name);
+        UTL::createVariableValues(file_path, file_name, file_partition_info);
 
     variable_values->interpolate(o_path);
 

@@ -59,13 +59,59 @@ struct DataPVD
     std::string vtu_file_name;
 };
 
+struct Excavation
+{
+    /*
+    Excavation(const int direction,
+    const double start_position,
+    const double depth,
+    const double start_time,
+    const double end_tim,
+    std::vector<std::size_t> const excavated_dom_ids) :
+    direction(excv.direction),
+    start_position(excv.start_position),
+    depth(excv.depth),
+    start_time(excv.start_time),
+    end_tim(excv.end_tim),
+    excavated_dom_ids(excv.excavated_dom_ids)
+    {}
+
+
+    Excavation(const Excavation& excv) :
+    direction(excv.direction),
+    start_position(excv.start_position),
+    depth(excv.depth),
+    start_time(excv.start_time),
+    end_tim(excv.end_tim),
+    excavated_dom_ids(excv.excavated_dom_ids)
+    {}
+
+    */
+
+    int direction = 0;  // 0, 1, 2 for x,y,z
+    double start_position = 0;
+    double depth = 0;
+    double start_time = 0;
+    double end_tim = 0;
+    std::vector<std::size_t> excavated_dom_ids;
+};
+
+struct DeactivatedDoms
+{
+    std::size_t dom_id;
+    double start_time;
+    double end_time;
+};
+
 class VariableValues
 {
 public:
     VariableValues(MeshLib::CFEMesh const* mesh,
                    FiniteElement::CElement* quadrature,
                    std::vector<SpecifiedPoint> const& specified_points,
-                   std::vector<DataPVD> const pvd_data);
+                   std::vector<DataPVD> const pvd_data,
+                   Excavation const& excavation,
+                   std::vector<DeactivatedDoms> const& deactivated_doms);
     ~VariableValues();
 
     void interpolate(const std::string& output_path);
@@ -76,6 +122,9 @@ private:
 
     std::vector<SpecifiedPoint> const _specified_points;
     std::vector<DataPVD> const _pvd_data;
+
+    Excavation const _excavation;
+    std::vector<DeactivatedDoms> const _deactivated_doms;
 };
 
 void subtractStringInQuatation(std::string& a_string);
