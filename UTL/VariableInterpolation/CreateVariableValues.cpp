@@ -126,8 +126,10 @@ bool isPointInElement(MeshLib::CElem const& element, const double x[3])
     return false;
 }
 
-VariableValues* createVariableValues(const std::string& file_path,
-                                     const std::string& file_name)
+VariableValues* createVariableValues(
+    const std::string& file_path,
+    const std::string& file_name,
+    const std::string& partition_info_file_name)
 {
     std::ifstream ins(file_name, std::ios::in);
     if (!ins.good())
@@ -301,6 +303,57 @@ VariableValues* createVariableValues(const std::string& file_path,
         }
     }
 
-    return new VariableValues(mesh, quadrature, specified_points, pvd_data);
+    is_pvd.close();
+
+    Excavation excavation;
+    std::vector<DeactivatedDoms> deactivated_doms;
+
+    if (!partition_info_file_name.empty())
+    {
+        const std::string f_name =
+            file_path + getDirSep() + partition_info_file_name;
+        std::ifstream ins(f_name, std::ios::in);
+        if (!ins.good())
+        {
+            Display::ScreenMessage("Can not open file %s \n",
+                                   pvd_file_name.data());
+            exit(1);
+        }
+
+        std::string string_buff;
+        ins >> string_buff;
+
+        if (string_buff.find("excavation") != std::string::npos)
+        {
+            ins >> excavation.direction >> excavation.start_position >>
+                excavation.depth >> excavation.start_time >> excavation.end_tim;
+
+            int num_doms;
+            ins >> num_doms;
+            for (int i = 0; i < num_doms; i++)
+            {
+                int dom_id;
+                ins >> dom_id;
+                excavation.excavated_dom_ids.push_back(dom_id);
+            }
+            ins >> string_buff;
+        }
+
+        if (string_buff.find("deactivated_elements") != std::string::npos)
+        {
+            int num_deactivated_dom = 0;
+            ins >> num_deactivated_dom;
+            for (int i = 0; i < num_deactivated_dom; i++)
+            {
+                DeactivatedDoms deactivated_elem;
+                ins >> deactivated_elem.dom_id >> deactivated_elem.start_time >>
+                    deactivated_elem.end_time;
+                deactivated_doms.push_back(deactivated_elem);
+            }
+        }
+    }
+
+    return new VariableValues(mesh, quadrature, specified_points, pvd_data,
+                              excavation, deactivated_doms);
 }
 }  // namespace UTL

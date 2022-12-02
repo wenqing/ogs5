@@ -18,8 +18,10 @@
 namespace UTL
 {
 class VariableValues;
-VariableValues* createVariableValues(const std::string& file_path,
-                                     const std::string& file_name);
+VariableValues* createVariableValues(
+    const std::string& file_path,
+    const std::string& file_name,
+    const std::string& partition_info_file_name);
 }  // namespace UTL
 
 #endif

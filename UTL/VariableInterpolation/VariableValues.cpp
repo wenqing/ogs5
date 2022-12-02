@@ -43,11 +43,15 @@ VariableValues::VariableValues(
     MeshLib::CFEMesh const* mesh,
     FiniteElement::CElement* quadrature,
     std::vector<SpecifiedPoint> const& specified_points,
-    std::vector<DataPVD> const pvd_data)
+    std::vector<DataPVD> const pvd_data,
+    Excavation const& excavation,
+    std::vector<DeactivatedDoms> const& deactivated_doms)
     : _mesh(mesh),
       _quadrature(quadrature),
       _specified_points(specified_points),
-      _pvd_data(pvd_data)
+      _pvd_data(pvd_data),
+      _excavation(excavation),
+      _deactivated_doms(deactivated_doms)
 {
 }
 
@@ -170,9 +174,61 @@ void VariableValues::interpolate(const std::string& output_path)
                             _quadrature->setUnitCoordinates(point_info.x);
                             _quadrature->ComputeShapefct(1, shapefunction);
 
+                            double const* xc = element->GetGravityCenter();
+
+                            const double t = (*it).time;
+                            bool elem_deactivated = false;
+                            for (std::size_t dom_id = 0;
+                                 dom_id < _excavation.excavated_dom_ids.size();
+                                 dom_id++)
+                            {
+                                if (element->GetPatchIndex() !=
+                                    _excavation.excavated_dom_ids[dom_id])
+
+                                {
+                                    continue;
+                                }
+                                const double y_ec = xc[_excavation.direction];
+
+                                const double y0 = _excavation.start_position;
+                                const double y =
+                                    y0 + (t - _excavation.start_time) *
+                                             _excavation.depth /
+                                             (_excavation.end_tim -
+                                              _excavation.start_time);
+                                if (y_ec < y)
+                                {
+                                    elem_deactivated = true;
+                                }
+                            }
+
+                            for (std::size_t dom_id = 0;
+                                 dom_id < _deactivated_doms.size();
+                                 dom_id++)
+                            {
+                                if (element->GetPatchIndex() !=
+                                    _deactivated_doms[dom_id].dom_id)
+
+                                {
+                                    continue;
+                                }
+
+                                if (t >= _deactivated_doms[dom_id].start_time &&
+                                    t <= _deactivated_doms[dom_id].end_time)
+                                {
+                                    elem_deactivated = true;
+                                }
+                            }
+
                             for (int k = 0; k < ncomponents; k++)
                             {
                                 double value = 0.0;
+                                if (elem_deactivated)
+                                {
+                                    interpolated_values[k].emplace_back(0.0);
+                                    continue;
+                                }
+
                                 for (std::size_t i = 0;
                                      i < element->GetNodesNumber(false);
                                      i++)
