@@ -1915,8 +1915,10 @@ double CFluidProperties::Viscosity(double* variables)
             mfp_arguments[1] = primary_variable[1];
 
             const double density =
-                Density(mfp_arguments);  // TODO: (NB) store density (and
-                                         // viscosity) as secondary variable
+                primary_variable[2] != 0.0
+                    ? primary_variable[2]
+                    : Density(mfp_arguments);  // TODO: (NB) store density (and
+            // viscosity) as secondary variable
             // NB
             viscosity = Fluid_Viscosity(density, mfp_arguments[1],
                                         mfp_arguments[0], fluid_id);

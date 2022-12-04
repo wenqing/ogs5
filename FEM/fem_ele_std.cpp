@@ -2655,7 +2655,7 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
 
             tensor = MediaProp->PermeabilityTensor(Index, ip);
 
-            double args[] = {std::max(0.0, PG), TG, 0.0};
+            double args[] = {std::max(0.0, PG), TG, val_ip.rho_w};
             if (MediaProp->unconfined_flow_group ==
                 2)  // 3D unconfined GW JOD, 5.3.07
                 mat_fac = time_unit_factor *
