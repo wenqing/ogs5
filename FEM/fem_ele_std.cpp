@@ -2638,14 +2638,10 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
                 vapor_variable_buffer[ip];
             // The following line only applies when Fluid Momentum is on
             PG = val_ip.p;  // interpolate(NodalVal1);  // 05.01.07 WW
-            TG = val_ip
-                     .T;  // cpl_pcs ? interpolate(NodalValC1)
-                          //     : PhysicalConstant::CelsiusZeroInKelvin + 20.0;
+            TG = val_ip.T;
 
             // 05.01.07 WW
-            Sw =
-                val_ip
-                    .S_w;  // MediaProp->SaturationCapillaryPressureFunction(-PG);
+            Sw = val_ip.S_w;
 
             if (MediaProp->permeability_pressure_model > 0)  // 12.2012. WX
                 fac_perm = MediaProp->PermeabilityFunctionPressure(Index, PG);
@@ -5989,6 +5985,13 @@ void CFiniteElementStd::Assemble_Gravity()
                                  (double)Index};
             rho = FluidProp->Density(dens_arg);
         }
+        else if (PcsType == EPT_RICHARDS_FLOW)
+        {
+            IntegrationPointVariableBuffer const val_ip =
+                vapor_variable_buffer[gp];
+            rho = val_ip.rho_w;
+        }
+
         else
         {
             rho = FluidProp->Density();
