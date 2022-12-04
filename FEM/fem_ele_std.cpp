@@ -2532,7 +2532,7 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
                 if (MediaProp->heat_diffusion_model == 1 &&
                     FluidProp->useLatentHeat() && Sw < 1.0)
                 {
-                    const VaporVariableBuffer gw_val_ip =
+                    const IntegrationPointVariableBuffer gw_val_ip =
                         vapor_variable_buffer[ip];
                     const double L0 = gw_val_ip.L0;
                     const double drho_gw_dT = gw_val_ip.drho_gw_dT;
@@ -2634,7 +2634,8 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
         //------------------------------------------------------------------
         case EPT_RICHARDS_FLOW:  // Richards flow
         {
-            VaporVariableBuffer const val_ip = vapor_variable_buffer[ip];
+            IntegrationPointVariableBuffer const val_ip =
+                vapor_variable_buffer[ip];
             // The following line only applies when Fluid Momentum is on
             PG = val_ip.p;  // interpolate(NodalVal1);  // 05.01.07 WW
             TG = val_ip
@@ -5634,7 +5635,7 @@ void CFiniteElementStd::CalcValuesAtIntegrationPoint(
     // Loop over Gauss points
     for (int gp = 0; gp < nGaussPoints; gp++)
     {
-        VaporVariableBuffer& val_ip = vapor_variable_buffer[gp];
+        IntegrationPointVariableBuffer& val_ip = vapor_variable_buffer[gp];
         //---------------------------------------------------------
         getShapefunctValues(gp, 1);
         if (is_pressure_primary_variable)
@@ -5724,7 +5725,7 @@ void CFiniteElementStd::CalcRHS_by_ThermalDiffusion()
         //---------------------------------------------------------
         getShapefunctValues(gp, 1);
 
-        VaporVariableBuffer const val_ip = vapor_variable_buffer[gp];
+        IntegrationPointVariableBuffer const val_ip = vapor_variable_buffer[gp];
 
         // WW
         const double Dv = val_ip.Dv;
@@ -11420,7 +11421,8 @@ void CFiniteElementStd::Assemble_RHS_LATENT_HEAT_TRANSPORT()
         getShapefunctValues(gp, 1);
 
         // Material
-        const VaporVariableBuffer vvar_buffer = vapor_variable_buffer[gp];
+        const IntegrationPointVariableBuffer vvar_buffer =
+            vapor_variable_buffer[gp];
         const double S_w = vvar_buffer.S_w;
         const double dSdpc = MediaProp->PressureSaturationDependency(Sw, true);
         const double dp_dt =

@@ -2550,7 +2550,7 @@ double MFPCalcFluidsHeatCapacity(const int gp, CFiniteElementStd* assem)
                                             (drho_gw_dT - rho_gw * alpha_T_l) *
                                             (1.0 - Sw) / rhow;
 
-                    FiniteElement::VaporVariableBuffer& gw_val_gp =
+                    FiniteElement::IntegrationPointVariableBuffer& gw_val_gp =
                         assem->vapor_variable_buffer[gp];
                     gw_val_gp.p = PG;
                     gw_val_gp.T = TG;

@@ -88,7 +88,7 @@ using Math_Group::SymMatrix;
 using Math_Group::Vec;
 using process::CRFProcessDeformation;
 
-struct VaporVariableBuffer
+struct IntegrationPointVariableBuffer
 {
     double L0;
     double rho_w;
@@ -293,7 +293,7 @@ public:
     // void Set_ctx_(long ele_index, double val, int gaussp, int i_dim);
     // double Get_ctx_(long ele_index, int gaussp, int i_dim);
 
-    std::vector<VaporVariableBuffer> vapor_variable_buffer;
+    std::vector<IntegrationPointVariableBuffer> vapor_variable_buffer;
 
 private:
     bool newton_raphson;  // 24.05.2007 WW
