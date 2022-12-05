@@ -5664,7 +5664,7 @@ void CFiniteElementStd::CalcValuesAtIntegrationPoint(
 
         if (MediaProp->heat_diffusion_model != 1)
         {
-            return;
+            continue;
         }
 
         val_ip.poro = MediaProp->Porosity(Index, pcs->m_num->ls_theta);
