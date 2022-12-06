@@ -5662,12 +5662,13 @@ void CFiniteElementStd::CalcValuesAtIntegrationPoint(
                 ? MediaProp->SaturationCapillaryPressureFunction(-val_ip.p)
                 : 1.0;
 
+        val_ip.poro = MediaProp->Porosity(Index, pcs->m_num->ls_theta);
+
         if (MediaProp->heat_diffusion_model != 1)
         {
             continue;
         }
 
-        val_ip.poro = MediaProp->Porosity(Index, pcs->m_num->ls_theta);
         val_ip.tort =
             MediaProp->TortuosityFunction(Index, unit, pcs->m_num->ls_theta);
         val_ip.humidity =
