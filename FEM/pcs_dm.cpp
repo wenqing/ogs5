@@ -3120,15 +3120,26 @@ void CRFProcessDeformation::WriteGaussPointStress(const bool last_step)
           _init_domain_data_type == FiniteElement::READ_WRITE))
         return;
 
-    if ((aktueller_zeitschritt % nwrite_restart) > 0 && (!last_step))
+    if ((aktueller_zeitschritt % nwrite_restart) > 0 && (!last_step) &&
+        aktuelle_zeit < Tim->time_end)
+    {
         return;
+    }
 
 #if defined(USE_PETSC)  //|| defined(other parallel libs)//03.3012. WW
-    const std::string StressFileName =
+    const std::string StressFileName0 =
         FileName + "_" + number2str(myrank) + ".sts";
 #else
-    const std::string StressFileName = FileName + ".sts";
+    const std::string StressFileName0 = FileName + ".sts";
 #endif
+
+    clock_t dm_time = -clock();
+
+    const std::string StressFileName =
+        last_step && aktuelle_zeit < Tim->time_end
+            ? "last_step_" + StressFileName0
+            : StressFileName0;
+
     ScreenMessage("-> Write initial stress \n");
     fstream file_stress(StressFileName.data(),
                         ios::binary | ios::out | ios::trunc);
@@ -3164,6 +3175,11 @@ void CRFProcessDeformation::WriteGaussPointStress(const bool last_step)
     }
     //
     file_stress.close();
+
+    dm_time += clock();
+
+    ScreenMessage("CPU time elapsed in writing %s: %g s\n",
+                  StressFileName.data(), (double)dm_time / CLOCKS_PER_SEC);
 }
 /**************************************************************************
    ROCKFLOW - Funktion: ReadGaussPointStress()

@@ -452,7 +452,21 @@ CRFProcess::~CRFProcess(void)
 
 #endif
 
-    WriteSolution(true);
+#ifdef USE_MPI
+    if (myrank == 0)
+    {
+#endif
+        if (getProcessType() != FiniteElement::DEFORMATION ||
+            getProcessType() != FiniteElement::DEFORMATION_DYNAMIC ||
+            getProcessType() != FiniteElement::DEFORMATION_FLOW ||
+            getProcessType() != FiniteElement::DEFORMATION_H2)
+        {
+            WriteSolution(true);
+        }
+#ifdef USE_MPI
+    }
+#endif
+
     long i;
     //----------------------------------------------------------------------
     // Finite element
@@ -1358,8 +1372,18 @@ void CRFProcess::WriteSolution(const bool for_destructor)
         _init_domain_data_type == FiniteElement::READ)
         return;
     // kg44 write out only between nwrite_restart timesteps
-    if ((aktueller_zeitschritt % nwrite_restart) > 0 && !for_destructor)
+    if ((aktueller_zeitschritt % nwrite_restart) > 0 && !for_destructor &&
+        aktuelle_zeit < Tim->time_end)
+    {
         return;
+    }
+
+    if (pcs_primary_function_name[0] == NULL)
+    {
+        return;
+    }
+
+    clock_t pcs_time = -clock();
 
     const std::string component_name =
         pcs_component_number >= 0 ? "_" + number2str(pcs_component_number) : "";
@@ -1368,43 +1392,50 @@ void CRFProcess::WriteSolution(const bool for_destructor)
 #if defined(USE_PETSC)  //|| defined(other parallel libs)//03.3012. WW
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    std::string m_file_name = FileName + "_" + pcs_type_name + "_" +
-                              pcs_primary_function_name[0] + component_name +
-                              "_primary_value_" + number2str(rank) + ".asc";
+    std::string m_file_name0 = FileName + "_" + pcs_type_name + "_" +
+                               pcs_primary_function_name[0] + component_name +
+                               "_primary_value_" + number2str(rank) + ".asc";
 
 #else
-    std::string m_file_name = FileName + "_" + pcs_type_name + "_" +
-                              pcs_primary_function_name[0] + component_name +
-                              "_primary_value.asc";
+    std::string m_file_name0 = FileName + "_" + pcs_type_name + "_" +
+                               pcs_primary_function_name[0] + component_name +
+                               "_primary_value.bin";
 #endif
-    std::ofstream os(m_file_name.c_str(), ios::trunc | ios::out);
+
+    const std::string m_file_name =
+        for_destructor && aktuelle_zeit < Tim->time_end
+            ? "last_step_" + m_file_name0
+            : m_file_name0;
+
+    // std::ofstream os(m_file_name.c_str(), ios::trunc | ios::out);
+    std::ofstream os(m_file_name.c_str(), ios::trunc | ios::out | ios::binary);
     if (!os.good())
     {
         cout << "Failure to open file: " << m_file_name << "\n";
         abort();
     }
 
-    os.precision(15);  // 15 digits accuracy seems enough? more fields are
-                       // filled up with random numbers!
-    os.setf(std::ios_base::scientific, std::ios_base::floatfield);
-
-    int j;
-    int* idx(new int[2 * pcs_number_of_primary_nvals]);
-    for (j = 0; j < pcs_number_of_primary_nvals; j++)
+    std::vector<int> idx(2 * pcs_number_of_primary_nvals);
+    for (int j = 0; j < pcs_number_of_primary_nvals; j++)
     {
         idx[j] = GetNodeValueIndex(pcs_primary_function_name[j]);
         idx[j + pcs_number_of_primary_nvals] = idx[j] + 1;
     }
-    for (size_t i = 0; i < m_msh->GetNodesNumber(false); i++)
+
+    const std::size_t data_size = m_msh->GetNodesNumber(false);
+    for (int j = 0; j < 2 * pcs_number_of_primary_nvals; j++)
     {
-        for (j = 0; j < 2 * pcs_number_of_primary_nvals; j++)
-            os << GetNodeValue(i, idx[j]) << "  ";
-        os << "\n";
+        os.write((char*)nod_val_vector[idx[j]], data_size * sizeof(double));
     }
+
     os.close();
-    cout << "Write solutions for timestep " << aktueller_zeitschritt
-         << " into file " << m_file_name << "\n";
-    delete[] idx;
+
+    ScreenMessage("Write solutions of time step %d into file %s s\n",
+                  aktueller_zeitschritt, m_file_name.data());
+
+    pcs_time += clock();
+    ScreenMessage("CPU time elapsed in writing %s: %g s\n", m_file_name.data(),
+                  (double)pcs_time / CLOCKS_PER_SEC);
 }
 
 /**************************************************************************
@@ -1430,39 +1461,29 @@ void CRFProcess::ReadSolution()
 #else
     std::string m_file_name = FileName + "_" + pcs_type_name + "_" +
                               pcs_primary_function_name[0] + component_name +
-                              "_primary_value.asc";
+                              "_primary_value.bin";
 #endif
-    std::ifstream is(m_file_name.c_str(), ios::in);
+    std::ifstream is(m_file_name.c_str(), ios::in | ios::binary);
     if (!is.good())
     {
         cout << "Failure to open file: " << m_file_name << "\n";
         abort();
     }
-    int j;
 
-    int* idx(new int[2 * pcs_number_of_primary_nvals]);
-    double* val(new double[2 * pcs_number_of_primary_nvals]);
-
-    for (j = 0; j < pcs_number_of_primary_nvals; j++)
+    std::vector<int> idx(2 * pcs_number_of_primary_nvals);
+    for (int j = 0; j < pcs_number_of_primary_nvals; j++)
     {
         idx[j] = GetNodeValueIndex(pcs_primary_function_name[j]);
         idx[j + pcs_number_of_primary_nvals] = idx[j] + 1;
     }
-    for (size_t i = 0; i < m_msh->GetNodesNumber(false); i++)
+
+    const std::size_t data_size = m_msh->GetNodesNumber(false);
+    for (int j = 0; j < 2 * pcs_number_of_primary_nvals; j++)
     {
-        for (j = 0; j < 2 * pcs_number_of_primary_nvals; j++)
-            is >> val[j];
-        is >> ws;
-        for (int j = 0; j < pcs_number_of_primary_nvals; j++)
-        {
-            SetNodeValue(i, idx[j], val[j + pcs_number_of_primary_nvals]);
-            SetNodeValue(i, idx[j + pcs_number_of_primary_nvals],
-                         val[j + pcs_number_of_primary_nvals]);
-        }
+        is.read((char*)nod_val_vector[idx[j]], data_size * sizeof(double));
     }
+
     is.close();
-    delete[] idx;
-    delete[] val;
 }
 
 /**************************************************************************
