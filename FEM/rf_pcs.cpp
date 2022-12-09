@@ -451,6 +451,8 @@ CRFProcess::~CRFProcess(void)
         cpu_time_assembly);
 
 #endif
+
+    WriteSolution(true);
     long i;
     //----------------------------------------------------------------------
     // Finite element
@@ -1350,13 +1352,13 @@ void CRFProcess::Write_Processed_BC()
    04/2006 WW
    last modified:
 **************************************************************************/
-void CRFProcess::WriteSolution()
+void CRFProcess::WriteSolution(const bool for_destructor)
 {
     if (_init_domain_data_type == FiniteElement::NO_IO ||
         _init_domain_data_type == FiniteElement::READ)
         return;
     // kg44 write out only between nwrite_restart timesteps
-    if ((aktueller_zeitschritt % nwrite_restart) > 0)
+    if ((aktueller_zeitschritt % nwrite_restart) > 0 && !for_destructor)
         return;
 
     const std::string component_name =

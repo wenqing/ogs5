@@ -423,7 +423,7 @@ public:
     // const int number_continuum=1;
     std::vector<double> continuum_vector;
 
-    void WriteSolution();  // WW
+    void WriteSolution(const bool for_destructor = false);  // WW
     void ReadSolution();   // WW
     //....................................................................
     // Construction / destruction
