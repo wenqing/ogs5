@@ -407,7 +407,7 @@ protected:
     double CalCoefContent();
     double CalCoefContentTNEQ(const int dof_index);  // NW
     double CalCoefContentTES(const int dof_index);
-    double CalCoefStrainCouping(const int phase = 0);
+    double CalCoefStrainCouping(const int ip, const int phase);
 
     double CalcCoefDualTransfer(const int ip);
     // 27.2.2007 WW

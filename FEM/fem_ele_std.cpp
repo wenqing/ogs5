@@ -3710,7 +3710,7 @@ void CFiniteElementStd::CalCoefAdvectionMCF()
    01/2005   WW/OK    Erste Version
    07/2005 WW Change for geometry element object
  **************************************************************************/
-double CFiniteElementStd::CalCoefStrainCouping(const int phase)
+double CFiniteElementStd::CalCoefStrainCouping(const int ip, const int phase)
 {
     double val = 0.0;
     /*
@@ -3738,8 +3738,11 @@ double CFiniteElementStd::CalCoefStrainCouping(const int phase)
         case EPT_OVERLAND_FLOW:  // Overland flow
             break;
         case EPT_RICHARDS_FLOW:                // Richard flow
-            return interpolate(NodalVal_Sat);  // Water saturation
-            break;
+        {
+            IntegrationPointVariableBuffer const val_ip =
+                vapor_variable_buffer[ip];
+            return val_ip.S_w;
+        }
         case EPT_MULTIPHASE_FLOW:
             if (phase == 0)
             {
@@ -5883,7 +5886,7 @@ void CFiniteElementStd::CalcStrainCoupling(int phase)
                 Radius += shapefct[i] * X[i];
         }
         //
-        fkt *= CalCoefStrainCouping(phase);
+        fkt *= CalCoefStrainCouping(gp, phase);
         for (size_t i = 0; i < dim; i++)
         {
             for (int k = 0; k < nnodes; k++)
@@ -8999,12 +9002,9 @@ void CFiniteElementStd::Assemble_strainCPL(const int phase)
         fac = pcs->m_num->GetDynamicDamping_beta1() * dt;
         u_n = dm_pcs->GetAuxArray();
     }
-    if (MediaProp->storage_model == 7)  // RW/WW
-        fac *= MediaProp->storage_model_values[0];
-    else
-        fac *= fabs(
-            SolidProp->biot_const);  // WX:11.2012. biot coeff is needed, in
-                                     // some case biot is defined negative
+
+    fac *= fabs(SolidProp->biot_const);  // WX:11.2012. biot coeff is needed, in
+                                         // some case biot is defined negative
 
     //
     for (i = nnodes; i < nnodesHQ; i++)
@@ -11113,6 +11113,7 @@ void CFiniteElementStd::Assemble_RHS_LIQUIDFLOW()
         //---------------------------------------------------------
         //  Evaluate variables
         //---------------------------------------------------------
+
         const double T_n = interpolate(NodalValC);
         const double T_n1 = interpolate(NodalValC1);
         const double dT = T_n1 - T_n;
