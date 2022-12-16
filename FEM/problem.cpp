@@ -295,7 +295,8 @@ Problem::Problem(const char* filename)
     //......................................................................
     //#ifdef RESET_4410
     //  //if(pcs_vector[0]->pcs_type_name.compare("TWO_PHASE_FLOW")==0) //OK
-    //  if(total_processes[3])  // 3: TWO_PHASE_FLOW. 12.12.2008. WW
+    //  if(total_processes[ProblemLib::multi_phase_flow])  // 3:
+    //  TWO_PHASE_FLOW. 12.12.2008. WW
     //    PCSCalcSecondaryVariables(); //OK
     //#endif
     //......................................................................
@@ -353,9 +354,12 @@ Problem::Problem(const char* filename)
             KBlobConfig(*_geo_obj, _geo_name);
             KBlobCheck();
             // in case of Twophaseflow before the first time step
-            if (total_processes[3] || total_processes[4])
+            if (total_processes[ProblemLib::two_phase_flow] ||
+                total_processes[ProblemLib::multi_phase_flow])
+            {
                 if (KNaplDissCheck())    // 3: TWO_PHASE_FLOW. 12.12.2008. WW
                     KNaplCalcDensity();  // PCSCalcSecondaryVariables();
+            }
             // CB _drmc_ data for microbes
             if (MicrobeData_vector.size() > 0)
                 MicrobeConfig();
@@ -640,7 +644,7 @@ Problem::Problem(const char* filename)
     }
     // Calculation of the initial stress and released load for excavation
     // simulation 07.09.2007  WW Excavation for defromation
-    dm_pcs = (CRFProcessDeformation*)total_processes[12];
+    dm_pcs = (CRFProcessDeformation*)total_processes[ProblemLib::deformation];
     if (dm_pcs)
         dm_pcs->CreateInitialState4Excavation();
 
@@ -745,115 +749,139 @@ Problem::~Problem()
 /*-------------------------------------------------------------------------
    GeoSys - Function: SetActiveProcesses
    Task:
-   total_processes:
-    0: LIQUID_FLOW     | 1: GROUNDWATER_FLOW  | 2: RICHARDS_FLOW
-    3: PS_GLOBAL   | 4: MULTI_PHASE_FLOW  | 5: COMPONENTAL_FLOW
-    6: OVERLAND_FLOW   | 7: AIR_FLOW          | 8: HEAT_TRANSPORT
-    9: FLUID_MOMENTUM  |10: RANDOM_WALK       |11: MASS_TRANSPORT
-   12: DEFORMATION     | 14: TNEQ             |15: TES
+
    Return:
    Programming:
    07/2008 WW
    03/2009 PCH added PS_GLOBAL
    Modification:
    -------------------------------------------------------------------------*/
-inline int Problem::AssignProcessIndex(CRFProcess* m_pcs, bool activefunc)
+int Problem::AssignProcessIndex(CRFProcess* m_pcs, bool activefunc)
 {
     //	if (m_pcs->pcs_type_name.compare("OVERLAND_FLOW") == 0) {
-    if (m_pcs->getProcessType() == FiniteElement::OVERLAND_FLOW)
+    if (isDeformationProcess(m_pcs->getProcessType()))
     {
+        const int id = ProblemLib::deformation;
         if (!activefunc)
-            return 0;
-        total_processes[0] = m_pcs;
-        active_processes[0] = &Problem::OverlandFlow;
-        return 0;
+            return id;
+        total_processes[id] = m_pcs;
+        active_processes[id] = &Problem::Deformation;
+        return id;
+        //	} else if (m_pcs->pcs_type_name.find("PS_GLOBAL") != string::npos) {
+    }
+    else if (m_pcs->getProcessType() == FiniteElement::OVERLAND_FLOW)
+    {
+        const int id = ProblemLib::overland_flow;
+        if (!activefunc)
+            return id;
+        total_processes[id] = m_pcs;
+        active_processes[id] = &Problem::OverlandFlow;
+        return id;
         //	} else if (m_pcs->pcs_type_name.compare("AIR_FLOW") == 0) {
     }
     else if (m_pcs->getProcessType() == FiniteElement::GROUNDWATER_FLOW)
     {
+        const int id = ProblemLib::groundwater_flow;
         if (!activefunc)
-            return 1;
-        total_processes[1] = m_pcs;
-        active_processes[1] = &Problem::GroundWaterFlow;
-        return 1;
+            return id;
+        total_processes[id] = m_pcs;
+        active_processes[id] = &Problem::GroundWaterFlow;
+        return id;
         //	} else if (m_pcs->pcs_type_name.compare("RICHARDS_FLOW") == 0) {
     }
     else if (m_pcs->getProcessType() == FiniteElement::RICHARDS_FLOW)
     {
+        const int id = ProblemLib::richards_flow;
         if (!activefunc)
-            return 2;
-        total_processes[2] = m_pcs;
-        active_processes[2] = &Problem::RichardsFlow;
-        return 2;
+            return id;
+        total_processes[id] = m_pcs;
+        active_processes[id] = &Problem::RichardsFlow;
+        return id;
         //	} else if (m_pcs->pcs_type_name.compare("TWO_PHASE_FLOW") == 0) {
+    }
+    else if (m_pcs->getProcessType() == FiniteElement::PS_GLOBAL)
+    {
+        const int id = ProblemLib::ps_global;
+        if (!activefunc)
+            return id;
+        total_processes[id] = m_pcs;
+        active_processes[id] = &Problem::PS_Global;
+        return id;
+    }
+    else if (m_pcs->getProcessType() == FiniteElement::MULTI_COMPONENTIAL_FLOW)
+    {
+        const int id = ProblemLib::multi_componential_flow;
+        if (!activefunc)
+            return id;
+        total_processes[id] = m_pcs;
+        active_processes[id] = &Problem::MULTI_COMPONENTIAL_FLOW;
+        return id;
     }
     else if (m_pcs->getProcessType() == FiniteElement::TWO_PHASE_FLOW)
     {
+        const int id = ProblemLib::two_phase_flow;
         if (!activefunc)
-            return 3;
-        total_processes[3] = m_pcs;
-        active_processes[3] = &Problem::TwoPhaseFlow;
-        return 3;
+            return id;
+        total_processes[id] = m_pcs;
+        active_processes[id] = &Problem::TwoPhaseFlow;
+        return id;
         //	} else if (m_pcs->pcs_type_name.compare("MULTI_PHASE_FLOW") == 0) {
     }
     else if (m_pcs->getProcessType() == FiniteElement::MULTI_PHASE_FLOW)
     {
+        const int id = ProblemLib::multi_phase_flow;
+
         if (!activefunc)
-            return 4;
-        total_processes[4] = m_pcs;
-        active_processes[4] = &Problem::MultiPhaseFlow;
-        return 4;
-        //	} else if (m_pcs->pcs_type_name.compare("COMPONENTAL_FLOW") == 0) {
-        //	} else if (m_pcs->getProcessType() == COMPONENTAL_FLOW) {
-        //		if (!activefunc)
-        //			return 5;
-        //		total_processes[5] = m_pcs;
-        //		active_processes[5] = &Problem::ComponentalFlow;
-        //		return 5;
-        //	} else if (m_pcs->pcs_type_name.compare("OVERLAND_FLOW") == 0) {
+            return id;
+        total_processes[id] = m_pcs;
+        active_processes[id] = &Problem::MultiPhaseFlow;
+        return id;
     }
     else if (m_pcs->getProcessType() == FiniteElement::LIQUID_FLOW)
     {
+        const int id = ProblemLib::liquid_flow;
         if (!activefunc)
-            return 6;
-        total_processes[6] = m_pcs;
-        active_processes[6] = &Problem::LiquidFlow;
-        return 6;
+            return id;
+        total_processes[id] = m_pcs;
+        active_processes[id] = &Problem::LiquidFlow;
+        return id;
         //	} else if (m_pcs->pcs_type_name.compare("GROUNDWATER_FLOW") == 0) {
     }
     else if (m_pcs->getProcessType() == FiniteElement::AIR_FLOW)
     {
+        const int id = ProblemLib::air_flow;
         if (!activefunc)
-            return 7;
-        total_processes[7] = m_pcs;
-        active_processes[7] = &Problem::AirFlow;
-        return 7;
-        //	} else if (m_pcs->pcs_type_name.compare("HEAT_TRANSPORT") == 0) {
+            return id;
+        total_processes[id] = m_pcs;
+        active_processes[id] = &Problem::AirFlow;
+        return id;
     }
     else if (m_pcs->getProcessType() == FiniteElement::HEAT_TRANSPORT)
     {
+        const int id = ProblemLib::heat_transport;
         if (!activefunc)
-            return 8;
-        total_processes[8] = m_pcs;
-        active_processes[8] = &Problem::HeatTransport;
-        return 8;
-        //	} else if (m_pcs->pcs_type_name.compare("FLUID_MOMENTUM") == 0) {
+            return id;
+        total_processes[id] = m_pcs;
+        active_processes[id] = &Problem::HeatTransport;
+        return id;
     }
     else if (m_pcs->getProcessType() == FiniteElement::FLUID_MOMENTUM)
     {
+        const int id = ProblemLib::fluid_momentum;
         if (!activefunc)
-            return 9;
-        total_processes[9] = m_pcs;
-        active_processes[9] = &Problem::FluidMomentum;
-        return 9;
+            return id;
+        total_processes[id] = m_pcs;
+        active_processes[id] = &Problem::FluidMomentum;
+        return id;
         //	} else if (m_pcs->pcs_type_name.compare("RANDOM_WALK") == 0) {
     }
     else if (m_pcs->getProcessType() == FiniteElement::RANDOM_WALK)
     {
+        const int id = ProblemLib::random_walk;
         if (!activefunc)
-            return 10;
-        total_processes[10] = m_pcs;
-        active_processes[10] = &Problem::RandomWalker;
+            return id;
+        total_processes[id] = m_pcs;
+        active_processes[id] = &Problem::RandomWalker;
         COutput* out = OUTGetRWPT("PARTICLES");
         if (out != NULL)
         {
@@ -864,60 +892,35 @@ inline int Problem::AssignProcessIndex(CRFProcess* m_pcs, bool activefunc)
         }
         else
             DATWriteParticleFile(0);  // YS
-        return 10;
-        //	} else if (m_pcs->pcs_type_name.compare("MASS_TRANSPORT") == 0) {
+        return id;
     }
     else if (m_pcs->getProcessType() == FiniteElement::MASS_TRANSPORT)
     {
+        const int id = ProblemLib::mass_transport;
         if (!activefunc)
-            return 11;
-        total_processes[11] = m_pcs;
-        active_processes[11] = &Problem::MassTrasport;
-        return 11;
-        //	} else if (m_pcs->pcs_type_name.find("DEFORMATION") != string::npos)
-        //{
-    }
-    else if (isDeformationProcess(m_pcs->getProcessType()))
-    {
-        if (!activefunc)
-            return 12;
-        total_processes[12] = m_pcs;
-        active_processes[12] = &Problem::Deformation;
-        return 12;
-        //	} else if (m_pcs->pcs_type_name.find("PS_GLOBAL") != string::npos) {
-    }
-    else if (m_pcs->getProcessType() == FiniteElement::PS_GLOBAL)
-    {
-        //    if(!activefunc) return 13;
-        if (!activefunc)
-            return 3;
-        total_processes[3] = m_pcs;
-        active_processes[3] = &Problem::PS_Global;
-        return 3;
-    }
-    else if (m_pcs->getProcessType() == FiniteElement::MULTI_COMPONENTIAL_FLOW)
-    {
-        if (!activefunc)
-            return 5;
-        total_processes[5] = m_pcs;
-        active_processes[5] = &Problem::MULTI_COMPONENTIAL_FLOW;
-        return 5;
+            return id;
+        total_processes[id] = m_pcs;
+        active_processes[id] = &Problem::MassTrasport;
+        return id;
     }
     else if (m_pcs->getProcessType() == FiniteElement::TNEQ)
     {
+        const int id = ProblemLib::tneq;
         if (!activefunc)
-            return 14;
-        total_processes[14] = m_pcs;
-        active_processes[14] = &Problem::TNEQ;
-        return 14;
+            return id;
+        total_processes[id] = m_pcs;
+        active_processes[id] = &Problem::TNEQ;
+        return id;
     }
     else if (m_pcs->getProcessType() == FiniteElement::TES)
     {
+        const int id = ProblemLib::tes;
+
         if (!activefunc)
-            return 15;
-        total_processes[15] = m_pcs;
-        active_processes[15] = &Problem::TES;
-        return 15;
+            return id;
+        total_processes[id] = m_pcs;
+        active_processes[id] = &Problem::TES;
+        return id;
     }
     std::cout << "Error: no process is specified. " << '\n';
     return -1;
@@ -925,14 +928,6 @@ inline int Problem::AssignProcessIndex(CRFProcess* m_pcs, bool activefunc)
 
 /*-------------------------------------------------------------------------
    GeoSys - Function: SetActiveProcesses
-   Task:
-   total_processes:
-    0: LIQUID_FLOW     | 1: GROUNDWATER_FLOW  | 2: RICHARDS_FLOW
-    3: TWO_PHASE_FLOW  | 4: MULTI_PHASE_FLOW  | 5: COMPONENTAL_FLOW
-    6: OVERLAND_FLOW   | 7: AIR_FLOW          | 8: HEAT_TRANSPORT
-    9: FLUID_MOMENTUM  |10: RANDOM_WALK       |11: MASS_TRANSPORT
-   12: DEFORMATION     |13: PS_GLOBAL         |14: TNEQ              | 15: TES
-   Return:
    Programming:
    07/2008 WW
    03/2009 PCH add PS_GLOBAL
@@ -1803,10 +1798,10 @@ void Problem::PostCouplingLoop()
     CRFProcess* m_pcs = NULL;
     bool prqvec = false;
     bool capvec = false;
-    if (total_processes[12])
+    if (total_processes[ProblemLib::deformation])
     {
         CRFProcessDeformation* dm_pcs =
-            (CRFProcessDeformation*)(total_processes[12]);
+            (CRFProcessDeformation*)(total_processes[ProblemLib::deformation]);
         bool doPostExcav = false;  // WX
         for (size_t l = 0; l < msp_vector.size(); l++)
         {
@@ -1837,12 +1832,15 @@ void Problem::PostCouplingLoop()
                 KinReactData_vector[0]->CopyConcentrations();
         if (transport_processes.size() > 0)
         {
-            if (total_processes[3] || total_processes[4])
+            if (total_processes[ProblemLib::two_phase_flow] ||
+                total_processes[ProblemLib::multi_phase_flow])
+            {
                 if (KNaplDissCheck())
                 {  // Check if NAPLdissolution is modeled
                     // return P_new, and Phase_volumina
                     CalcNewPhasePressure();
                 }
+            }
         }
         // update porosities and permeabilities from reactions
         if (REACTINT_vec.size() > 0)
@@ -1911,8 +1909,9 @@ void Problem::PostCouplingLoop()
 #if !defined(USE_PETSC) && \
     !defined(NEW_EQS)  // && defined(other parallel libs)//03~04.3012. WW
     //#ifndef NEW_EQS                                //WW. 07.11.2008
-    if (total_processes[1])
-        total_processes[1]->AssembleParabolicEquationRHSVector();
+    if (total_processes[ProblemLib::groundwater_flow])
+        total_processes[ProblemLib::groundwater_flow]
+            ->AssembleParabolicEquationRHSVector();
 #endif
     LOPCalcELEResultants();
 }
@@ -1939,7 +1938,7 @@ inline double Problem::LiquidFlow()
 {
     int success;
     double error = 0.;
-    CRFProcess* m_pcs = total_processes[6];
+    CRFProcess* m_pcs = total_processes[ProblemLib::liquid_flow];
     if (!m_pcs->selected)
         return error;
     //  error = m_pcs->Execute();
@@ -2000,12 +1999,13 @@ inline double Problem::RichardsFlow()
 {
     //-------  WW
     double error = 0.;
-    CRFProcess* m_pcs = total_processes[2];
+    CRFProcess* m_pcs = total_processes[ProblemLib::richards_flow];
     if (!m_pcs->selected)
         return error;
     bool twoflowcpl = false;
     // if(GROUNDWATER_FLOW|| OVERLAND_FLOW) WW
-    if (total_processes[1] || total_processes[6])
+    if (total_processes[ProblemLib::groundwater_flow] ||
+        total_processes[ProblemLib::overland_flow])
         twoflowcpl = true;
     if (twoflowcpl)
     {  //-------  WW
@@ -2063,7 +2063,7 @@ inline double Problem::RichardsFlow()
 inline double Problem::TwoPhaseFlow()
 {
     double error = 1.0e+8;
-    CRFProcess* m_pcs = total_processes[3];
+    CRFProcess* m_pcs = total_processes[ProblemLib::two_phase_flow];
     if (!m_pcs->selected)
         return error;  // 12.12.2008 WW
     //
@@ -2098,7 +2098,7 @@ inline double Problem::MultiPhaseFlow()
 {
     double error = 1.0e+8;
     int success = 0;  // BG
-    CRFProcess* m_pcs = total_processes[4];
+    CRFProcess* m_pcs = total_processes[ProblemLib::multi_phase_flow];
     if (!m_pcs->selected)
         return error;  // 12.12.2008 WW
     // initialize density and viscosity if the CO2 phase transition is used
@@ -3220,7 +3220,7 @@ void Problem::OutputMassOfComponentInModel(std::vector<CRFProcess*> flow_pcs,
 inline double Problem::PS_Global()
 {
     double error = 1.0e+8;
-    CRFProcess* m_pcs = total_processes[3];
+    CRFProcess* m_pcs = total_processes[ProblemLib::ps_global];
     if (!m_pcs->selected)
         return error;
     error = m_pcs->ExecuteNonLinear(loop_process_number);
@@ -3243,7 +3243,7 @@ inline double Problem::PS_Global()
 inline double Problem::MULTI_COMPONENTIAL_FLOW()
 {
     double error = 1.0e+8;
-    CRFProcess* m_pcs = total_processes[5];
+    CRFProcess* m_pcs = total_processes[ProblemLib::multi_componential_flow];
     if (!m_pcs->selected)
         return error;
     error = m_pcs->ExecuteNonLinear(loop_process_number);
@@ -3262,7 +3262,7 @@ Modification:
 inline double Problem::TNEQ()
 {
     double error = 1.0e+8;
-    CRFProcess* m_pcs = total_processes[14];
+    CRFProcess* m_pcs = total_processes[ProblemLib::tneq];
     if (!m_pcs->selected)
         return error;
     error = m_pcs->ExecuteNonLinear(loop_process_number);
@@ -3282,7 +3282,7 @@ Modification:
 inline double Problem::TES()
 {
     double error = 1.0e+8;
-    CRFProcess* m_pcs = total_processes[15];
+    CRFProcess* m_pcs = total_processes[ProblemLib::tes];
     if (!m_pcs->selected)
         return error;
     error = m_pcs->ExecuteNonLinear(loop_process_number);
@@ -3304,7 +3304,7 @@ inline double Problem::TES()
 inline double Problem::GroundWaterFlow()
 {
     double error = 1.0e+8;
-    CRFProcess* m_pcs = total_processes[1];
+    CRFProcess* m_pcs = total_processes[ProblemLib::groundwater_flow];
     if (!m_pcs->selected)
         return error;              // 12.12.2008 WW
     ClockTimeVec[0]->StartTime();  // CB time
@@ -3312,7 +3312,7 @@ inline double Problem::GroundWaterFlow()
     //----- For the coupling with the soil column approach. 05.2009. WW
     MeshLib::GridsTopo* neighb_grid = NULL;
     MeshLib::GridsTopo* neighb_grid_this = NULL;
-    CRFProcess* neighb_pcs = total_processes[2];
+    CRFProcess* neighb_pcs = total_processes[ProblemLib::richards_flow];
     std::vector<double> border_flux;
     int idx_flux = 0, idx_flux_this;
     // WW int no_local_nodes;
@@ -3440,7 +3440,7 @@ inline double Problem::GroundWaterFlow()
 inline double Problem::ComponentalFlow()
 {
     double error = 1.e8;
-    CRFProcess* m_pcs = total_processes[5];
+    CRFProcess* m_pcs = total_processes[ProblemLib::componental_flow];
     if (!m_pcs->selected)
         return error;  // 12.12.2008 WW
     //
@@ -3460,7 +3460,7 @@ inline double Problem::ComponentalFlow()
 inline double Problem::OverlandFlow()
 {
     double error = 1.e8;
-    CRFProcess* m_pcs = total_processes[0];
+    CRFProcess* m_pcs = total_processes[ProblemLib::overland_flow];
     if (!m_pcs->selected)
         return error;  // 12.12.2008 WW
 
@@ -3481,7 +3481,7 @@ inline double Problem::OverlandFlow()
 inline double Problem::AirFlow()
 {
     double error = 1.e8;
-    CRFProcess* m_pcs = total_processes[7];
+    CRFProcess* m_pcs = total_processes[ProblemLib::air_flow];
     if (!m_pcs->selected)
         return error;  // 12.12.2008 WW
 
@@ -3504,7 +3504,7 @@ inline double Problem::AirFlow()
 inline double Problem::HeatTransport()
 {
     double error = 1.0e+8;
-    CRFProcess* m_pcs = total_processes[8];
+    CRFProcess* m_pcs = total_processes[ProblemLib::heat_transport];
     if (!m_pcs->selected)
         return error;  // 12.12.2008 WW
     // CB This is a cheat to map a 2D horizontal heat pump distribution on a
@@ -3554,7 +3554,7 @@ inline double Problem::MassTrasport()
     double error = 1.0e+8;
     bool capvec = false;
     // bool prqvec = false;
-    CRFProcess* m_pcs = total_processes[11];
+    CRFProcess* m_pcs = total_processes[ProblemLib::mass_transport];
     //
     if (!m_pcs->selected)
         return error;  // 12.12.2008 WW
@@ -3721,7 +3721,7 @@ inline double Problem::MassTrasport()
 inline double Problem::FluidMomentum()
 {
     double error = 1.0e+8;
-    CRFProcess* m_pcs = total_processes[9];
+    CRFProcess* m_pcs = total_processes[ProblemLib::fluid_momentum];
     //
     if (!m_pcs->selected)
         return error;  // 12.12.2008 WW
@@ -3774,7 +3774,7 @@ inline double Problem::RandomWalker()
 {
     double error = 1.0e+8;
     //
-    CRFProcess* m_pcs = total_processes[10];
+    CRFProcess* m_pcs = total_processes[ProblemLib::random_walk];
     //
     if (!m_pcs->selected)
         return error;  // 12.12.2008 WW
@@ -3941,7 +3941,7 @@ inline double Problem::Deformation()
 {
     CRFProcessDeformation* dm_pcs = NULL;
     double error = 1.0e+8;
-    CRFProcess* m_pcs = total_processes[12];
+    CRFProcess* m_pcs = total_processes[ProblemLib::deformation];
     //
     dm_pcs = (CRFProcessDeformation*)(m_pcs);
     error = dm_pcs->Execute(loop_process_number);
@@ -4124,7 +4124,7 @@ inline void Problem::LOPExecuteRegionalRichardsFlow(CRFProcess* m_pcs_global,
     //--- For couping with ground flow process. WW
     int idx_v;
     MeshLib::GridsTopo* neighb_grid = NULL;
-    CRFProcess* neighb_pcs = total_processes[1];
+    CRFProcess* neighb_pcs = total_processes[ProblemLib::groundwater_flow];
 
     if (neighb_pcs)
         for (i = 0; i < (int)neighb_pcs->m_msh->grid_neighbors.size(); i++)

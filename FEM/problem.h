@@ -37,6 +37,29 @@ namespace MeshLib
 class CElem;
 }
 
+namespace ProblemLib
+{
+enum ProcessID
+{
+    heat_transport,
+    deformation,
+    overland_flow,
+    groundwater_flow,
+    richards_flow,
+    ps_global,
+    multi_componential_flow,
+    multi_phase_flow,
+    two_phase_flow,
+    liquid_flow,
+    air_flow,
+    fluid_momentum,
+    random_walk,
+    mass_transport,
+    componental_flow,
+    tneq,
+    tes
+};
+}
 //---------------------------------------------------------------------
 // Pointers to member functions
 class Problem;
