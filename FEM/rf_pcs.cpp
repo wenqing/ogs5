@@ -3439,142 +3439,75 @@ void CRFProcess::VariableStaticProblem()
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STRESS_XX";
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
     pcs_number_of_secondary_nvals++;
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STRESS_XY";
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
     pcs_number_of_secondary_nvals++;
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STRESS_YY";
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
     pcs_number_of_secondary_nvals++;
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STRESS_ZZ";
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
     pcs_number_of_secondary_nvals++;
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STRAIN_XX";
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
     pcs_number_of_secondary_nvals++;
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STRAIN_XY";
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
     pcs_number_of_secondary_nvals++;
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STRAIN_YY";
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
     pcs_number_of_secondary_nvals++;
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STRAIN_ZZ";
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
     pcs_number_of_secondary_nvals++;
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STRAIN_PLS";
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-    pcs_number_of_secondary_nvals++;
-    // NB new secondary variables for principle stresses; Principle stress
-    // directions might follow later
-    pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-        "STRESS_1";  // i.e. Sigma_1
-    pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
-    pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-    pcs_number_of_secondary_nvals++;
-    pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-        "STRESS_2";  // i.e. Sigma_2
-    pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
-    pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-    pcs_number_of_secondary_nvals++;
-    pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-        "STRESS_3";  // i.e. Sigma_3
-    pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
-    pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-    pcs_number_of_secondary_nvals++;
-    //  pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-    //  "POROPRESSURE0";
-    //  pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
-    //  pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-    //  pcs_number_of_secondary_nvals++;
 
     if (max_dim == 2)  // 3D
     {
+        pcs_number_of_secondary_nvals++;
         pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
             "STRESS_XZ";
         pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
         pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
         pcs_number_of_secondary_nvals++;
         pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
             "STRESS_YZ";
         pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
         pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
         pcs_number_of_secondary_nvals++;
         pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
             "STRAIN_XZ";
         pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "--";
         pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
         pcs_number_of_secondary_nvals++;
         pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
             "STRAIN_YZ";
         pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "--";
         pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
-    }
-    if (max_dim > 0)  // >1D
-    {
-        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-            "NORM_STRESS_1_X";  // i.e. Sigma_1
-        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
-        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
-
-        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-            "NORM_STRESS_1_Y";  // i.e. Sigma_1
-        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
-        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
-
-        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-            "NORM_STRESS_1_Z";  // i.e. Sigma_1
-        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
-        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
-
-        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-            "NORM_STRESS_2_X";  // i.e. Sigma_1
-        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
-        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
-
-        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-            "NORM_STRESS_2_Y";  // i.e. Sigma_1
-        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
-        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
-
-        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-            "NORM_STRESS_2_Z";  // i.e. Sigma_1
-        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
-        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
-
-        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-            "NORM_STRESS_3_X";  // i.e. Sigma_1
-        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
-        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
-
-        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-            "NORM_STRESS_3_Y";  // i.e. Sigma_1
-        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
-        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
-
-        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-            "NORM_STRESS_3_Z";  // i.e. Sigma_1
-        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
-        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
     }
 
+    pcs_number_of_secondary_nvals++;
     if (type == 41)
     {  // Monolithic scheme
         Def_Variable_LiquidFlow();
@@ -3625,39 +3558,42 @@ void CRFProcess::VariableDynamics()
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STRESS_XX";
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
     pcs_number_of_secondary_nvals++;
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STRESS_XY";
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
     pcs_number_of_secondary_nvals++;
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STRESS_YY";
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
     pcs_number_of_secondary_nvals++;
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STRESS_ZZ";
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
     pcs_number_of_secondary_nvals++;
-    //  pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-    //  "POROPRESSURE0";
-    //  pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
-    //  pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-    //  pcs_number_of_secondary_nvals++;
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STRAIN_XX";
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
     pcs_number_of_secondary_nvals++;
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STRAIN_XY";
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
     pcs_number_of_secondary_nvals++;
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STRAIN_YY";
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
     pcs_number_of_secondary_nvals++;
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STRAIN_ZZ";
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
     pcs_number_of_secondary_nvals++;
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STRAIN_PLS";
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
@@ -3670,11 +3606,13 @@ void CRFProcess::VariableDynamics()
         "STRESS_1";  // i.e. Sigma_1
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
     pcs_number_of_secondary_nvals++;
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
         "STRESS_2";  // i.e. Sigma_2
     pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+
     pcs_number_of_secondary_nvals++;
     pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
         "STRESS_3";  // i.e. Sigma_3
@@ -3737,62 +3675,6 @@ void CRFProcess::VariableDynamics()
         pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
             "VELOCITY_DM_Z";
         pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "m/s";
-        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
-    }
-    if (max_dim > 0)  // >1D
-    {
-        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-            "NORM_STRESS_1_X";  // i.e. Sigma_1
-        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
-        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
-
-        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-            "NORM_STRESS_1_Y";  // i.e. Sigma_1
-        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
-        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
-
-        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-            "NORM_STRESS_1_Z";  // i.e. Sigma_1
-        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
-        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
-
-        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-            "NORM_STRESS_2_X";  // i.e. Sigma_1
-        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
-        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
-
-        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-            "NORM_STRESS_2_Y";  // i.e. Sigma_1
-        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
-        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
-
-        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-            "NORM_STRESS_2_Z";  // i.e. Sigma_1
-        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
-        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
-
-        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-            "NORM_STRESS_3_X";  // i.e. Sigma_1
-        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
-        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
-
-        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-            "NORM_STRESS_3_Y";  // i.e. Sigma_1
-        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
-        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-        pcs_number_of_secondary_nvals++;
-
-        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-            "NORM_STRESS_3_Z";  // i.e. Sigma_1
-        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
         pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
         pcs_number_of_secondary_nvals++;
     }

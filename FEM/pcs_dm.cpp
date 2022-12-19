@@ -2105,14 +2105,9 @@ double CRFProcessDeformation::CaclMaxiumLoadRatio(void)
 **************************************************************************/
 void CRFProcessDeformation::Extropolation_GaussValue()
 {
-    int k, NS;
-    long i = 0;
-    int Idx_Stress[7];
-    const long LowOrderNodes = m_msh->GetNodesNumber(false);
-    MeshLib::CElem* elem = NULL;
-
     // Clean nodal stresses
-    NS = 4;
+    int NS = 4;
+    int Idx_Stress[7];
     Idx_Stress[0] = GetNodeValueIndex("STRESS_XX");
     if (m_msh->isAxisymmetry())  // indices are swapped if axisymmetry!
     {
@@ -2134,36 +2129,16 @@ void CRFProcessDeformation::Extropolation_GaussValue()
     Idx_Stress[NS] = GetNodeValueIndex("STRAIN_PLS");
     NS++;
 
-    // NB, TN
-    int stressPrincipleIndices[3];
-
-    stressPrincipleIndices[0] = GetNodeValueIndex("STRESS_1");
-    stressPrincipleIndices[1] = GetNodeValueIndex("STRESS_2");
-    stressPrincipleIndices[2] = GetNodeValueIndex("STRESS_3");
-
-    int PrinStressDirectionIndices[9];
-
-    PrinStressDirectionIndices[0] = GetNodeValueIndex("NORM_STRESS_1_X");
-    PrinStressDirectionIndices[1] = GetNodeValueIndex("NORM_STRESS_1_Y");
-    PrinStressDirectionIndices[2] = GetNodeValueIndex("NORM_STRESS_1_Z");
-    PrinStressDirectionIndices[3] = GetNodeValueIndex("NORM_STRESS_2_X");
-    PrinStressDirectionIndices[4] = GetNodeValueIndex("NORM_STRESS_2_Y");
-    PrinStressDirectionIndices[5] = GetNodeValueIndex("NORM_STRESS_2_Z");
-    PrinStressDirectionIndices[6] = GetNodeValueIndex("NORM_STRESS_3_X");
-    PrinStressDirectionIndices[7] = GetNodeValueIndex("NORM_STRESS_3_Y");
-    PrinStressDirectionIndices[8] = GetNodeValueIndex("NORM_STRESS_3_Z");
-
-    for (i = 0; i < LowOrderNodes; i++)
+    const long LowOrderNodes = m_msh->GetNodesNumber(false);
+    for (long i = 0; i < LowOrderNodes; i++)
     {
-        for (k = 0; k < NS; k++)
+        for (int k = 0; k < NS; k++)
             SetNodeValue(i, Idx_Stress[k], 0.0);
-        for (k = 0; k < 3; k++)
-            SetNodeValue(i, stressPrincipleIndices[k], 0.0);
     }
 
-    for (i = 0; i < (long)m_msh->ele_vector.size(); i++)
+    for (std::size_t i = 0; i < m_msh->ele_vector.size(); i++)
     {
-        elem = m_msh->ele_vector[i];
+        MeshLib::CElem* elem = m_msh->ele_vector[i];
         if (elem->GetMark())  // Marked for use
         {
             fem_dm->setElement(elem);
@@ -2176,60 +2151,6 @@ void CRFProcessDeformation::Extropolation_GaussValue()
             fem_dm->ExtropolateGuassStress();
             // TEST        if(!update)
             //           (*eval_DM->Stress) -= (*eval_DM->Stress0);
-            // calculation of principal stresses for postprocessing on nodes
-
-            for (int i = 0; i < fem_dm->nnodes; i++)
-            {
-                // MeshLib::CNode *node;
-                int node_index = fem_dm->nodes[i];
-                // node = m_msh->nod_vector[node_index];
-                double stress[6];
-                stress[0] = fem_dm->pcs->GetNodeValue(
-                    node_index, Idx_Stress[0]);  // sigma_xx
-                stress[1] = fem_dm->pcs->GetNodeValue(
-                    node_index, Idx_Stress[1]);  // sigma_yy
-                stress[2] = fem_dm->pcs->GetNodeValue(
-                    node_index, Idx_Stress[2]);  // sigma_zz
-                stress[3] = fem_dm->pcs->GetNodeValue(
-                    node_index, Idx_Stress[3]);  // sigma_xy
-                if (problem_dimension_dm == 3)
-                {
-                    stress[4] = fem_dm->pcs->GetNodeValue(
-                        node_index, Idx_Stress[4]);  // sigma_xz
-                    stress[5] = fem_dm->pcs->GetNodeValue(
-                        node_index, Idx_Stress[5]);  // sigma_yz
-                }
-                else
-                {
-                    stress[4] = 0;  // sigma_xz
-                    stress[5] = 0;  // sigma_yz
-                }
-                double prin_str[3];
-                double prin_dir[9];
-                fem_dm->smat->CalPrinStrDir(stress, prin_str, prin_dir, 3);
-                // transpose rotation tensor for principal directions
-                for (size_t i = 0; i < 3; i++)
-                    fem_dm->pcs->SetNodeValue(
-                        node_index, stressPrincipleIndices[i], prin_str[i]);
-                fem_dm->pcs->SetNodeValue(
-                    node_index, PrinStressDirectionIndices[0], prin_dir[0]);
-                fem_dm->pcs->SetNodeValue(
-                    node_index, PrinStressDirectionIndices[1], prin_dir[3]);
-                fem_dm->pcs->SetNodeValue(
-                    node_index, PrinStressDirectionIndices[2], prin_dir[6]);
-                fem_dm->pcs->SetNodeValue(
-                    node_index, PrinStressDirectionIndices[3], prin_dir[1]);
-                fem_dm->pcs->SetNodeValue(
-                    node_index, PrinStressDirectionIndices[4], prin_dir[4]);
-                fem_dm->pcs->SetNodeValue(
-                    node_index, PrinStressDirectionIndices[5], prin_dir[7]);
-                fem_dm->pcs->SetNodeValue(
-                    node_index, PrinStressDirectionIndices[6], prin_dir[2]);
-                fem_dm->pcs->SetNodeValue(
-                    node_index, PrinStressDirectionIndices[7], prin_dir[5]);
-                fem_dm->pcs->SetNodeValue(
-                    node_index, PrinStressDirectionIndices[8], prin_dir[8]);
-            }
         }
     }
 }
