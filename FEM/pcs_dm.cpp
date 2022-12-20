@@ -373,11 +373,10 @@ void CRFProcessDeformation::InitialMBuffer()
         abort();
     }
 
-    size_t bufferSize(0);
+    size_t bufferSize = GetPrimaryVNumber() * m_msh->GetNodesNumber(true);
     bool HM_Stagered = false;
     if (GetObjType() == 4)
     {
-        bufferSize = GetPrimaryVNumber() * m_msh->GetNodesNumber(true);
         if (H_Process)
             HM_Stagered = true;
     }
@@ -389,8 +388,7 @@ void CRFProcessDeformation::InitialMBuffer()
                      2 * m_msh->GetNodesNumber(false);
 
     // Allocate memory for  temporal array
-    if (m_num->nls_method != 2)
-        ARRAY = new double[bufferSize];
+    ARRAY = new double[bufferSize];
 
     // Allocate memory for element variables
     MeshLib::CElem* elem = NULL;
@@ -508,8 +506,11 @@ double CRFProcessDeformation::Execute(int loop_process_number)
      */
 
     // JT//if(CouplingIterations == 0 && m_num->nls_method != 2)
-    if (this->first_coupling_iteration && m_num->nls_method != 2)
+    if (this->first_coupling_iteration)
+    {
         StoreLastSolution();  // u_n-->temp
+    }
+
     //  Reset stress for each coupling step when partitioned scheme is applied
     //  to HM
     if (H_Process && (type / 10 != 4))
@@ -885,8 +886,7 @@ double CRFProcessDeformation::Execute(int loop_process_number)
         "      ------------------------------------------------\n");
 
     // Recovery the old solution.  Temp --> u_n	for flow process
-    if (m_num->nls_method != 2)
-        RecoverSolution();
+    RecoverSolution();
 //
 #ifdef NEW_EQS  // WW
 #if defined(USE_MPI)
@@ -2105,6 +2105,18 @@ double CRFProcessDeformation::CaclMaxiumLoadRatio(void)
 **************************************************************************/
 void CRFProcessDeformation::Extropolation_GaussValue()
 {
+    m_msh->SwitchOnQuadraticNodes(true);
+    //
+    if (hasAnyProcessDeactivatedSubdomains || NumDeactivated_SubDomains > 0 ||
+        num_type_name.find("EXCAVATION") != string::npos)
+    {
+        CheckMarkedElement();
+    }
+    if (ExcavMaterialGroup > -1)
+    {
+        CheckExcavedElement();
+    }
+
     // Clean nodal stresses
     int NS = 4;
     int Idx_Stress[7];
@@ -2151,6 +2163,10 @@ void CRFProcessDeformation::Extropolation_GaussValue()
             fem_dm->ExtropolateGuassStress();
             // TEST        if(!update)
             //           (*eval_DM->Stress) -= (*eval_DM->Stress0);
+
+            fem_dm->ConfigElement(elem);
+
+            fem_dm->ExtropolateGuassStrain();
         }
     }
 }

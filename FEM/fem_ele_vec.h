@@ -65,7 +65,12 @@ public:
     void Write_BIN(std::fstream& os, const bool last_step = false);
     void Read_BIN(std::fstream& is);
     void ReadElementStressASCI(std::fstream& is);
-    double MeanStress(const int gp);
+    double MeanStress(const int gp) const;
+    double FirstStressInvariantIncrement(const int gp) const;
+    double getVolumeStrainIncrement(const int gp) const
+    {
+        return dstrain_v[gp];
+    }
 
 private:
     // Friend class
@@ -79,6 +84,7 @@ private:
     Math_Group::Matrix* Stress_i;
     Math_Group::Matrix* Stress_j;
     Math_Group::Matrix* pStrain;
+    double* dstrain_v;
     Math_Group::Matrix* y_surface;
     // Preconsolidation pressure
     Math_Group::Matrix* prep0;
@@ -272,6 +278,8 @@ private:
     void ComputeRESM(const double* tangJump = NULL);
     // Compute the singular enhanced strain matrix
     void ComputeSESM(const double* tangJump = NULL);
+
+    bool isElementExcavated();
 
     friend class process::CRFProcessDeformation;
 

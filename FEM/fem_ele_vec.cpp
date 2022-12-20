@@ -1105,6 +1105,7 @@ void CFiniteElementVec::LocalAssembly(const int update)
             }
     }
     else
+    {
         for (size_t i = 0; i < dim; i++)
             for (j = 0; j < nnodesHQ; j++)
                 // WX:03.2013 use total disp. if damage or E=f(t) is on, dstress
@@ -1117,6 +1118,7 @@ void CFiniteElementVec::LocalAssembly(const int update)
                 else
                     Disp[j + i * nnodesHQ] =
                         pcs->GetNodeValue(nodes[j], Idx_dm0[i]);
+    }
 
     if (_nodal_p1)
     {
@@ -2052,8 +2054,6 @@ void CFiniteElementVec::LocalAssembly_continuum(const int update)
 
         ComputeStrain(gp);
 
-        if (update)
-            RecordGuassStrain(gp, gp_r, gp_s, gp_t);
         if (F_Flag || T_Flag)
             getShapefunctValues(gp, 1);  // Linear order interpolation function
 
@@ -2489,10 +2489,11 @@ void CFiniteElementVec::LocalAssembly_continuum(const int update)
         }
     }
     // The mapping of Gauss point strain to element nodes
-    if (update)
-        ExtropolateGuassStrain();
-    else if (smat->Creep_mode == 1000)  // HL_ODS. Strain increment by creep
+    if (smat->Creep_mode == 1000 &&
+        (!update))  // HL_ODS. Strain increment by creep
+    {
         smat->AccumulateEtr_HL_ODS(eleV_DM, nGaussPoints);
+    }
 }
 
 /***************************************************************************
@@ -2562,6 +2563,40 @@ bool CFiniteElementVec::RecordGuassStrain(const int gp, const int gp_r,
     }
     return false;
 }
+bool CFiniteElementVec::isElementExcavated()
+{
+    if ((smat->excavation > 0 || pcs->ExcavMaterialGroup > -1) &&
+        MeshElement->GetMark())
+    {
+        int valid;
+        if (smat->excavation > 0)
+        {
+            if (GetCurveValue(smat->excavation, 0, aktuelle_zeit, &valid) < 1.0)
+            {
+                smat->excavated = true;
+                return true;
+            }
+            else
+            {
+                smat->excavated = false;
+            }
+        }
+        if (static_cast<size_t>(pcs->ExcavMaterialGroup) ==
+            MeshElement->GetPatchIndex())
+        {
+            double const* ele_center(MeshElement->GetGravityCenter());
+            double max_excavation_range = 0;
+            double min_excavation_range = 0;
+            if (pcs->isPointInExcavatedDomain(ele_center, max_excavation_range,
+                                              min_excavation_range))
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
 
 /***************************************************************************
    GeoSys - Funktion:
@@ -2577,7 +2612,42 @@ bool CFiniteElementVec::RecordGuassStrain(const int gp, const int gp_r,
  **************************************************************************/
 void CFiniteElementVec::ExtropolateGuassStrain()
 {
-    // WX:03.2012. if excavation dbuff changed
+    if (isElementExcavated())
+    {
+        return;
+    }
+
+    for (size_t i = 0; i < dim; i++)
+    {
+        for (int j = 0; j < nnodesHQ; j++)
+        {
+            Disp[j + i * nnodesHQ] = pcs->GetNodeValue(nodes[j], Idx_dm1[i]) -
+                                     pcs->GetNodeValue(nodes[j], Idx_dm0[i]);
+        }
+    }
+
+    int gp_r = 0, gp_s = 0, gp_t = 0;
+    ElementValue_DM* eleV_DM = ele_value_dm[MeshElement->GetIndex()];
+
+    for (int gp = 0; gp < nGaussPoints; gp++)
+    {
+        GetGaussData(gp, gp_r, gp_s, gp_t);
+        getGradShapefunctValues(gp, 2);
+        // Computes dstrain
+        ComputeStrain(gp);
+        eleV_DM->dstrain_v[gp] = dstrain[0] + dstrain[1] + dstrain[2];
+        RecordGuassStrain(gp, gp_r, gp_s, gp_t);
+    }
+
+    nnodes = MeshElement->nnodes;
+    // Node indices
+    for (int i = 0; i < nnodes; i++)
+    {
+        nodes[i] = MeshElement->nodes[i]->GetIndex();
+        dbuff[i] =
+            (double)MeshElement->nodes[i]->getConnectedElementIDs().size();
+    }
+
     if (pcs->ExcavMaterialGroup > -1)
     {
         MeshLib::checkConnectedElementsAferExcavation(*MeshElement, dbuff);
@@ -2699,6 +2769,11 @@ void CFiniteElementVec::ExtropolateGuassStrain()
  **************************************************************************/
 void CFiniteElementVec::ExtropolateGuassStress()
 {
+    if (isElementExcavated())
+    {
+        return;
+    }
+
     // For strain and stress extrapolation all element types
     // Number of elements associated to nodes
     nnodes = MeshElement->nnodes;
@@ -3597,7 +3672,6 @@ void CFiniteElementVec::LocalAssembly_EnhancedStrain(const int update)
         if (update)
         {
             // Two Dimensional
-            RecordGuassStrain(gp, gp_r, gp_s, gp_t);
             for (int i = 0; i < ns; i++)
             {
                 (*eleV_DM->Stress)(i, gp) = dstress[i];
@@ -3664,7 +3738,6 @@ void CFiniteElementVec::LocalAssembly_EnhancedStrain(const int update)
     {
         // Update strains.
         // The mapping of Gauss point strain to element nodes
-        ExtropolateGuassStrain();
         // Update enhanced parameter
         eleV_DM->disp_j = zeta_t1;
         eleV_DM->tract_j = sj;
@@ -3770,7 +3843,14 @@ ElementValue_DM::ElementValue_DM(CElem* ele, const int NGP, bool HM_Staggered)
     Stress_i = new Matrix(LengthBS, NGPoints);
     Stress = Stress_i;
     if (HM_Staggered)
+    {
         Stress_j = new Matrix(LengthBS, NGPoints);
+        dstrain_v = new double[NGPoints];
+    }
+    else
+    {
+        dstrain_v = NULL;
+    }
     //
     if (Plastic > 0)
     {
@@ -3871,6 +3951,11 @@ void ElementValue_DM::Write_BIN(std::fstream& os, const bool last_step)
     Stress_i->Write_BIN(os);
     if (pStrain)
         pStrain->Write_BIN(os);
+    if (dstrain_v)
+    {
+        os.write((char*)dstrain_v, Stress_i->Cols() * sizeof(double));
+    }
+
     if (y_surface)
         y_surface->Write_BIN(os);
     if (xi)
@@ -3910,6 +3995,11 @@ void ElementValue_DM::Read_BIN(std::fstream& is)
 {
     Stress0->Read_BIN(is);
     Stress_i->Read_BIN(is);
+    if (dstrain_v)
+    {
+        is.read((char*)dstrain_v, Stress_i->Cols() * sizeof(double));
+    }
+
     if (pStrain)
         pStrain->Read_BIN(is);
     if (y_surface)
@@ -3987,6 +4077,12 @@ ElementValue_DM::~ElementValue_DM()
         delete Stress_j;
     if (pStrain)
         delete pStrain;
+
+    if (dstrain_v)
+    {
+        delete[] dstrain_v;
+    }
+
     if (y_surface)
         delete y_surface;
 
@@ -4051,9 +4147,14 @@ ElementValue_DM::~ElementValue_DM()
     ev_loc_nr_res = NULL;
 }
 
-double ElementValue_DM::MeanStress(const int gp)
+double ElementValue_DM::MeanStress(const int gp) const
 {
     return (*Stress)(0, gp) + (*Stress)(1, gp) + (*Stress)(2, gp);
 }
 
+double ElementValue_DM::FirstStressInvariantIncrement(const int gp) const
+{
+    return (*Stress)(0, gp) + (*Stress)(1, gp) + (*Stress)(2, gp) -
+           ((*Stress_i)(0, gp) + (*Stress_i)(1, gp) + (*Stress_i)(2, gp));
+}
 }  // end namespace FiniteElement
