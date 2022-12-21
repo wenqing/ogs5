@@ -2632,10 +2632,14 @@ void CFiniteElementVec::ExtropolateGuassStrain()
     for (int gp = 0; gp < nGaussPoints; gp++)
     {
         GetGaussData(gp, gp_r, gp_s, gp_t);
+        getShapefunctValues(gp, 2);
         getGradShapefunctValues(gp, 2);
         // Computes dstrain
         ComputeStrain(gp);
-        eleV_DM->dstrain_v[gp] = dstrain[0] + dstrain[1] + dstrain[2];
+        if (F_Flag)
+        {
+            eleV_DM->dstrain_v[gp] = dstrain[0] + dstrain[1] + dstrain[2];
+        }
         RecordGuassStrain(gp, gp_r, gp_s, gp_t);
     }
 
@@ -3557,6 +3561,7 @@ void CFiniteElementVec::LocalAssembly_EnhancedStrain(const int update)
         //---------------------------------------------------------
         // Compute geometry
         //---------------------------------------------------------
+        getShapefunctValues(gp, 2);
         getGradShapefunctValues(gp, 2);
         ComputeStrain(gp);
         // Compute Ge, regular part of enhanced strain-jump matrix
@@ -3845,12 +3850,13 @@ ElementValue_DM::ElementValue_DM(CElem* ele, const int NGP, bool HM_Staggered)
     if (HM_Staggered)
     {
         Stress_j = new Matrix(LengthBS, NGPoints);
-        dstrain_v = new double[NGPoints];
     }
-    else
+    dstrain_v = new double[NGPoints];
+    for (int i = 0; i < NGPoints; i++)
     {
-        dstrain_v = NULL;
+        dstrain_v[i] = 0.0;
     }
+
     //
     if (Plastic > 0)
     {
@@ -3951,10 +3957,8 @@ void ElementValue_DM::Write_BIN(std::fstream& os, const bool last_step)
     Stress_i->Write_BIN(os);
     if (pStrain)
         pStrain->Write_BIN(os);
-    if (dstrain_v)
-    {
-        os.write((char*)dstrain_v, Stress_i->Cols() * sizeof(double));
-    }
+
+    os.write((char*)dstrain_v, Stress_i->Cols() * sizeof(double));
 
     if (y_surface)
         y_surface->Write_BIN(os);
@@ -3995,10 +3999,7 @@ void ElementValue_DM::Read_BIN(std::fstream& is)
 {
     Stress0->Read_BIN(is);
     Stress_i->Read_BIN(is);
-    if (dstrain_v)
-    {
-        is.read((char*)dstrain_v, Stress_i->Cols() * sizeof(double));
-    }
+    is.read((char*)dstrain_v, Stress_i->Cols() * sizeof(double));
 
     if (pStrain)
         pStrain->Read_BIN(is);

@@ -1368,6 +1368,10 @@ void CRFProcess::Write_Processed_BC()
 **************************************************************************/
 void CRFProcess::WriteSolution(const bool for_destructor)
 {
+    if (aktueller_zeitschritt == 0)
+    {
+        return;
+    }
     if (_init_domain_data_type == FiniteElement::NO_IO ||
         _init_domain_data_type == FiniteElement::READ)
         return;

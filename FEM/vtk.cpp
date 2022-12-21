@@ -637,7 +637,6 @@ bool CVTK::WriteNodalValue(std::fstream& fin, bool output_data, COutput* out,
     bool is3D = (msh->GetCoordinateFlag() / 10 == 3);
     bool outNodeVelocity = false;
     bool outNodeDisplacement = false;
-    bool outNodePrincipleStressDirections = false;
 
     // Nodal values
     for (int i = 0; i < (int)out->_nod_value_vector.size(); i++)
@@ -653,12 +652,6 @@ bool CVTK::WriteNodalValue(std::fstream& fin, bool output_data, COutput* out,
         if (internal_val_name.find("DISPLACEMENT") != string::npos)
         {
             outNodeDisplacement = true;
-            continue;
-        }
-
-        if (internal_val_name.find("NORM_STRESS") != string::npos)
-        {
-            outNodePrincipleStressDirections = true;
             continue;
         }
 

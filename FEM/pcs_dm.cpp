@@ -1982,6 +1982,7 @@ double CRFProcessDeformation::CaclMaxiumLoadRatio(void)
                                  "MshElemType not handled"
                               << std::endl;
                 }
+                fem_dm->getShapefunctValues(gp, 2);
                 fem_dm->getGradShapefunctValues(gp, 2);
                 fem_dm->ComputeStrain(gp);
 
@@ -3053,6 +3054,11 @@ void CRFProcessDeformation::UpdateStress()
 **************************************************************************/
 void CRFProcessDeformation::WriteGaussPointStress(const bool last_step)
 {
+    if (aktueller_zeitschritt == 0)
+    {
+        return;
+    }
+
     if (!(_init_domain_data_type == FiniteElement::WRITE ||
           _init_domain_data_type == FiniteElement::READ_WRITE))
         return;
