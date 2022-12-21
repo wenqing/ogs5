@@ -13,6 +13,8 @@
 
 #include "fem_ele_std.h"
 
+#include "fem_ele_vec.h"
+
 // C++ STL
 #include <cfloat>
 #include <cmath>
@@ -1732,50 +1734,92 @@ double CFiniteElementStd::CalCoefMass(const int gp)
         {
             // Since there might be mass lumping, the IP data have to be
             // calculated.
-            Sw = 1.0;
+            double drho_dp_rho = 0.0;
+            val = 0.0;
             dSdp = 0.;
-            PG = interpolate(NodalVal1);  // 12.02.2007.  Important! WW
-            TG = cpl_pcs ? interpolate(NodalValC)
-                         : PhysicalConstant::CelsiusZeroInKelvin + 20.0;
-
-            double args[] = {std::max(0.0, PG), TG, 0.0};
-            if (PG <
-                0.0)  // JM skip to call these two functions in saturated case
+            if (pcs->m_num->ele_mass_lumping == 1)
             {
-                Sw = MediaProp->SaturationCapillaryPressureFunction(-PG);
-                dSdp = -MediaProp->PressureSaturationDependency(
-                    Sw, true);  // JT: dSdp now returns actual sign (i.e. <0)
+                Sw = 1.0;
+                PG = interpolate(NodalVal1);  // 12.02.2007.  Important! WW
+                TG = cpl_pcs ? interpolate(NodalValC)
+                             : PhysicalConstant::CelsiusZeroInKelvin + 20.0;
+
+                double args[] = {std::max(0.0, PG), TG, 0.0};
+                if (PG < 0.0)  // JM skip to call these two functions in
+                               // saturated case
+                {
+                    Sw = MediaProp->SaturationCapillaryPressureFunction(-PG);
+                    dSdp = -MediaProp->PressureSaturationDependency(
+                        Sw,
+                        true);  // JT: dSdp now returns actual sign (i.e. <0)
+                }
+
+                poro = MediaProp->Porosity(Index, pcs->m_num->ls_theta);
+                rhow = FluidProp->Density(args);
+
+                drho_dp_rho = (FluidProp->compressibility_model_pressure > 0)
+                                  ? FluidProp->drhodP(args) / rhow
+                                  : FluidProp->drho_dp;
+                if (MediaProp->heat_diffusion_model == 1)
+                {
+                    const double humi =
+                        exp(std::min(PG, 0.0) /
+                            (SpecificGasConstant::WaterVapour * TG * rhow));
+                    const double rhov = humi * FluidProp->vaporDensity(TG);
+                    //
+                    val -= poro * rhov * dSdp / rhow;
+                    val +=
+                        (1.0 - Sw) * poro * rhov /
+                        (rhow * rhow * SpecificGasConstant::WaterVapour * TG);
+                }
+            }
+            else
+            {
+                IntegrationPointVariableBuffer const val_ip =
+                    vapor_variable_buffer[gp];
+
+                Sw = val_ip.S_w;
+                PG = val_ip.p;
+                TG = val_ip.T;
+                dSdp = (PG < 0.0)
+                           ? -MediaProp->PressureSaturationDependency(Sw, true)
+                           : 0.0;
+
+                poro = val_ip.poro;
+                rhow = val_ip.rho_w;
+
+                drho_dp_rho = val_ip.fluid_compressibility;
+
+                if (MediaProp->heat_diffusion_model == 1)
+                {
+                    const double rhov = val_ip.rho_gw;
+                    //
+                    val -= poro * rhov * dSdp / rhow;
+                    val +=
+                        (1.0 - Sw) * poro * rhov /
+                        (rhow * rhow * SpecificGasConstant::WaterVapour * TG);
+                }
             }
 
-            poro = MediaProp->Porosity(Index, pcs->m_num->ls_theta);
-            rhow = FluidProp->Density(args);
-
-            double drho_dp_rho = (FluidProp->compressibility_model_pressure > 0)
-                                     ? FluidProp->drhodP(args) / rhow
-                                     : FluidProp->drho_dp;
-
             // Storativity
-            val =
+            val +=
                 MediaProp->StorageFunction(Index, unit, pcs->m_num->ls_theta) *
                 Sw;
 
             // Fluid compressibility
-            if (rhow > 0.0)
-                val += poro * Sw * drho_dp_rho;
+            val += poro * Sw * drho_dp_rho;
             // Capillarity
-            if (PG < 0.0)  // dSdp gives always a value>0, even if p>0!
-                val += poro * dSdp;
-            // WW
-            if (MediaProp->heat_diffusion_model == 1)
+            val += poro * dSdp;
+
+            if (dm_pcs &&
+                dm_pcs->getProcessType() == FiniteElement::DEFORMATION)
             {
-                const double humi =
-                    exp(std::min(PG, 0.0) /
-                        (SpecificGasConstant::WaterVapour * TG * rhow));
-                const double rhov = humi * FluidProp->vaporDensity(TG);
-                //
-                val -= poro * rhov * dSdp / rhow;
-                val += (1.0 - Sw) * poro * rhov /
-                       (rhow * rhow * SpecificGasConstant::WaterVapour * TG);
+                const double S_e =
+                    MediaProp->GetEffectiveSaturationForPerm(Sw, 0);
+                const double bishop = SolidProp->getBishopCoefficient(S_e, PG);
+                double const alpha_B = SolidProp->getBiotsConstant();
+                val += 3.0 * bishop * alpha_B * alpha_B /
+                       SolidProp->getBulkModulus();
             }
         }
         break;
@@ -3741,7 +3785,9 @@ double CFiniteElementStd::CalCoefStrainCouping(const int ip, const int phase)
         {
             IntegrationPointVariableBuffer const val_ip =
                 vapor_variable_buffer[ip];
-            return val_ip.S_w;
+            const double S_e =
+                MediaProp->GetEffectiveSaturationForPerm(val_ip.S_w, 0);
+            return SolidProp->getBishopCoefficient(S_e, val_ip.p);
         }
         case EPT_MULTIPHASE_FLOW:
             if (phase == 0)
@@ -5639,15 +5685,23 @@ void CFiniteElementStd::CalcValuesAtIntegrationPoint(
         getShapefunctValues(gp, 1);
         if (is_pressure_primary_variable)
         {
+            val_ip.p0 = interpolate(NodalVal0);
             val_ip.p = interpolate(NodalVal1);
-            val_ip.T = cpl_pcs ? interpolate(NodalValC)
+            val_ip.T0 = cpl_pcs ? interpolate(NodalValC)
+                                : PhysicalConstant::CelsiusZeroInKelvin + 20.0;
+            val_ip.T = cpl_pcs ? interpolate(NodalValC1)
                                : PhysicalConstant::CelsiusZeroInKelvin + 20.0;
         }
         else
         {
+            val_ip.T0 = interpolate(NodalVal0);
             val_ip.T = interpolate(NodalVal1);
-            val_ip.p = cpl_pcs ? interpolate(NodalValC) : 0.0;
+            val_ip.p0 = cpl_pcs ? interpolate(NodalValC) : 0.0;
+            val_ip.p = cpl_pcs ? interpolate(NodalValC1) : 0.0;
         }
+
+        const double relaxation = pcs->m_num->nls_relaxation;
+        val_ip.p = relaxation * val_ip.p + (1.0 - relaxation) * val_ip.p0;
 
         args[0] = std::max(0.0, val_ip.p);
         args[1] = std::max(0.0, val_ip.T);
@@ -5655,15 +5709,25 @@ void CFiniteElementStd::CalcValuesAtIntegrationPoint(
 
         val_ip.rho_w = FluidProp->Density(args);
 
-        val_ip.fluid_thermal_expansivity =
+        val_ip.fluid_compressibility =
             FluidProp->compressibility_model_pressure > 0
                 ? FluidProp->drhodP(args) / val_ip.rho_w
                 : FluidProp->drho_dp;
 
-        val_ip.S_w =
-            val_ip.p < 0.0
-                ? MediaProp->SaturationCapillaryPressureFunction(-val_ip.p)
-                : 1.0;
+        val_ip.S_w = 1.0;
+        if (pcs->getProcessType() == FiniteElement::MULTI_PHASE_FLOW ||
+            pcs->getProcessType() == FiniteElement::RICHARDS_FLOW)
+        {
+            double const pc =
+                (pcs->getProcessType() == FiniteElement::MULTI_PHASE_FLOW)
+                    ? val_ip.p
+                    : -val_ip.p;
+
+            if (pc >= 0.0)
+            {
+                val_ip.S_w = MediaProp->SaturationCapillaryPressureFunction(pc);
+            }
+        }
 
         val_ip.poro = MediaProp->Porosity(Index, pcs->m_num->ls_theta);
 
@@ -9009,28 +9073,78 @@ void CFiniteElementStd::Assemble_strainCPL(const int phase)
     //
     for (i = nnodes; i < nnodesHQ; i++)
         nodes[i] = MeshElement->nodes_index[i];
-    (*StrainCoupling) = 0.0;
-    CalcStrainCoupling(phase);
-    //	if(D_Flag != 41&&aktueller_zeitschritt>1)
-    if (Residual >= 0)
-    {                       // Incorparate this after the first time step
-        if (Residual == 0)  // Partitioned
 
-            for (i = 0; i < nnodesHQ; i++)
+    if (Residual == 0)  // staggered scheme
+    {
+        int gp_r, gp_s, gp_t;
+
+        // Compute grad N, det(J), and etc.
+        // ComputeGradShapefctInElement(false);
+
+        const int dp_idx = pcs->GetNodeValueIndex("dX_t_n_minus_1");
+        const int dT_idx =
+            cpl_pcs ? cpl_pcs->GetNodeValueIndex("dX_t_n_minus_1") : -1;
+
+        for (i = 0; i < nnodes; i++)
+        {
+            NodalVal[i] = 0.0;
+        }
+
+        ElementValue_DM const* eleV_DM = ele_value_dm[MeshElement->GetIndex()];
+
+        // Loop over Gauss points
+        for (int gp = 0; gp < nGaussPoints; gp++)
+        {
+            double const fkt = GetGaussData(gp, gp_r, gp_s, gp_t);
+
+            getShapefunctValues(gp, 1);
+
+            double const dstrain_v = eleV_DM->getVolumeStrainIncrement(gp);
+
+            double const coefficient =
+                CalCoefStrainCouping(gp, phase) * fabs(SolidProp->biot_const);
+            //
+            double const factor = fkt * dstrain_v * coefficient / dt;
+            for (i = 0; i < nnodes; i++)
             {
-                NodalVal2[i] =
-                    -fac * (dm_pcs->GetNodeValue(nodes[i], Idx_dm1[0]) -
-                            dm_pcs->GetNodeValue(nodes[i], Idx_dm0[0]));
-                NodalVal3[i] =
-                    -fac * (dm_pcs->GetNodeValue(nodes[i], Idx_dm1[1]) -
-                            dm_pcs->GetNodeValue(nodes[i], Idx_dm0[1]));
-                if (dim == 3)  // 3D.
-                    NodalVal4[i] =
-                        -fac * (dm_pcs->GetNodeValue(nodes[i], Idx_dm1[2]) -
-                                dm_pcs->GetNodeValue(nodes[i], Idx_dm0[2]));
+                NodalVal[i] -= factor * shapefct[i];
             }
-        else if (Residual == 1)  // Mono and plastic
 
+            double const Kr = SolidProp->getBulkModulus();
+
+            double const dp_n_0 = interpolate(dp_idx, pcs);
+            double const factor_dp =
+                3.0 * fkt * dp_n_0 * coefficient * coefficient / (Kr * dt);
+
+            for (i = 0; i < nnodes; i++)
+            {
+                NodalVal[i] += factor_dp * shapefct[i];
+            }
+
+            if (cpl_pcs &&
+                cpl_pcs->getProcessType() == FiniteElement::HEAT_TRANSPORT)
+            {
+                IntegrationPointVariableBuffer const val_ip =
+                    vapor_variable_buffer[gp];
+                double const dT_n_0 = interpolate(dT_idx, cpl_pcs);
+                double const factor_T = 3.0 * fkt * coefficient *
+                                        (val_ip.T - val_ip.T0 - dT_n_0) *
+                                        SolidProp->Thermal_Expansion() / dt;
+                for (i = 0; i < nnodes; i++)
+                {
+                    NodalVal[i] -= factor_T * shapefct[i];
+                }
+            }
+        }
+        setOrder(1);
+    }
+    else
+    {
+        (*StrainCoupling) = 0.0;
+        CalcStrainCoupling(phase);
+
+        if (Residual == 1)  // Mono and plastic
+        {
             // du is stored in u_0
             for (i = 0; i < nnodesHQ; i++)
             {
@@ -9040,8 +9154,9 @@ void CFiniteElementStd::Assemble_strainCPL(const int phase)
                     NodalVal4[i] =
                         -fac * pcs->GetNodeValue(nodes[i], Idx_dm0[2]);
             }
-        else if (Residual == 2)  // Mono dynamic
-
+        }
+        if (Residual == 2)  // Mono dynamic
+        {
             // da is stored in a_0
             // v_{n+1} = v_{n}+a_n*dt+beta1*dt*da
             // a_n is in dm_pcs->ARRAY
@@ -9059,6 +9174,7 @@ void CFiniteElementStd::Assemble_strainCPL(const int phase)
                           fac * pcs->GetNodeValue(nodes[i], Idx_dm0[2]) +
                           u_n[nodes[i] + NodeShift[2]] * dt);
             }
+        }
 
         for (i = 0; i < nnodes; i++)
         {
@@ -9073,15 +9189,16 @@ void CFiniteElementStd::Assemble_strainCPL(const int phase)
                         (*StrainCoupling)(i, j + 2 * nnodesHQ) * NodalVal4[j];
             }
         }
-        // Add RHS
-        for (i = 0; i < nnodes; i++)
-        {
-#if !defined(USE_PETSC)  // && !defined(other parallel libs)//03~04.3012. WW
-            eqs_rhs[NodeShift[shift_index] + eqs_number[i]] += NodalVal[i];
-#endif
-            (*RHS)[i + LocalShift] += NodalVal[i];
-        }
     }
+    // Add RHS
+    for (i = 0; i < nnodes; i++)
+    {
+#if !defined(USE_PETSC)  // && !defined(other parallel libs)//03~04.3012. WW
+        eqs_rhs[NodeShift[shift_index] + eqs_number[i]] += NodalVal[i];
+#endif
+        (*RHS)[i + LocalShift] += NodalVal[i];
+    }
+
     // Monolithic scheme.
     // if(D_Flag == 41)
     if (dm_pcs->type == 41)  // 06.2011. WW
@@ -9450,6 +9567,7 @@ void CFiniteElementStd::Assembly()
     {
         //....................................................................
         case EPT_LIQUID_FLOW:  // Liquid flow
+            CalcValuesAtIntegrationPoint(true);
             AssembleParabolicEquation();
             Assemble_Gravity();
             Assemble_RHS_LIQUIDFLOW();
@@ -9555,7 +9673,9 @@ void CFiniteElementStd::Assembly()
             Assemble_Gravity();
             Assemble_RHS_LIQUIDFLOW();  // JM  (thermal expansion fluid)
             if (dm_pcs)
+            {
                 Assemble_strainCPL();
+            }
 
             if (pcs->m_num->nls_method == 1)  // Newton-Raphson. 07.2011. WW
                 ComputeAdditionalJacobi_Richards();
@@ -9580,6 +9700,7 @@ void CFiniteElementStd::Assembly()
         case EPT_MULTIPHASE_FLOW:
             // TEST                   dm_pcs = NULL;
             // Multi-phase flow 24.02.2007 WW
+            CalcValuesAtIntegrationPoint(true);
             AssembleParabolicEquation();
             Assemble_Gravity();
             if (cpl_pcs && MediaProp->heat_diffusion_model == 1)

@@ -9712,7 +9712,7 @@ double CSolidProperties::getBulkModulus() const
         return K;
 
     if (Youngs_mode < 10 || Youngs_mode > 13)
-        return E / 3 / (1 - 2 * PoissonRatio);
+        return getYoungsModulus() / 3 / (1 - 2 * PoissonRatio);
 
     // average Youngs modulus
     double const E_av =

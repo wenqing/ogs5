@@ -41,8 +41,6 @@ namespace ProblemLib
 {
 enum ProcessID
 {
-    heat_transport,
-    deformation,
     overland_flow,
     groundwater_flow,
     richards_flow,
@@ -52,6 +50,8 @@ enum ProcessID
     two_phase_flow,
     liquid_flow,
     air_flow,
+    heat_transport,
+    deformation,
     fluid_momentum,
     random_walk,
     mass_transport,

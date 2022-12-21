@@ -1428,6 +1428,12 @@ void CRFProcess::WriteSolution(const bool for_destructor)
         os.write((char*)nod_val_vector[idx[j]], data_size * sizeof(double));
     }
 
+    const int dX_idx = GetNodeValueIndex("dX_t_n_minus_1");
+    if (dX_idx > 0)
+    {
+        os.write((char*)nod_val_vector[dX_idx], data_size * sizeof(double));
+    }
+
     os.close();
 
     ScreenMessage("Write solutions of time step %d into file %s s\n",
@@ -1481,6 +1487,12 @@ void CRFProcess::ReadSolution()
     for (int j = 0; j < 2 * pcs_number_of_primary_nvals; j++)
     {
         is.read((char*)nod_val_vector[idx[j]], data_size * sizeof(double));
+    }
+
+    const int dX_idx = GetNodeValueIndex("dX_t_n_minus_1");
+    if (dX_idx > 0)
+    {
+        is.read((char*)nod_val_vector[dX_idx], data_size * sizeof(double));
     }
 
     is.close();
@@ -3274,10 +3286,19 @@ void CRFProcess::ConfigHeatTransport()
         pcs_number_of_primary_nvals = 1;
         pcs_primary_function_name[0] = "TEMPERATURE1";
         pcs_primary_function_unit[0] = "K";
-        pcs_number_of_secondary_nvals = 1;  // JOD 2014-11-10
-        pcs_secondary_function_name[0] = "DELTA_TEMPERATURE1";
-        pcs_secondary_function_unit[0] = "K";
-        pcs_secondary_function_timelevel[0] = 0;
+
+        pcs_number_of_secondary_nvals = 0;  // JOD 2014-11-10
+        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
+            "DELTA_TEMPERATURE1";
+        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "K";
+        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 0;
+        pcs_number_of_secondary_nvals++;
+
+        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
+            "dX_t_n_minus_1";
+        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "K";
+        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 0;
+        pcs_number_of_secondary_nvals++;
 
 #ifdef REACTION_ELEMENT
         pcs_number_of_evals = 1;  // MX
@@ -3703,6 +3724,7 @@ void CRFProcess::ConfigUnsaturatedFlow()
             "SATURATION1";
         pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "m3/m3";
         pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 0;
+
         pcs_number_of_secondary_nvals++;
         pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
             "SATURATION1";
@@ -3723,6 +3745,13 @@ void CRFProcess::ConfigUnsaturatedFlow()
         pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "FLUX";
         pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "m/s";
         pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+        pcs_number_of_secondary_nvals++;
+
+        // Pressure increment of the previous time step.
+        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
+            "dX_t_n_minus_1";
+        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
+        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 0;
         pcs_number_of_secondary_nvals++;
         if (Neglect_H_ini == 2)
         {
@@ -10450,6 +10479,9 @@ void CRFProcess::CopyTimestepNODValues(bool forward)
     if (type == 4 || type == 41)
         Quadr = true;
 
+    // For the increment of the solution of the previous time step:
+    const int dX_idx = GetNodeValueIndex("dX_t_n_minus_1");
+
     for (int j = 0; j < pcs_number_of_primary_nvals; j++)
     {
         int nidx0 = GetNodeValueIndex(pcs_primary_function_name[j]);
@@ -10459,6 +10491,16 @@ void CRFProcess::CopyTimestepNODValues(bool forward)
             nidx0++;
             nidx1--;
         }
+
+        if (dX_idx > 0)
+        {
+            for (size_t l = 0; l < m_msh->GetNodesNumber(Quadr); l++)
+            {
+                SetNodeValue(l, dX_idx,
+                             GetNodeValue(l, nidx1) - GetNodeValue(l, nidx0));
+            }
+        }
+
         for (size_t l = 0; l < m_msh->GetNodesNumber(Quadr); l++)
             SetNodeValue(l, nidx0, GetNodeValue(l, nidx1));
         // WW

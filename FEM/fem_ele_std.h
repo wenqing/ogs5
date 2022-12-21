@@ -92,7 +92,7 @@ struct IntegrationPointVariableBuffer
 {
     double L0;
     double rho_w;
-    double fluid_thermal_expansivity;
+    double fluid_compressibility;
     double S_w = 1.0;
     double Dvp;
     double Dv;
@@ -100,7 +100,9 @@ struct IntegrationPointVariableBuffer
     double humidity;
     double drho_gw_dp;
     double drho_gw_dT;
+    double p0;
     double p;
+    double T0;
     double T;
     double poro;
     double tort;
