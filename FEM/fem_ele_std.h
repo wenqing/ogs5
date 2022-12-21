@@ -92,6 +92,7 @@ struct IntegrationPointVariableBuffer
 {
     double L0;
     double rho_w;
+    double viscosity_w;
     double fluid_compressibility;
     double S_w = 1.0;
     double Dvp;

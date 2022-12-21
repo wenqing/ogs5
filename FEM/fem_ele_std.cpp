@@ -1590,32 +1590,44 @@ double CFiniteElementStd::CalCoefMass(const int gp)
             break;
         case EPT_LIQUID_FLOW:  // Liquid flow
         {
-            val = MediaProp->StorageFunction(Index, unit, pcs->m_num->ls_theta);
-            double drho_dp_rho = 0.0;
-            // get drho/dp/rho from material model or direct input
-            const double rho_val = FluidProp->Density();
-            if (FluidProp->compressibility_model_pressure > 0)
+            val = 0.0;
+            if (pcs->m_num->ele_mass_lumping == 1)
             {
-                double arg[2];
-                arg[0] = interpolate(NodalVal1);   //   p
-                arg[1] = interpolate(NodalValC1);  //   T
-                if (cpl_pcs)
-                     arg[1] = interpolate(NodalValC1);
+                // Since there might be mass lumping, the IP data have to be
+                // calculated.
+                // get drho/dp/rho from material model or direct input
+                const double rho_val = FluidProp->Density();
+                double drho_dp_rho = 0.0;
+                if (FluidProp->compressibility_model_pressure > 0)
+                {
+                    double arg[2];
+                    arg[0] = interpolate(NodalVal1);   //   p
+                    arg[1] = interpolate(NodalValC1);  //   T
+                    if (cpl_pcs)
+                        arg[1] = interpolate(NodalValC1);
+                    else
+                        arg[1] = PhysicalConstant::CelsiusZeroInKelvin + 20.0;
+                    drho_dp_rho = FluidProp->drhodP(arg) / rho_val;
+                }
                 else
-                     arg[1] = PhysicalConstant::CelsiusZeroInKelvin + 20.0;
-                drho_dp_rho = FluidProp->drhodP(arg) / rho_val;
+                {
+                    drho_dp_rho =
+                        rho_val > DBL_EPSILON
+                            ? FluidProp->drho_dp * FluidProp->rho_0 / rho_val
+                            : 0.0;
+                }
+                const double poro_val =
+                    MediaProp->Porosity(Index, pcs->m_num->ls_theta);
+                val += poro_val * drho_dp_rho;
             }
             else
             {
-                drho_dp_rho =
-                    rho_val > DBL_EPSILON
-                        ? FluidProp->drho_dp * FluidProp->rho_0 / rho_val
-                        : 0.0;
+                IntegrationPointVariableBuffer const val_ip =
+                    vapor_variable_buffer[gp];
+                val += val_ip.poro * val_ip.fluid_compressibility;
             }
-
-            const double poro_val =
-                MediaProp->Porosity(Index, pcs->m_num->ls_theta);
-            val += poro_val * drho_dp_rho;
+            val +=
+                MediaProp->StorageFunction(Index, unit, pcs->m_num->ls_theta);
 
             // AS,WX: 08.2012 storage function eff stress
             if (MediaProp->storage_effstress_model > 0)
@@ -1626,6 +1638,13 @@ double CFiniteElementStd::CalCoefMass(const int gp)
                 storage_effstress =
                     MediaProp->StorageFunctionEffStress(Index, nnodes, h_fem);
                 val += storage_effstress;
+            }
+
+            if (dm_pcs &&
+                dm_pcs->getProcessType() == FiniteElement::DEFORMATION)
+            {
+                double const alpha_B = SolidProp->getBiotsConstant();
+                val += 3.0 * alpha_B * alpha_B / SolidProp->getBulkModulus();
             }
 
             // val /= time_unit_factor;
@@ -2261,7 +2280,6 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
     int nidx1;
     int Index = MeshElement->GetIndex();
     double k_rel;
-    double variables[3];         // OK4709
     int tr_phase = 0;            // SB, BG
     double perm_effstress = 1.;  // AS:08.2012
     // WX:12.2012 perm depends on p or strain, same as CalCoefLaplace2
@@ -2276,6 +2294,7 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
         default:
             break;
         case EPT_LIQUID_FLOW:  // Liquid flow
+        {
             k_rel = 1.0;
             if (MediaProp->flowlinearity_model > 0)
                 k_rel = MediaProp->NonlinearFlowFunction(
@@ -2321,15 +2340,12 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
                     for (size_t j = 0; j < dim; j++)
                         tensor[dim * i + j] = global_tensor(i, j);
             }
-            variables[0] = interpolate(NodalVal1);  // OK4709 pressure
-            if (T_Flag)
-                variables[1] = interpolate(NodalValC);  // OK4709 temperature
-            else
-                variables[1] = PhysicalConstant::CelsiusZeroInKelvin + 20.0;
 
-            // OK4709
-            mat_fac = FluidProp->Viscosity(variables);
-            // OK4709 mat_fac = FluidProp->Viscosity();
+            const IntegrationPointVariableBuffer val_ip =
+                vapor_variable_buffer[ip];
+
+            mat_fac = val_ip.viscosity_w;
+
             if (gravity_constant < MKleinsteZahl)  // HEAD version
                 mat_fac = 1.0;
             if (HEAD_Flag)
@@ -2337,10 +2353,7 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
             // Modified LBNL model WW
             if (MediaProp->permeability_stress_mode > 1)
             {
-                if (cpl_pcs)
-                    TG = interpolate(NodalValC1);
-                else
-                    TG = 296.0;
+                TG = val_ip.T;
                 MediaProp->CalStressPermeabilityFactor(w, TG);
                 for (size_t i = 0; i < dim; i++)
                     tensor[i * dim + i] *= w[i];
@@ -2349,7 +2362,7 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
                 mat[i] = time_unit_factor * tensor[i] / mat_fac *
                          perm_effstress *
                          k_rel;  // AS:perm. dependent eff stress.
-
+        }
             break;
         case EPT_GROUNDWATER_FLOW:  // Groundwater flow
             /* SB4218 - moved to ->PermeabilityTensor(Index, ip);
@@ -2695,16 +2708,15 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
 
             tensor = MediaProp->PermeabilityTensor(Index, ip);
 
-            double args[] = {std::max(0.0, PG), TG, val_ip.rho_w};
             if (MediaProp->unconfined_flow_group ==
                 2)  // 3D unconfined GW JOD, 5.3.07
                 mat_fac = time_unit_factor *
                           MediaProp->PermeabilitySaturationFunction(-PG, 0) /
-                          FluidProp->Viscosity(args);
+                          val_ip.viscosity_w;
             else
                 mat_fac = time_unit_factor *
                           MediaProp->PermeabilitySaturationFunction(Sw, 0) /
-                          FluidProp->Viscosity(args);
+                          val_ip.viscosity_w;
             // Modified LBNL model WW
             if (MediaProp->permeability_stress_mode > 1)
             {
@@ -5722,6 +5734,7 @@ void CFiniteElementStd::CalcValuesAtIntegrationPoint(
         args[2] = 0.0;
 
         val_ip.rho_w = FluidProp->Density(args);
+        val_ip.viscosity_w = FluidProp->Viscosity(args);
 
         val_ip.fluid_compressibility =
             FluidProp->compressibility_model_pressure > 0
