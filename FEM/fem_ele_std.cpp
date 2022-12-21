@@ -1732,13 +1732,13 @@ double CFiniteElementStd::CalCoefMass(const int gp)
             break;
         case EPT_RICHARDS_FLOW:  // Richards
         {
-            // Since there might be mass lumping, the IP data have to be
-            // calculated.
             double drho_dp_rho = 0.0;
             val = 0.0;
             dSdp = 0.;
             if (pcs->m_num->ele_mass_lumping == 1)
             {
+                // Since there might be mass lumping, the IP data have to be
+                // calculated.
                 Sw = 1.0;
                 PG = interpolate(NodalVal1);  // 12.02.2007.  Important! WW
                 TG = cpl_pcs ? interpolate(NodalValC)
@@ -3958,6 +3958,20 @@ void CFiniteElementStd::CalcMass()
             for (j = 0; j < nnodes; j++)
                 if (i > j)
                     (*Mass)(j, i) = (*Mass)(i, j);
+    }
+
+    if (pcs->m_num->ele_mass_lumping == 2)
+    {
+        for (i = 0; i < nnodes; i++)
+        {
+            double row_sum = 0.0;
+            for (j = 0; j < nnodes; j++)
+            {
+                row_sum += (*Mass)(i, j);
+                (*Mass)(i, j) = 0.0;
+            }
+            (*Mass)(i, i) = row_sum;
+        }
     }
 #endif
     // Test Output
@@ -7935,7 +7949,7 @@ void CFiniteElementStd::AssembleParabolicEquation()
     }
     else
     {
-        if (pcs->m_num->ele_mass_lumping)
+        if (pcs->m_num->ele_mass_lumping == 1)
             CalcLumpedMass();
         else
             CalcMass();
@@ -8688,7 +8702,7 @@ void CFiniteElementStd::AssembleMixedHyperbolicParabolicEquation()
         // NW
         if (this->pcs->tim_type != TimType::STEADY)
         {
-            if (pcs->m_num->ele_mass_lumping)
+            if (pcs->m_num->ele_mass_lumping == 1)
                 CalcLumpedMass();
             else
                 CalcMass();
