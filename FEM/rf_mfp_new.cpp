@@ -2546,6 +2546,7 @@ double MFPCalcFluidsHeatCapacity(const int gp, CFiniteElementStd* assem)
                     }
 
                     const double L0 =
+                        rhow *
                         MaterialLib::Fluid::LinearWaterVapourLatentHeat(TG);
 
                     heat_capacity_fluids += L0 *
