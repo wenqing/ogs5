@@ -2361,8 +2361,10 @@ void COutput::NODWritePNTDataTEC(double time_current, int time_step_number)
     if (msh_node_number < 0)  // 11.06.2012. WW
         return;
 
+#ifdef OUTPUT_STRESS_INVARIANT
     CRFProcess* dm_pcs = NULL;
     for (size_t i = 0; i < pcs_vector.size(); i++)
+    {
         //		if (pcs_vector[i]->pcs_type_name.find("DEFORMATION") !=
         // string::npos) { TF
         if (isDeformationProcess(pcs_vector[i]->getProcessType()))
@@ -2370,6 +2372,8 @@ void COutput::NODWritePNTDataTEC(double time_current, int time_step_number)
             dm_pcs = pcs_vector[i];
             break;
         }
+    }
+#endif
 
     //......................................................................
     const bool is_TECPLOT = (dat_type_name.compare("TECPLOT") == 0);
@@ -2499,6 +2503,7 @@ void COutput::NODWritePNTDataTEC(double time_current, int time_step_number)
 
 #endif
 
+#ifdef OUTPUT_STRESS_INVARIANT
         if (dm_pcs)  // WW
         {
             if (is_CSV)
@@ -2514,6 +2519,8 @@ void COutput::NODWritePNTDataTEC(double time_current, int time_step_number)
                          << " Effective_Strain";
             }
         }
+#endif
+
         tec_file << "\n";
 
         if (is_GNUPLOT)        // 5.3.07 JOD
@@ -2533,29 +2540,6 @@ void COutput::NODWritePNTDataTEC(double time_current, int time_step_number)
         }
     }
 
-    // For deformation
-    size_t ns = 4;
-    int stress_i[6], strain_i[6];
-    double ss[6];
-    if (dm_pcs)  // WW
-    {
-        stress_i[0] = dm_pcs->GetNodeValueIndex("STRESS_XX");
-        stress_i[1] = dm_pcs->GetNodeValueIndex("STRESS_YY");
-        stress_i[2] = dm_pcs->GetNodeValueIndex("STRESS_ZZ");
-        stress_i[3] = dm_pcs->GetNodeValueIndex("STRESS_XY");
-        strain_i[0] = dm_pcs->GetNodeValueIndex("STRAIN_XX");
-        strain_i[1] = dm_pcs->GetNodeValueIndex("STRAIN_YY");
-        strain_i[2] = dm_pcs->GetNodeValueIndex("STRAIN_ZZ");
-        strain_i[3] = dm_pcs->GetNodeValueIndex("STRAIN_XY");
-        if (m_msh->GetCoordinateFlag() / 10 == 3)  // 3D
-        {
-            ns = 6;
-            stress_i[4] = dm_pcs->GetNodeValueIndex("STRESS_XZ");
-            stress_i[5] = dm_pcs->GetNodeValueIndex("STRESS_YZ");
-            strain_i[4] = dm_pcs->GetNodeValueIndex("STRAIN_XZ");
-            strain_i[5] = dm_pcs->GetNodeValueIndex("STRAIN_YZ");
-        }
-    }
     //--------------------------------------------------------------------
     // Write data
     //......................................................................
@@ -2733,8 +2717,28 @@ void COutput::NODWritePNTDataTEC(double time_current, int time_step_number)
 
 #endif
         //....................................................................
+#ifdef OUTPUT_STRESS_INVARIANT
         if (dm_pcs)  // WW
         {
+            size_t ns = 4;
+            int stress_i[6], strain_i[6];
+            double ss[6];
+            stress_i[0] = dm_pcs->GetNodeValueIndex("STRESS_XX");
+            stress_i[1] = dm_pcs->GetNodeValueIndex("STRESS_YY");
+            stress_i[2] = dm_pcs->GetNodeValueIndex("STRESS_ZZ");
+            stress_i[3] = dm_pcs->GetNodeValueIndex("STRESS_XY");
+            strain_i[0] = dm_pcs->GetNodeValueIndex("STRAIN_XX");
+            strain_i[1] = dm_pcs->GetNodeValueIndex("STRAIN_YY");
+            strain_i[2] = dm_pcs->GetNodeValueIndex("STRAIN_ZZ");
+            strain_i[3] = dm_pcs->GetNodeValueIndex("STRAIN_XY");
+            if (m_msh->GetCoordinateFlag() / 10 == 3)  // 3D
+            {
+                ns = 6;
+                stress_i[4] = dm_pcs->GetNodeValueIndex("STRESS_XZ");
+                stress_i[5] = dm_pcs->GetNodeValueIndex("STRESS_YZ");
+                strain_i[4] = dm_pcs->GetNodeValueIndex("STRAIN_XZ");
+                strain_i[5] = dm_pcs->GetNodeValueIndex("STRAIN_YZ");
+            }
             for (size_t i = 0; i < ns; i++)
                 ss[i] = dm_pcs->GetNodeValue(msh_node_number, stress_i[i]);
 
@@ -2776,6 +2780,7 @@ void COutput::NODWritePNTDataTEC(double time_current, int time_step_number)
                                  2.0);
             }
         }
+#endif
         // OK411
         for (size_t k = 0; k < mfp_value_vector.size(); k++)
         {
