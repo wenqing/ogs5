@@ -2596,7 +2596,7 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
                     poro = MediaProp->Porosity(Index, pcs->m_num->ls_theta);
                     tort = MediaProp->TortuosityFunction(Index, unit,
                                                          pcs->m_num->ls_theta);
-                    const double Dv = tort * poro * gw_val_ip.Dvp;
+                    const double Dv = tort * gw_val_ip.Dvp / gw_val_ip.rho_gw;
                     mat_fac += L0 * Dv * drho_gw_dT;
                 }
 
@@ -11614,8 +11614,8 @@ void CFiniteElementStd::Assemble_RHS_LATENT_HEAT_TRANSPORT()
         tort = MediaProp->TortuosityFunction(Index, unit, pcs->m_num->ls_theta);
         const double Dv = tort * poro * vvar_buffer.Dvp;
 
-        const double fac_gw =
-            vvar_buffer.L0 * tort * poro * vvar_buffer.drho_gw_dp * Dv;
+        const double fac_gw = vvar_buffer.L0 * tort * vvar_buffer.drho_gw_dp *
+                              Dv / vvar_buffer.rho_gw;
         for (size_t k = 0; k < dim; k++)
         {
             for (int i = 0; i < nnodes; i++)
