@@ -2271,7 +2271,6 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
     double dens_arg[3];  // AKS
     double mat_fac = 1.0;
     double Dpv = 0.0;
-    double poro = 0.0;
     double tort = 0.0;
     double* tensor = NULL;
     double Hav, manning, chezy, expp, chezy4, Ss, arg;
@@ -9126,27 +9125,14 @@ void CFiniteElementStd::Assemble_strainCPL(const int phase)
 
             getShapefunctValues(gp, 1);
 
-            double const dstrain_v = eleV_DM->getVolumeStrainIncrement(gp);
+            double dstrain_v = eleV_DM->getVolumeStrainIncrement(gp);
 
+            // fixed stress rate
+            double const Kr = SolidProp->getBulkModulus();
+            double const dp_n_0 = interpolate(dp_idx, pcs);
             double const coefficient =
                 CalCoefStrainCouping(gp, phase) * fabs(SolidProp->biot_const);
-            //
-            double const factor = fkt * dstrain_v * coefficient / dt;
-            for (i = 0; i < nnodes; i++)
-            {
-                NodalVal[i] -= factor * shapefct[i];
-            }
-
-            double const Kr = SolidProp->getBulkModulus();
-
-            double const dp_n_0 = interpolate(dp_idx, pcs);
-            double const factor_dp =
-                3.0 * fkt * dp_n_0 * coefficient * coefficient / (Kr * dt);
-
-            for (i = 0; i < nnodes; i++)
-            {
-                NodalVal[i] += factor_dp * shapefct[i];
-            }
+            dstrain_v -= 3.0 * coefficient * dp_n_0 / Kr;
 
             if (cpl_pcs &&
                 cpl_pcs->getProcessType() == FiniteElement::HEAT_TRANSPORT)
@@ -9154,13 +9140,15 @@ void CFiniteElementStd::Assemble_strainCPL(const int phase)
                 IntegrationPointVariableBuffer const val_ip =
                     vapor_variable_buffer[gp];
                 double const dT_n_0 = interpolate(dT_idx, cpl_pcs);
-                double const factor_T = 3.0 * fkt * coefficient *
-                                        (val_ip.T - val_ip.T0 - dT_n_0) *
-                                        SolidProp->Thermal_Expansion() / dt;
-                for (i = 0; i < nnodes; i++)
-                {
-                    NodalVal[i] -= factor_T * shapefct[i];
-                }
+                dstrain_v += 3.0 * SolidProp->Thermal_Expansion() *
+                             (val_ip.T - val_ip.T0 - dT_n_0);
+            }
+
+            //
+            double const factor = fkt * dstrain_v * coefficient / dt;
+            for (i = 0; i < nnodes; i++)
+            {
+                NodalVal[i] -= factor * shapefct[i];
             }
         }
         setOrder(1);

@@ -66,7 +66,7 @@ public:
     void Read_BIN(std::fstream& is);
     void ReadElementStressASCI(std::fstream& is);
     double MeanStress(const int gp) const;
-    double FirstStressInvariantIncrement(const int gp) const;
+
     double getVolumeStrainIncrement(const int gp) const
     {
         return dstrain_v[gp];

@@ -3800,6 +3800,7 @@ ElementValue_DM::ElementValue_DM(CElem* ele, const int NGP, bool HM_Staggered)
       Stress_i(NULL),
       Stress_j(NULL),
       pStrain(NULL),
+      dstrain_v(NULL),
       y_surface(NULL),
       prep0(NULL),
       e_i(NULL),
@@ -3850,11 +3851,11 @@ ElementValue_DM::ElementValue_DM(CElem* ele, const int NGP, bool HM_Staggered)
     if (HM_Staggered)
     {
         Stress_j = new Matrix(LengthBS, NGPoints);
-    }
-    dstrain_v = new double[NGPoints];
-    for (int i = 0; i < NGPoints; i++)
-    {
-        dstrain_v[i] = 0.0;
+        dstrain_v = new double[NGPoints];
+        for (int i = 0; i < NGPoints; i++)
+        {
+            dstrain_v[i] = 0.0;
+        }
     }
 
     //
@@ -4153,9 +4154,4 @@ double ElementValue_DM::MeanStress(const int gp) const
     return (*Stress)(0, gp) + (*Stress)(1, gp) + (*Stress)(2, gp);
 }
 
-double ElementValue_DM::FirstStressInvariantIncrement(const int gp) const
-{
-    return (*Stress)(0, gp) + (*Stress)(1, gp) + (*Stress)(2, gp) -
-           ((*Stress_i)(0, gp) + (*Stress_i)(1, gp) + (*Stress_i)(2, gp));
-}
 }  // end namespace FiniteElement
