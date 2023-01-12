@@ -1383,7 +1383,8 @@ void COutput::WriteTECNodeData(fstream& tec_file)
                            atoi(
                                &mfp_value_vector[k][mfp_value_vector[k].size() -
                                                     1]) -
-                               1)
+                               1,
+                           true)
                     << " ";  // NB: MFP output for all phases
         }
         tec_file << "\n";
@@ -2335,7 +2336,8 @@ double COutput::NODWritePLYDataTEC(int number)
                        gnode, mfp_value_vector[k],
                        atoi(&mfp_value_vector[k]
                                              [mfp_value_vector[k].size() - 1]) -
-                           1)
+                           1,
+                       true)
                 << " ";  // NB: MFP output for all phases
 
         tec_file << "\n";
@@ -2793,7 +2795,8 @@ void COutput::NODWritePNTDataTEC(double time_current, int time_step_number)
                            atoi(
                                &mfp_value_vector[k][mfp_value_vector[k].size() -
                                                     1]) -
-                               1);
+                               1,
+                           true);
             }
             else
             {
@@ -2804,7 +2807,8 @@ void COutput::NODWritePNTDataTEC(double time_current, int time_step_number)
                            atoi(
                                &mfp_value_vector[k][mfp_value_vector[k].size() -
                                                     1]) -
-                               1)
+                               1,
+                           true)
                     << " ";  // NB
             }
         }
