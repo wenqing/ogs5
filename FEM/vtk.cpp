@@ -938,7 +938,7 @@ bool CVTK::WriteNodalValue(std::fstream& fin, bool output_data, COutput* out,
                 {
                     const double v = MFPGetNodeValue(
                         msh->nod_vector[j]->GetIndex(), mfp_name,
-                        atoi(&mfp_name[mfp_name.size() - 1]) - 1);
+                        atoi(&mfp_name[mfp_name.size() - 1]) - 1, true);
                     fin << v << " ";
                 }
                 fin << endl;
@@ -951,7 +951,7 @@ bool CVTK::WriteNodalValue(std::fstream& fin, bool output_data, COutput* out,
                 {
                     const double v = MFPGetNodeValue(
                         msh->nod_vector[j]->GetIndex(), mfp_name,
-                        atoi(&mfp_name[mfp_name.size() - 1]) - 1);
+                        atoi(&mfp_name[mfp_name.size() - 1]) - 1, true);
                     write_value_binary(fin, v);
                 }
             }
@@ -1290,6 +1290,7 @@ bool CVTK::WriteElementValue(std::fstream& fin, bool output_data, COutput* out,
     }
 
     // MFP
+#ifdef USE_ELEMEMT_MFP_OUTPUT
     if (out->mfp_value_vector.size() > 0)
     {
         for (size_t i_mfp = 0; i_mfp < out->mfp_value_vector.size(); i_mfp++)
@@ -1356,6 +1357,6 @@ bool CVTK::WriteElementValue(std::fstream& fin, bool output_data, COutput* out,
                 WriteDataArrayFooter(fin);
         }
     }
-
+#endif
     return true;
 }
