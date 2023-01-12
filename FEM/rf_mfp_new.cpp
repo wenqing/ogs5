@@ -414,6 +414,13 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
                 density_pcs_name_vector.push_back("PRESSURE1");
                 density_pcs_name_vector.push_back("TEMPERATURE1");
             }
+            if (density_model == 28)  // rho_0 exp( beta(pL- pL0)+alpha T) 
+            {
+                compressibility_model_temperature = 28;
+                compressibility_model_pressure = 28;
+                density_pcs_name_vector.push_back("PRESSURE1");
+                density_pcs_name_vector.push_back("TEMPERATURE1");
+            }
             if (density_model == 9)  // WW
                 // Molar mass
                 in >> molar_mass;
@@ -572,6 +579,11 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
                 viscosity_pcs_name_vector.push_back("PRESSURE1");
                 viscosity_pcs_name_vector.push_back("TEMPERATURE1");
             }
+            if (viscosity_model == 28)  //  A exp(B/(273.15+T))
+            {
+                viscosity_pcs_name_vector.push_back("TEMPERATURE1");
+            }
+
             if (viscosity_model == 9)  // my(rho,T)
             {
                 std::string fluid_type, arg1, arg2;
@@ -1215,6 +1227,18 @@ double CFluidProperties::Density(double* variables)
                 // MATCalcFluidDensityMethod8(p, T, variables[2]);
             }
             break;
+            case 28:  // rho_0 exp( beta(pL- pL0)+alpha T)
+            {
+                const double T =
+                    variables[1] - PhysicalConstant::CelsiusZeroInKelvin;
+                const double p = std::max(0.0, variables[0]);
+                const double rho_0 = 1002.6;
+                const double beta = 4.5e-10;
+                const double alpha = -2.0e-4;
+                return rho_0 * exp(beta * (p - 1.e5) + alpha * T);
+            }
+            break;
+
             case 10:  // Get density from temperature-pressure values from
                       // fct-file	NB 4.8.01
                 density = GetMatrixValue(variables[1], variables[0], fluid_name,
@@ -1407,6 +1431,17 @@ double CFluidProperties::Density(double* variables)
                 // // M14 von JdJ // 25.1.12 Added by CB for density output
                 // AB-model,
                 // MATCalcFluidDensityMethod8(p, T, primary_variable[2]);
+            }
+            break;
+            case 28:  // rho_0 exp( beta(pL- pL0)+alpha T)
+            {
+                const double T = primary_variable[1] -
+                                 (PhysicalConstant::CelsiusZeroInKelvin + 20);
+                const double p = std::max(0.0, primary_variable[0]);
+                const double rho_0 = 1002.6;
+                const double beta = 4.5e-10;
+                const double alpha = -2.0e-4;
+                return rho_0 * exp(beta * (p - 1.e5) + alpha * T);
             }
             break;
             case 10:  // Get density from temperature-pressure values from
@@ -1903,6 +1938,11 @@ double CFluidProperties::Viscosity(double* variables)
             viscosity = LiquidViscosity_CMCD(
                 primary_variable[0], primary_variable[1], primary_variable[2]);
             break;
+        case 28:  //  A exp(B/(273.15+T))
+        {
+            return 2.1e-6 * std::exp(1808.5 / primary_variable[1]);
+        }
+        break;
         case 9:  // viscosity as function of density and temperature, NB
         {
             double mfp_arguments[2];
@@ -3720,7 +3760,18 @@ double CFluidProperties::drhodP(double* variables)
             */
             break;
         }
+        case 28:  // rho_0 exp( beta(pL- pL0)+alpha T)
+        {
+            const double T =
+                variables[1] - PhysicalConstant::CelsiusZeroInKelvin;
 
+            const double p = std::max(0.0, variables[0]);
+            const double rho_0 = 1002.6;
+            const double beta = 4.5e-10;
+            const double alpha = -2.0e-4;
+            return beta * rho_0 * exp(beta * (p - 1.e5) + alpha * T);
+        }
+        break;
         case 15:  // volume translated Peng-Robinson
             if (eos_name == "VTPR" || eos_name == "PR" || eos_name == "IDEAL")
             {
@@ -3863,6 +3914,17 @@ double CFluidProperties::drhodT(double* variables)
                       -MATCalcFluidDensityMethod8(p, T, 0.0)) / perturbation;*/
             break;
         }
+        case 28:  // rho_0 exp( beta(pL- pL0)+alpha T)
+        {
+            const double T =
+                variables[1] - PhysicalConstant::CelsiusZeroInKelvin;
+            const double p = std::max(0.0, variables[0]);
+            const double rho_0 = 1002.6;
+            const double beta = 4.5e-10;
+            const double alpha = -2.0e-4;
+            return alpha * rho_0 * exp(beta * (p - 1.e5) + alpha * T);
+        }
+        break;
         case 15:  // volume translated Peng-Robinson
             if (eos_name == "VTPR" || eos_name == "PR" || eos_name == "IDEAL")
             {
