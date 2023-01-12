@@ -1641,7 +1641,8 @@ double CFiniteElementStd::CalCoefMass(const int gp)
             }
 
             if (dm_pcs &&
-                dm_pcs->getProcessType() == FiniteElement::DEFORMATION)
+                dm_pcs->getProcessType() == FiniteElement::DEFORMATION &&
+                pcs->m_num->fixed_stress_coupling)
             {
                 double const alpha_B = SolidProp->getBiotsConstant();
                 val += 3.0 * alpha_B * alpha_B / SolidProp->getBulkModulus();
@@ -1831,7 +1832,8 @@ double CFiniteElementStd::CalCoefMass(const int gp)
             val += poro * dSdp;
 
             if (dm_pcs &&
-                dm_pcs->getProcessType() == FiniteElement::DEFORMATION)
+                dm_pcs->getProcessType() == FiniteElement::DEFORMATION &&
+                pcs->m_num->fixed_stress_coupling)
             {
                 const double S_e =
                     MediaProp->GetEffectiveSaturationForPerm(Sw, 0);
@@ -5733,6 +5735,7 @@ void CFiniteElementStd::CalcValuesAtIntegrationPoint(
         args[2] = 0.0;
 
         val_ip.rho_w = FluidProp->Density(args);
+
         val_ip.viscosity_w = FluidProp->Viscosity(args);
 
         val_ip.fluid_compressibility =
@@ -9126,22 +9129,25 @@ void CFiniteElementStd::Assemble_strainCPL(const int phase)
             getShapefunctValues(gp, 1);
 
             double dstrain_v = eleV_DM->getVolumeStrainIncrement(gp);
-
-            // fixed stress rate
-            double const Kr = SolidProp->getBulkModulus();
-            double const dp_n_0 = interpolate(dp_idx, pcs);
             double const coefficient =
                 CalCoefStrainCouping(gp, phase) * fabs(SolidProp->biot_const);
-            dstrain_v -= 3.0 * coefficient * dp_n_0 / Kr;
 
-            if (cpl_pcs &&
-                cpl_pcs->getProcessType() == FiniteElement::HEAT_TRANSPORT)
+            // fixed stress rate
+            if (pcs->m_num->fixed_stress_coupling)
             {
-                IntegrationPointVariableBuffer const val_ip =
-                    vapor_variable_buffer[gp];
-                double const dT_n_0 = interpolate(dT_idx, cpl_pcs);
-                dstrain_v += 3.0 * SolidProp->Thermal_Expansion() *
-                             (val_ip.T - val_ip.T0 - dT_n_0);
+                double const Kr = SolidProp->getBulkModulus();
+                double const dp_n_0 = interpolate(dp_idx, pcs);
+                dstrain_v -= 3.0 * coefficient * dp_n_0 / Kr;
+
+                if (cpl_pcs &&
+                    cpl_pcs->getProcessType() == FiniteElement::HEAT_TRANSPORT)
+                {
+                    IntegrationPointVariableBuffer const val_ip =
+                        vapor_variable_buffer[gp];
+                    double const dT_n_0 = interpolate(dT_idx, cpl_pcs);
+                    dstrain_v += 3.0 * SolidProp->Thermal_Expansion() *
+                                 (val_ip.T - val_ip.T0 - dT_n_0);
+                }
             }
 
             //
@@ -11263,12 +11269,13 @@ void CFiniteElementStd::Assemble_RHS_LIQUIDFLOW()
                 ->Thermal_Expansion();  // multiply 3 for volumetrix expression
         Sw = 1.0;
         double alpha_T_l;
-        if (FluidProp->density_model > 7 && FluidProp->density_model < 15)
+        if ((FluidProp->density_model > 7 && FluidProp->density_model < 15) ||
+            FluidProp->compressibility_model_temperature == 28)
         {
             double arg[2];
             arg[0] = interpolate(NodalVal1);   // p
             arg[1] = interpolate(NodalValC1);  // T
-            alpha_T_l = -FluidProp->drhodT(arg) / FluidProp->Density();
+            alpha_T_l = -FluidProp->drhodT(arg) / FluidProp->Density(arg);
         }
         else
             alpha_T_l =
