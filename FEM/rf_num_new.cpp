@@ -133,6 +133,9 @@ CNumerics::CNumerics(string name)
     fct_const_alpha = -1.0;           // NW
     newton_damping_factor = 1.0;
     newton_damping_tolerance = 1.e3;
+
+    fixed_stress_coupling = false;
+
     nls_abs_residual_tolerance = std::numeric_limits<double>::max();
     nls_abs_unknown_tolerance = std::numeric_limits<double>::max();
     nls_rel_unknown_tolerance = std::numeric_limits<double>::max();
@@ -387,6 +390,12 @@ ios::pos_type CNumerics::Read(ifstream* num_file)
             continue;
         }
         //....................................................................
+        // subkeyword found
+        if (line_string.find("$FIXED_STRESS_HM_COUPLING") != string::npos)
+        {
+            fixed_stress_coupling = true;
+            continue;
+        }
         // subkeyword found
         if (line_string.find("$RENUMBER") != string::npos)
         {

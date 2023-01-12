@@ -120,6 +120,8 @@ public:
     double nls_abs_residual_tolerance;
     double nls_abs_unknown_tolerance;
     double nls_rel_unknown_tolerance;
+
+    bool fixed_stress_coupling;
     //
     // Configure
     void NumConfigure(bool overall_coupling_exists);  // JT2012
