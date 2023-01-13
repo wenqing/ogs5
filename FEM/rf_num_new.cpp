@@ -135,6 +135,7 @@ CNumerics::CNumerics(string name)
     newton_damping_tolerance = 1.e3;
 
     fixed_stress_coupling = false;
+    non_strain_coupling = false;
 
     nls_abs_residual_tolerance = std::numeric_limits<double>::max();
     nls_abs_unknown_tolerance = std::numeric_limits<double>::max();
@@ -242,6 +243,11 @@ bool NUMRead(string file_base_name)
         {
             m_num = new CNumerics("default");
             position = m_num->Read(&num_file);
+
+            if (m_num->non_strain_coupling)
+            {
+                m_num->fixed_stress_coupling = false;
+            }
 
             max_num_integration_pnts =
                 std::max(max_num_integration_pnts, m_num->ele_gauss_points);
@@ -394,6 +400,13 @@ ios::pos_type CNumerics::Read(ifstream* num_file)
         if (line_string.find("$FIXED_STRESS_HM_COUPLING") != string::npos)
         {
             fixed_stress_coupling = true;
+            continue;
+        }
+
+        // subkeyword found
+        if (line_string.find("$NON_STRAIN_COUPLING") != string::npos)
+        {
+            non_strain_coupling = true;
             continue;
         }
         // subkeyword found

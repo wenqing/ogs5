@@ -9072,6 +9072,11 @@ void CFiniteElementStd::AssembleParabolicEquationNewtonJacobian(
  **************************************************************************/
 void CFiniteElementStd::Assemble_strainCPL(const int phase)
 {
+    if (pcs->m_num->non_strain_coupling)
+    {
+        return;
+    }
+
     int i, j;
     double* u_n = NULL;  // Dynamic
     double fac;
