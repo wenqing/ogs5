@@ -1255,7 +1255,7 @@ void CRFProcessDeformation::InitGauss(void)
                                 continue;
                             (*eleV_DM->Stress)(j, gp) =
                                 m_ic->getLinearFunction()->getValue(
-                                    k, xyz[0], xyz[1], xyz[2]);
+                                    MatGroup, xyz[0], xyz[1], xyz[2]);
                             (*eleV_DM->Stress0)(j, gp) =
                                 (*eleV_DM->Stress)(j, gp);
                         }
