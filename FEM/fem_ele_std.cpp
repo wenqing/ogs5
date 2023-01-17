@@ -2592,13 +2592,13 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
                 {
                     const IntegrationPointVariableBuffer gw_val_ip =
                         vapor_variable_buffer[ip];
-                    const double L0 = gw_val_ip.L0;
+                    const double Lw = gw_val_ip.L0 / gw_val_ip.rho_w;
                     const double drho_gw_dT = gw_val_ip.drho_gw_dT;
                     poro = MediaProp->Porosity(Index, pcs->m_num->ls_theta);
                     tort = MediaProp->TortuosityFunction(Index, unit,
                                                          pcs->m_num->ls_theta);
-                    const double Dv = tort * gw_val_ip.Dvp / gw_val_ip.rho_gw;
-                    mat_fac += L0 * Dv * drho_gw_dT;
+                    const double Dv = tort * poro * gw_val_ip.Dvp;
+                    mat_fac += Lw * Dv * drho_gw_dT;
                 }
 
                 for (size_t i = 0; i < dim; i++)
@@ -11234,11 +11234,15 @@ void CFiniteElementStd::Assemble_RHS_Pc()
 void CFiniteElementStd::Assemble_RHS_LIQUIDFLOW()
 {
     if (!isTemperatureCoupling())
+    {
         return;
-    if ((FluidProp->drho_dT == .0 &&
-         (FluidProp->density_model < 8 || FluidProp->density_model > 14)) &&
-        SolidProp->Thermal_Expansion() == .0)
+    }
+
+    if (FluidProp->drho_dT == .0 &&
+        FluidProp->compressibility_model_temperature == -1)
+    {
         return;
+    }
 
     //----------------------------------------------------------------------
     for (int i = 0; i < nnodes; i++)
@@ -11264,6 +11268,7 @@ void CFiniteElementStd::Assemble_RHS_LIQUIDFLOW()
         const double T_n = interpolate(NodalValC);
         const double T_n1 = interpolate(NodalValC1);
         const double dT = T_n1 - T_n;
+        const double p_n1 = interpolate(NodalVal1);
         //---------------------------------------------------------
         //  Evaluate material property
         //---------------------------------------------------------
@@ -11274,29 +11279,34 @@ void CFiniteElementStd::Assemble_RHS_LIQUIDFLOW()
                 ->Thermal_Expansion();  // multiply 3 for volumetrix expression
         Sw = 1.0;
         double alpha_T_l;
-        if ((FluidProp->density_model > 7 && FluidProp->density_model < 15) ||
-            FluidProp->compressibility_model_temperature == 28)
+        if (FluidProp->compressibility_model_temperature > 0)
         {
             double arg[2];
-            arg[0] = interpolate(NodalVal1);   // p
+            arg[0] = p_n1;                     // p
             arg[1] = interpolate(NodalValC1);  // T
             alpha_T_l = -FluidProp->drhodT(arg) / FluidProp->Density(arg);
         }
         else
+        {
             alpha_T_l =
                 -FluidProp
                      ->drho_dT;  // negative sign is required due to OGS input
+        }
 
         if (PcsType == EPT_RICHARDS_FLOW)
         {
             // for Richards:
-            PG = interpolate(NodalVal1);
-            if (PG < 0.0)
+            if (p_n1 < 0.0)
             {
                 if (FluidProp->drho_dT_unsaturated)
-                    Sw = MediaProp->SaturationCapillaryPressureFunction(-PG);
+                {
+                    Sw = MediaProp->SaturationCapillaryPressureFunction(-p_n1);
+                }
                 else
+                {
                     alpha_T_l = alpha_T_s = 0.0;
+                    continue;
+                }
             }
         }
         const double eff_thermal_expansion =
@@ -11557,12 +11567,12 @@ void CFiniteElementStd::Assemble_RHS_LATENT_HEAT_TRANSPORT()
         NodalVal[i] = 0.0;
     //======================================================================
     // Loop over Gauss points
-    int non_computed_gp_counter = 0;
+    // int non_computed_gp_counter = 0;
     for (int gp = 0; gp < nGaussPoints; gp++)
     {
         if (!(vapor_variable_buffer[gp].S_w < 1.0))
         {
-            non_computed_gp_counter++;
+            // non_computed_gp_counter++;
             continue;
         }
         //---------------------------------------------------------
@@ -11593,14 +11603,14 @@ void CFiniteElementStd::Assemble_RHS_LATENT_HEAT_TRANSPORT()
 
         const double mass_ratio = vvar_buffer.rho_gw / rho_w;
         const double fac =
-            vvar_buffer.L0 * poro *
+            fkt * vvar_buffer.L0 * poro *
             (mass_ratio * dSdpc +
              (1 - S_w) * (vvar_buffer.drho_gw_dp - mass_ratio * drhow_dp) /
                  rho_w) *
             dp_dt;
 
         for (int i = 0; i < nnodes; i++)
-            NodalVal[i] += fac * fkt * shapefct[i];
+            NodalVal[i] += fac * shapefct[i];
 
         for (size_t i = 0; i < dim; i++)
         {
@@ -11614,22 +11624,23 @@ void CFiniteElementStd::Assemble_RHS_LATENT_HEAT_TRANSPORT()
         tort = MediaProp->TortuosityFunction(Index, unit, pcs->m_num->ls_theta);
         const double Dv = tort * poro * vvar_buffer.Dvp;
 
-        const double fac_gw = vvar_buffer.L0 * tort * vvar_buffer.drho_gw_dp *
-                              Dv / vvar_buffer.rho_gw;
+        // Assume that Lw not L0 is used in qT_v =  Lw Dv grad (rho_v)
+        const double fac_gw =
+            fkt * vvar_buffer.L0 * vvar_buffer.drho_gw_dp * Dv / rho_w;
         for (size_t k = 0; k < dim; k++)
         {
             for (int i = 0; i < nnodes; i++)
             {
-                NodalVal[i] +=
-                    fac_gw * fkt * dshapefct[k * nnodes + i] * grad_p[k];
+                NodalVal[i] += fac_gw * dshapefct[k * nnodes + i] * grad_p[k];
             }
         }
     }
 
+    /*
     if (non_computed_gp_counter == nGaussPoints)
     {
         return;
-    }
+    }*/
 
     for (int i = 0; i < nnodes; i++)
     {

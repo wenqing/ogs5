@@ -123,6 +123,7 @@ CFluidProperties::CFluidProperties()
     // WW
     molar_mass = MolarMass::Air;
 
+    compressibility_model_temperature = -1;
     compressibility_model_pressure = -1;
     specific_heat_source = 0.0;
     beta_T = 0.0;
@@ -357,6 +358,7 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
                 in >> p_0;
                 in >> drho_dp;
                 density_pcs_name_vector.push_back("PRESSURE1");
+                compressibility_model_pressure = 6;
             }
             if (density_model == 3)  // rho(C) = rho_0*(1+beta_C*(C-C_0))
             {
@@ -374,6 +376,7 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
                 in >> T_0;
                 T_0 += TemperatureUnitOffset();
                 in >> drho_dT;
+                compressibility_model_temperature = 6;
                 density_pcs_name_vector.push_back("TEMPERATURE1");
             }
             if (density_model ==
@@ -385,6 +388,7 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
                 in >> T_0;
                 T_0 += TemperatureUnitOffset();
                 in >> drho_dT;
+                compressibility_model_temperature = 6;
                 density_pcs_name_vector.push_back("CONCENTRATION1");
                 density_pcs_name_vector.push_back("TEMPERATURE1");
             }
@@ -400,10 +404,13 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
                 in >> drho_dT;
                 density_pcs_name_vector.push_back("PRESSURE1");
                 density_pcs_name_vector.push_back("TEMPERATURE1");
+                compressibility_model_temperature = 6;
+                compressibility_model_pressure = 6;
             }
             if (density_model == 7)  // rho(p,p_v,T)
             {
-                // no input data required
+                compressibility_model_temperature = 7;
+                compressibility_model_pressure = 7;
             }
             if (density_model == 8)  // rho(p,T,C)
             {
@@ -2570,8 +2577,8 @@ double MFPCalcFluidsHeatCapacity(const int gp, CFiniteElementStd* assem)
                         rho_gw * PG /
                             (SpecificGasConstant::WaterVapour * rhow * TG * TG);
 
-                    double alpha_T_l;  // (drho_w/dT)/rho_w
-                    if (m_mfp0->density_model > 7 && m_mfp0->density_model < 15)
+                    double alpha_T_l;  // - (drho_w/dT)/rho_w
+                    if (m_mfp0->compressibility_model_temperature > 0)
                     {
                         double arg[2];
                         arg[0] = 0.0;  // p = 0 of p < 0
@@ -2589,9 +2596,10 @@ double MFPCalcFluidsHeatCapacity(const int gp, CFiniteElementStd* assem)
                         rhow *
                         MaterialLib::Fluid::LinearWaterVapourLatentHeat(TG);
 
-                    heat_capacity_fluids += L0 *
-                                            (drho_gw_dT - rho_gw * alpha_T_l) *
-                                            (1.0 - Sw) / rhow;
+                    // alpha_T_l = - (drho_w/dT)/rho_w
+                    heat_capacity_fluids += L0 * (1.0 - Sw) *
+                                            (drho_gw_dT + rho_gw * alpha_T_l) /
+                                            rhow;
 
                     FiniteElement::IntegrationPointVariableBuffer& gw_val_gp =
                         assem->vapor_variable_buffer[gp];
@@ -2603,14 +2611,13 @@ double MFPCalcFluidsHeatCapacity(const int gp, CFiniteElementStd* assem)
                     gw_val_gp.rho_gw = rho_gw;
                     gw_val_gp.drho_gw_dT = drho_gw_dT;
                     gw_val_gp.drho_gw_dp =
-                        rho_gw_rel * humi /
-                        (SpecificGasConstant::WaterVapour * TG * rhow);
+                        rho_gw / (SpecificGasConstant::WaterVapour * TG * rhow);
 
                     gw_val_gp.Dvp =
                         assem->MediaProp->base_heat_diffusion_coefficient *
                         (1 - Sw) *
                         std::pow(TG / PhysicalConstant::CelsiusZeroInKelvin,
-                                 1.8);
+                                 1.8);  //
                 }
 
                 // heat_capacity_fluids +=
@@ -3746,12 +3753,12 @@ double CFluidProperties::drhodP(double* variables)
             drhodP = (rho1 - rho2) / compressibility_pressure;
 
             break;             // use of difference quotient
-        case 7:                // use of fct file
-            drhodP = 1.0 / p;  // to be done
-            break;
+        case 6:                //
+            return rho_0 * drho_dp;
+        case 7:  // Pefect gas. WW
+            return molar_mass / (PhysicalConstant::IdealGasConstant * T);
         case 8:
         {
-            const double T = variables[1];
             drhodP = densityIAPWS->getdValuedp(variables[0], T);
             /*
             const double perturbation = 1.e-4;
@@ -3899,9 +3906,10 @@ double CFluidProperties::drhodT(double* variables)
             drhodT = (rho1 - rho2) / compressibility_temperature;
             break;
         case 6:  // rho(p,T) = rho_0*(1+beta_p*(p-p_0)+beta_T*(T-T_0))
-            return drho_dT;
-        case 7:  // use of fct file
-            drhodT = 1.0 / T;
+            return rho_0 * drho_dT;
+        case 7:  // Pefect gas. WW
+            return -molar_mass * p /
+                   (PhysicalConstant::IdealGasConstant * T * T);
             break;
         case 8:
         {
