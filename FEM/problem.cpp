@@ -27,6 +27,7 @@
 #include <cfloat>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 // kg44: max size for size_t (system_dependent) is set normally here
 #include <limits>
 // WW
@@ -114,7 +115,7 @@ using process::CRFProcessDeformation;
 
 static void readAddtionalExcavationData(
     const std::string& file_base_name,
-    std::vector<int>& addtional_excavating_subdomaim_ids)
+    std::vector<std::size_t>& addtional_excavating_subdomaim_ids)
 {
     const std::string file_name = file_base_name + ".pcs";
     std::ifstream ins(file_name.data());
@@ -132,7 +133,7 @@ static void readAddtionalExcavationData(
             iss >> subdomain_number;
             for (int i = 0; i < subdomain_number; i++)
             {
-                int domain_id;
+                std::size_t domain_id;
                 iss >> domain_id;
                 addtional_excavating_subdomaim_ids.push_back(domain_id);
             }
@@ -176,12 +177,27 @@ Problem::Problem(const char* filename)
         }
     }
 
+    // Check whether all processes have ExcavMaterialGroup > 0
+    std::size_t counter = 0;
+    for (std::size_t i = 0; i < pcs_vector.size(); i++)
+    {
+        if (pcs_vector[i]->ExcavMaterialGroup >= 0)
+        {
+            counter++;
+        }
+    }
+    if (counter > 0 && (counter != pcs_vector.size()))
+    {
+        throw std::runtime_error(
+            "$TIME_CONTROLLED_EXCAVATION must be defined for all processes");
+    }
+
     // See the excavated subdomain IDs to the ID of the major excavated
     // sudomain.
     if (pcs_vector[0]->ExcavMaterialGroup >= 0)
     {
         const int excavating_subdomaoin_id = pcs_vector[0]->ExcavMaterialGroup;
-        std::vector<int> addtional_excavating_subdomaim_ids;
+        std::vector<std::size_t> addtional_excavating_subdomaim_ids;
         readAddtionalExcavationData(filename,
                                     addtional_excavating_subdomaim_ids);
         for (std::size_t i = 0; i < fem_msh_vector[0]->ele_vector.size(); i++)
@@ -3834,7 +3850,7 @@ inline double Problem::RandomWalker()
 
             rw_pcs->ReadInVelocityFieldOnNodes(dateiname);
 
-            delete[] dateiname;
+            free(dateiname);
         }
 
         // Set the mode of the RWPT method
