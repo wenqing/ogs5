@@ -1238,11 +1238,12 @@ double CFluidProperties::Density(double* variables)
             {
                 const double T =
                     variables[1] - PhysicalConstant::CelsiusZeroInKelvin;
-                const double p = std::max(0.0, variables[0]);
+                const double p0 = 1.e+5;
+                const double p = std::max(p0, variables[0]);
                 const double rho_0 = 1002.6;
                 const double beta = 4.5e-10;
                 const double alpha = -2.0e-4;
-                return rho_0 * exp(beta * (p - 1.e5) + alpha * T);
+                return rho_0 * exp(beta * (p - p0) + alpha * T);
             }
             break;
 
@@ -2549,6 +2550,10 @@ double MFPCalcFluidsHeatCapacity(const int gp, CFiniteElementStd* assem)
         heat_capacity_fluids = rhow * m_mfp0->SpecificHeatCapacity();
         assem->vapor_variable_buffer[gp].S_w = 1.0;
 
+        FiniteElement::IntegrationPointVariableBuffer& gw_val_gp =
+            assem->vapor_variable_buffer[gp];
+        gw_val_gp.rho_w = rhow;
+
         if (m_pcs && m_pcs->type != 1)  // neither liquid nor ground water flow
         {
             //  pressure
@@ -2558,6 +2563,8 @@ double MFPCalcFluidsHeatCapacity(const int gp, CFiniteElementStd* assem)
             {
                 const double Sw =
                     assem->MediaProp->SaturationCapillaryPressureFunction(-PG);
+                gw_val_gp.S_w = Sw;
+
                 heat_capacity_fluids *= Sw;
                 if (assem->GasProp != 0)
                     heat_capacity_fluids +=
@@ -2601,8 +2608,6 @@ double MFPCalcFluidsHeatCapacity(const int gp, CFiniteElementStd* assem)
                                             (drho_gw_dT + rho_gw * alpha_T_l) /
                                             rhow;
 
-                    FiniteElement::IntegrationPointVariableBuffer& gw_val_gp =
-                        assem->vapor_variable_buffer[gp];
                     gw_val_gp.p = PG;
                     gw_val_gp.T = TG;
                     gw_val_gp.L0 = L0;
@@ -3772,11 +3777,12 @@ double CFluidProperties::drhodP(double* variables)
             const double T =
                 variables[1] - PhysicalConstant::CelsiusZeroInKelvin;
 
-            const double p = std::max(0.0, variables[0]);
+            const double p0 = 1.e+5;
+            const double p = std::max(p0, variables[0]);
             const double rho_0 = 1002.6;
             const double beta = 4.5e-10;
             const double alpha = -2.0e-4;
-            return beta * rho_0 * exp(beta * (p - 1.e5) + alpha * T);
+            return beta * rho_0 * exp(beta * (p - p0) + alpha * T);
         }
         break;
         case 15:  // volume translated Peng-Robinson
