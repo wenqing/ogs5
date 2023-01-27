@@ -987,9 +987,28 @@ void CRFProcess::Create()
         SetIC();
     }
     else
+    {
         // Bypassing IC
         ScreenMessage("RELOAD is set to be %d. So, bypassing IC's\n",
                                _init_domain_data_type);
+    }
+
+    // Take the temperature unit
+    if ((_pcs_type == FiniteElement::HEAT_TRANSPORT) &&
+        (_temp_unit == FiniteElement::CELSIUS))
+    {
+        const int temerature_var_id = GetNodeValueIndex("TEMPERATURE1");
+        if (temerature_var_id >= 0)
+        {
+            double* T0 = nod_val_vector[temerature_var_id];
+            double* T1 = nod_val_vector[temerature_var_id + 1];
+            for (std::size_t i = 0; i < m_msh->GetNodesNumber(false); i++)
+            {
+                T0[i] += PhysicalConstant::CelsiusZeroInKelvin;
+                T1[i] += PhysicalConstant::CelsiusZeroInKelvin;
+            }
+        }
+    }
 
     if (pcs_type_name_vector.size() &&
         pcs_type_name_vector[0].find("DYNAMIC") != string::npos)  // WW
@@ -1497,6 +1516,28 @@ void CRFProcess::ReadSolution()
     if (dX_idx > 0)
     {
         is.read((char*)nod_val_vector[dX_idx], data_size * sizeof(double));
+    }
+
+    if ((_pcs_type == FiniteElement::HEAT_TRANSPORT) &&
+        (_temp_unit == FiniteElement::CELSIUS))
+    {
+        // In the internal computation, the temperature unit is Kelvin.
+        // Therefore the temperature in the reloading file written by
+        // WriteSolution is in Kelvin too. In order to keep the consistency of
+        // temperature unit with that in SetIC(...), the temperature is
+        // converted to Celsius data if the temperature unit is defined as
+        // Celsius.
+        const int temerature_var_id = GetNodeValueIndex("TEMPERATURE1");
+        if (temerature_var_id >= 0)
+        {
+            double* T0 = nod_val_vector[temerature_var_id];
+            double* T1 = nod_val_vector[temerature_var_id + 1];
+            for (std::size_t i = 0; i < m_msh->GetNodesNumber(false); i++)
+            {
+                T0[i] -= PhysicalConstant::CelsiusZeroInKelvin;
+                T1[i] -= PhysicalConstant::CelsiusZeroInKelvin;
+            }
+        }
     }
 
     is.close();
@@ -9177,19 +9218,6 @@ void CRFProcess::SetIC()
         }          // end of for i
 
     }  // end of if-else
-
-    // Take the temperature unit
-    const int temerature_var_id = GetNodeValueIndex("TEMPERATURE1");
-    if (_temp_unit == FiniteElement::CELSIUS && temerature_var_id >= 0)
-    {
-        double* T0 = nod_val_vector[temerature_var_id];
-        double* T1 = nod_val_vector[temerature_var_id + 1];
-        for (std::size_t i = 0; i < m_msh->GetNodesNumber(false); i++)
-        {
-            T0[i] += PhysicalConstant::CelsiusZeroInKelvin;
-            T1[i] += PhysicalConstant::CelsiusZeroInKelvin;
-        }
-    }
 }
 
 void CRFProcess::SetInitialConditionInElement(const MeshLib::CElem& element)
