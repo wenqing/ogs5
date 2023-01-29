@@ -1591,12 +1591,15 @@ double CFiniteElementStd::CalCoefMass(const int gp)
         case EPT_LIQUID_FLOW:  // Liquid flow
         {
             val = 0.0;
+            IntegrationPointVariableBuffer const val_ip =
+                vapor_variable_buffer[gp];
+            rhow = val_ip.rho_w;
             if (pcs->m_num->ele_mass_lumping == 1)
             {
                 // Since there might be mass lumping, the IP data have to be
                 // calculated.
                 // get drho/dp/rho from material model or direct input
-                const double rho_val = FluidProp->Density();
+                rhow = FluidProp->Density();
                 double drho_dp_rho = 0.0;
                 if (FluidProp->compressibility_model_pressure > 0)
                 {
@@ -1607,13 +1610,13 @@ double CFiniteElementStd::CalCoefMass(const int gp)
                         arg[1] = interpolate(NodalValC1);
                     else
                         arg[1] = PhysicalConstant::CelsiusZeroInKelvin + 20.0;
-                    drho_dp_rho = FluidProp->drhodP(arg) / rho_val;
+                    drho_dp_rho = FluidProp->drhodP(arg) / rhow;
                 }
                 else
                 {
                     drho_dp_rho =
-                        rho_val > DBL_EPSILON
-                            ? FluidProp->drho_dp * FluidProp->rho_0 / rho_val
+                        rhow > DBL_EPSILON
+                            ? FluidProp->drho_dp * FluidProp->rho_0 / rhow
                             : 0.0;
                 }
                 const double poro_val =
@@ -1622,8 +1625,6 @@ double CFiniteElementStd::CalCoefMass(const int gp)
             }
             else
             {
-                IntegrationPointVariableBuffer const val_ip =
-                    vapor_variable_buffer[gp];
                 val += val_ip.poro * val_ip.fluid_compressibility;
             }
             val +=
@@ -1648,6 +1649,7 @@ double CFiniteElementStd::CalCoefMass(const int gp)
                 val += 3.0 * alpha_B * alpha_B / SolidProp->getBulkModulus();
             }
 
+            return FluidProp->useDensityScaling() ? val : val * rhow;
             // val /= time_unit_factor;
         }
         break;
@@ -1755,6 +1757,9 @@ double CFiniteElementStd::CalCoefMass(const int gp)
             double drho_dp_rho = 0.0;
             val = 0.0;
             dSdp = 0.;
+            IntegrationPointVariableBuffer const val_ip =
+                vapor_variable_buffer[gp];
+            rhow = val_ip.rho_w;
             if (pcs->m_num->ele_mass_lumping == 1)
             {
                 // Since there might be mass lumping, the IP data have to be
@@ -1795,9 +1800,6 @@ double CFiniteElementStd::CalCoefMass(const int gp)
             }
             else
             {
-                IntegrationPointVariableBuffer const val_ip =
-                    vapor_variable_buffer[gp];
-
                 Sw = val_ip.S_w;
                 PG = val_ip.p;
                 TG = val_ip.T;
@@ -1806,7 +1808,6 @@ double CFiniteElementStd::CalCoefMass(const int gp)
                            : 0.0;
 
                 poro = val_ip.poro;
-                rhow = val_ip.rho_w;
 
                 drho_dp_rho = val_ip.fluid_compressibility;
 
@@ -1842,6 +1843,8 @@ double CFiniteElementStd::CalCoefMass(const int gp)
                 val += 3.0 * bishop * alpha_B * alpha_B /
                        SolidProp->getBulkModulus();
             }
+
+            return FluidProp->useDensityScaling() ? val : val * rhow;
         }
         break;
         case EPT_FLUID_MOMENTUM:  // Fluid Momentum
@@ -2268,7 +2271,8 @@ double CFiniteElementStd::CalCoefContent()
    01/2007 OK Two-phase flow
    10/2008 PCH Two-phase flow modified
 **************************************************************************/
-void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
+void CFiniteElementStd::CalCoefLaplace(const bool Gravity,
+                                       const bool for_velocity, const int ip)
 {
     double dens_arg[3];  // AKS
     double mat_fac = 1.0;
@@ -2359,10 +2363,17 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
                 for (size_t i = 0; i < dim; i++)
                     tensor[i * dim + i] *= w[i];
             }
+
+            double const fac0 =
+                time_unit_factor * perm_effstress * k_rel / mat_fac;
+
+            double const fac = (FluidProp->useDensityScaling() || for_velocity)
+                                   ? fac0
+                                   : fac0 * val_ip.rho_w;
             for (size_t i = 0; i < dim * dim; i++)
-                mat[i] = time_unit_factor * tensor[i] / mat_fac *
-                         perm_effstress *
-                         k_rel;  // AS:perm. dependent eff stress.
+            {
+                mat[i] = fac * tensor[i];
+            }
         }
             break;
         case EPT_GROUNDWATER_FLOW:  // Groundwater flow
@@ -2726,15 +2737,28 @@ void CFiniteElementStd::CalCoefLaplace(bool Gravity, int ip)
                     tensor[i * dim + i] *= w[i];
             }
             //
+
+            const double fac = (FluidProp->useDensityScaling() || for_velocity)
+                                   ? mat_fac * fac_perm
+                                   : mat_fac * fac_perm * val_ip.rho_w;
+
             for (size_t i = 0; i < dim * dim; i++)
-                mat[i] = tensor[i] * mat_fac * fac_perm;  // WX:12.2012
+            {
+                mat[i] = tensor[i] * fac;
+            }
 
             if (MediaProp->heat_diffusion_model == 1 && !Gravity)
             {
                 Dpv = val_ip.Dv * time_unit_factor * val_ip.rho_gw /
                       (SpecificGasConstant::WaterVapour * val_ip.rho_w * TG);
+
+                const double fac1 =
+                    (FluidProp->useDensityScaling() || for_velocity)
+                        ? Dpv / val_ip.rho_w
+                        : Dpv;
+
                 for (size_t i = 0; i < dim; i++)
-                    mat[i * dim + i] += Dpv / val_ip.rho_w;
+                    mat[i * dim + i] += fac1;
             }
         }
             break;
@@ -3868,6 +3892,7 @@ void CFiniteElementStd::CalcMass()
         //  Compute Jacobian matrix and its determinate
         //---------------------------------------------------------
         fkt = GetGaussData(gp, gp_r, gp_s, gp_t);
+
         // Compute geometry
         // if(PcsType==T)
         //{
@@ -4719,6 +4744,7 @@ void CFiniteElementStd::CalcLumpedMass()
     factor *= MediaProp->ElementVolumeMultiplyer;
     pcs->timebuffer = factor;  // Tim Control "Neumann"
     factor *= vol / (double)nnodes;
+
 #if defined(USE_PETSC)  // || defined(other parallel libs)//03~04.3012. WW
     for (i = 0; i < act_nodes; i++)
     {
@@ -5060,6 +5086,7 @@ void CFiniteElementStd::CalcLaplace()
 
     //----------------------------------------------------------------------
     // Loop over Gauss points
+    const bool for_velocity = false;
     for (gp = 0; gp < nGaussPoints; gp++)
     {
         //---------------------------------------------------------
@@ -5067,6 +5094,7 @@ void CFiniteElementStd::CalcLaplace()
         //  Compute Jacobian matrix and its determinate
         //---------------------------------------------------------
         double fkt = GetGaussData(gp, gp_r, gp_s, gp_t);
+
         //---------------------------------------------------------
         // Compute geometry
         getGradShapefunctValues(gp, 1);
@@ -5094,7 +5122,7 @@ void CFiniteElementStd::CalcLaplace()
             {
                 // Material
                 if (dof_n == 1)
-                    CalCoefLaplace(false, gp);
+                    CalCoefLaplace(false, for_velocity, gp);
                 else if (dof_n == 2)
                 {
                     if (PcsType == EPT_MULTIPHASE_FLOW)
@@ -5810,15 +5838,17 @@ void CFiniteElementStd::CalcRHS_by_ThermalDiffusion()
         //  Get local coordinates and weights
         //  Compute Jacobian matrix and its determinate
         //---------------------------------------------------------
-        const double fkt = GetGaussData(gp, gp_r, gp_s, gp_t);
+        IntegrationPointVariableBuffer const val_ip = vapor_variable_buffer[gp];
+        const double fkt =
+            FluidProp->useDensityScaling()
+                ? GetGaussData(gp, gp_r, gp_s, gp_t)
+                : GetGaussData(gp, gp_r, gp_s, gp_t) * val_ip.rho_w;
 
         //---------------------------------------------------------
         // Compute geometry
         getGradShapefunctValues(gp, 1);  // Linear interpolation function
         //---------------------------------------------------------
         getShapefunctValues(gp, 1);
-
-        IntegrationPointVariableBuffer const val_ip = vapor_variable_buffer[gp];
 
         // WW
         const double Dv = val_ip.Dv;
@@ -6061,6 +6091,7 @@ void CFiniteElementStd::Assemble_Gravity()
 
     // (*GravityMatrix) = 0.0;
     // Loop over Gauss points
+    const bool for_velocity = false;
     for (gp = 0; gp < nGaussPoints; gp++)
     {
         //---------------------------------------------------------
@@ -6082,7 +6113,7 @@ void CFiniteElementStd::Assemble_Gravity()
                                  (double)Index};
             rho = FluidProp->Density(dens_arg);
         }
-        else if (PcsType == EPT_RICHARDS_FLOW)
+        else if (PcsType == EPT_RICHARDS_FLOW || PcsType == EPT_LIQUID_FLOW)
         {
             IntegrationPointVariableBuffer const val_ip =
                 vapor_variable_buffer[gp];
@@ -6106,9 +6137,9 @@ void CFiniteElementStd::Assemble_Gravity()
             if (dof_n == 1)
             {
                 if (PcsType == EPT_TWOPHASE_FLOW)
-                    CalCoefLaplace(false);
+                    CalCoefLaplace(false, for_velocity, gp);
                 else
-                    CalCoefLaplace(true);
+                    CalCoefLaplace(true, for_velocity, gp);
             }
 
             if (dof_n == 2)
@@ -6301,6 +6332,7 @@ void CFiniteElementStd::Assemble_Gravity_Multiphase()
 
     // (*GravityMatrix) = 0.0;
     // Loop over Gauss points
+    const bool for_velocity = false;
     for (gp = 0; gp < nGaussPoints; gp++)
     {
         //---------------------------------------------------------
@@ -6375,7 +6407,7 @@ void CFiniteElementStd::Assemble_Gravity_Multiphase()
                 // This is not right for two phase gravity terms, because the
                 // equation is not summable this way. It should be seperated.
                 if (dof_n == 1)
-                    CalCoefLaplace(false);
+                    CalCoefLaplace(false, for_velocity, gp);
                 if (dof_n == 2)
                     CalCoefLaplace2(false, ii * dof_n + 1, gp);
 
@@ -6796,6 +6828,7 @@ void CFiniteElementStd::Cal_Velocity()
     tmp_gp_velocity = 0.0;
     // gp_ele->Velocity = 0.0;                     // CB inserted here and
     // commented above due to conflict with transport calculation, needs
+    const bool for_velocity = true;
     for (gp = 0; gp < nGaussPoints; gp++)
     {
         //---------------------------------------------------------
@@ -6815,7 +6848,7 @@ void CFiniteElementStd::Cal_Velocity()
             flag_cpl_pcs = true;
         // Material
         if (dof_n == 1)
-            CalCoefLaplace(true);
+            CalCoefLaplace(true, for_velocity, gp);
         else if (dof_n == 4 && PcsType == EPT_THERMAL_NONEQUILIBRIUM)
             CalCoefLaplaceTNEQ(0);
         else if (dof_n == 3 && PcsType == EPT_TES)
@@ -7401,8 +7434,9 @@ void CFiniteElementStd::Cal_Velocity_2()
     if ((PcsType == EPT_TWOPHASE_FLOW) && (pcs->pcs_type_number == 1))  // WW/CB
         flag_cpl_pcs = true;
     // Material
+    const bool for_velocity = true;
     if (dof_n == 1)
-        CalCoefLaplace(true, gp);
+        CalCoefLaplace(true, for_velocity, gp);
     else if (dof_n == 2)
         CalCoefLaplace2(true, 0, gp);
     if ((PcsType == EPT_TWOPHASE_FLOW) && (pcs->pcs_type_number == 1))  // WW/CB
@@ -7754,6 +7788,7 @@ void CFiniteElementStd::AssembleRHS(int dimension)
     }
 
     // Loop over Gauss points
+    const bool for_velocity = false;
     for (gp = 0; gp < nGaussPoints; gp++)
     {
         //---------------------------------------------------------
@@ -7769,7 +7804,7 @@ void CFiniteElementStd::AssembleRHS(int dimension)
         getShapefunctValues(gp, 1);      // Linear interpolation function
 
         // Material
-        CalCoefLaplace(true);
+        CalCoefLaplace(true, for_velocity, gp);
 
         // Calculate vector that computes dNj/dx*Ni*Pressure(j)
         // These index are very important.
@@ -9129,7 +9164,12 @@ void CFiniteElementStd::Assemble_strainCPL(const int phase)
         // Loop over Gauss points
         for (int gp = 0; gp < nGaussPoints; gp++)
         {
-            double const fkt = GetGaussData(gp, gp_r, gp_s, gp_t);
+            IntegrationPointVariableBuffer const val_ip =
+                vapor_variable_buffer[gp];
+            double const fkt =
+                FluidProp->useDensityScaling()
+                    ? GetGaussData(gp, gp_r, gp_s, gp_t)
+                    : GetGaussData(gp, gp_r, gp_s, gp_t) * val_ip.rho_w;
 
             getShapefunctValues(gp, 1);
 
@@ -9147,8 +9187,6 @@ void CFiniteElementStd::Assemble_strainCPL(const int phase)
                 if (cpl_pcs &&
                     cpl_pcs->getProcessType() == FiniteElement::HEAT_TRANSPORT)
                 {
-                    IntegrationPointVariableBuffer const val_ip =
-                        vapor_variable_buffer[gp];
                     double const dT_n_0 = interpolate(dT_idx, cpl_pcs);
                     dstrain_v += 3.0 * SolidProp->Thermal_Expansion() *
                                  (val_ip.T - val_ip.T0 - dT_n_0);
@@ -11256,7 +11294,11 @@ void CFiniteElementStd::Assemble_RHS_LIQUIDFLOW()
         //  Get local coordinates and weights
         //  Compute Jacobian matrix and its determinate
         //---------------------------------------------------------
-        const double gp_fkt = GetGaussData(gp, gp_r, gp_s, gp_t);
+        IntegrationPointVariableBuffer const val_ip = vapor_variable_buffer[gp];
+        const double gp_fkt =
+            FluidProp->useDensityScaling()
+                ? GetGaussData(gp, gp_r, gp_s, gp_t)
+                : GetGaussData(gp, gp_r, gp_s, gp_t) * val_ip.rho_w;
         //---------------------------------------------------------
         // Compute geometry
         //---------------------------------------------------------

@@ -277,7 +277,7 @@ void CFiniteElementStd::ComputeAdditionalJacobi_Richards()
         //  Get local coordinates and weights
         //  Compute Jacobian matrix and its determinate
         //---------------------------------------------------------
-        fkt = relax * GetGaussData(gp, gp_r, gp_s, gp_t);
+        fkt = relax * GetGaussData(gp, gp_r, gp_s, gp_t) * 1000.0;
         getShapefunctValues(gp, 1);      // Linear interpolation function
         getGradShapefunctValues(gp, 1);  // Linear interpolation function
 
