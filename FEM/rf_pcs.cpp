@@ -2206,8 +2206,7 @@ std::ios::pos_type CRFProcess::Read(std::ifstream* pcs_file)
         // subkeyword found
         if (line_string.find("$ELEMENT_MATRIX_OUTPUT") != string::npos)
         {
-            *pcs_file >> Write_Matrix;  // WW
-            pcs_file->ignore(MAX_ZEILE, '\n');
+            Write_Matrix = true;  // WW
             continue;
         }
         //....................................................................
