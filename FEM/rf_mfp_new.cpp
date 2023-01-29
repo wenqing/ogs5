@@ -80,7 +80,8 @@ double TemperatureUnitOffset()
    08/2004 OK Implementation
 **************************************************************************/
 CFluidProperties::CFluidProperties()
-    : name("WATER"),
+    : use_density_scaling(true),
+      name("WATER"),
       _reference_temperature(PhysicalConstant::CelsiusZeroInKelvin + 20.0),
       _use_latent_heat(false),
       densityIAPWS(NULL)
@@ -899,6 +900,12 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
             in.clear();
             continue;
         }
+        if (line_string.find("$NO_EQUATION_SCALING_WITH_DENSITY") !=
+            string::npos)
+        {
+            use_density_scaling = false;
+            continue;
+        }
     }
     return position;
 }
@@ -1443,13 +1450,14 @@ double CFluidProperties::Density(double* variables)
             break;
             case 28:  // rho_0 exp( beta(pL- pL0)+alpha T)
             {
+                const double p0 = 1.e+5;
                 const double T = primary_variable[1] -
                                  (PhysicalConstant::CelsiusZeroInKelvin + 20);
-                const double p = std::max(0.0, primary_variable[0]);
+                const double p = std::max(p0, primary_variable[0]);
                 const double rho_0 = 1002.6;
                 const double beta = 4.5e-10;
                 const double alpha = -2.0e-4;
-                return rho_0 * exp(beta * (p - 1.e5) + alpha * T);
+                return rho_0 * exp(beta * (p - p0) + alpha * T);
             }
             break;
             case 10:  // Get density from temperature-pressure values from
@@ -2590,7 +2598,7 @@ double MFPCalcFluidsHeatCapacity(const int gp, CFiniteElementStd* assem)
                         double arg[2];
                         arg[0] = 0.0;  // p = 0 of p < 0
                         arg[1] = TG;   // T
-                        alpha_T_l = -m_mfp0->drhodT(arg) / m_mfp0->Density();
+                        alpha_T_l = -m_mfp0->drhodT(arg) / rhow;
                     }
                     else
                     {

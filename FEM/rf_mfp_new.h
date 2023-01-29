@@ -141,7 +141,12 @@ public:
 
     bool useLatentHeat() const { return _use_latent_heat; }
 
+    bool useDensityScaling() const { return use_density_scaling; }
+
 private:
+    /// if use_density_scaling, the PDE, Neumann BC and source terms are scaled
+    /// with density.
+    bool use_density_scaling;
     int fluid_id;  // specification of substance (NB JUN 09)
     std::string name;
     std::string cmpNm1, cmpNm2, cmpNm3, cmpNm4;  // component name

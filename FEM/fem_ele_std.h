@@ -385,7 +385,8 @@ protected:
     double CalCoefMasstneq(int dof_index);
     // 03.3.2009 PCH
     double CalCoefMassPSGLOBAL(int dof_index);
-    void CalCoefLaplace(bool Gravity, int ip = 0);
+    void CalCoefLaplace(const bool Gravity, const bool for_velocity,
+                        const int ip);
     // 10 2008 PCH
     void CalCoefLaplaceMultiphase(int phase, int ip = 0);
     void CalCoefLaplace2(const bool Gravity, const int dof_index, const int ip);
