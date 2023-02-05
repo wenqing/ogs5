@@ -5499,6 +5499,10 @@ void CFiniteElementStd::CalcAdvection()
     gp_t = 0;
     (*Advection) = 0.0;
 
+    const bool single_phase_water_vapor =
+        ((cpl_pcs->getProcessType() == FiniteElement::RICHARDS_FLOW) &&
+         (MediaProp->heat_diffusion_model == 1));
+
     //----------------------------------------------------------------------
     // Loop over Gauss points
     for (gp = 0; gp < nGaussPoints; gp++)
@@ -5558,6 +5562,28 @@ void CFiniteElementStd::CalcAdvection()
             vel[1] += mat_factor * gp_ele->Velocity_g(1, gp);
             vel[2] += mat_factor * gp_ele->Velocity_g(2, gp);
         }
+
+        if (single_phase_water_vapor)
+        {
+            IntegrationPointVariableBuffer& val_ip = vapor_variable_buffer[gp];
+            if (val_ip.S_w < 1.0)
+            {
+                const double coef =
+                    -PhysicalConstant::specific_heat_water_vapor *
+                    val_ip.rho_gw * val_ip.Dv / val_ip.rho_w;
+                for (size_t i = 0; i < dim; i++)
+                {
+                    for (int j = 0; j < nnodes; j++)
+                    {
+                        vel[i] += coef *
+                                  (NodalVal1[j] * val_ip.drho_gw_dT +
+                                   NodalValC1[j] * val_ip.drho_gw_dp) *
+                                  dshapefct[i * nnodes + j];
+                    }
+                }
+            }
+        }
+
         // Velocity by Fluid_Momentum - 13.11.2009  PCH
         if (pcs_fluid_momentum)
         {

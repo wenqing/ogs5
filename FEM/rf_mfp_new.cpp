@@ -2579,8 +2579,7 @@ double MFPCalcFluidsHeatCapacity(const int gp, CFiniteElementStd* assem)
                         (1. - Sw) * assem->GasProp->Density() *
                         assem->GasProp->SpecificHeatCapacity();
 
-                if (m_mfp0->useLatentHeat() &&
-                    assem->MediaProp->heat_diffusion_model == 1)
+                if (assem->MediaProp->heat_diffusion_model == 1)
                 {
                     const double TG = assem->interpolate(assem->NodalVal1);
                     const double humi = exp(
@@ -2592,33 +2591,8 @@ double MFPCalcFluidsHeatCapacity(const int gp, CFiniteElementStd* assem)
                         rho_gw * PG /
                             (SpecificGasConstant::WaterVapour * rhow * TG * TG);
 
-                    double alpha_T_l;  // - (drho_w/dT)/rho_w
-                    if (m_mfp0->compressibility_model_temperature > 0)
-                    {
-                        double arg[2];
-                        arg[0] = 0.0;  // p = 0 of p < 0
-                        arg[1] = TG;   // T
-                        alpha_T_l = -m_mfp0->drhodT(arg) / rhow;
-                    }
-                    else
-                    {
-                        alpha_T_l = -m_mfp0->drho_dT;  // negative sign is
-                                                       // required due to OGS
-                                                       // input
-                    }
-
-                    const double L0 =
-                        rhow *
-                        MaterialLib::Fluid::LinearWaterVapourLatentHeat(TG);
-
-                    // alpha_T_l = - (drho_w/dT)/rho_w
-                    heat_capacity_fluids += L0 * (1.0 - Sw) *
-                                            (drho_gw_dT + rho_gw * alpha_T_l) /
-                                            rhow;
-
                     gw_val_gp.p = PG;
                     gw_val_gp.T = TG;
-                    gw_val_gp.L0 = L0;
                     gw_val_gp.rho_w = rhow;
                     gw_val_gp.S_w = Sw;
                     gw_val_gp.rho_gw = rho_gw;
@@ -2631,6 +2605,45 @@ double MFPCalcFluidsHeatCapacity(const int gp, CFiniteElementStd* assem)
                         (1 - Sw) *
                         std::pow(TG / PhysicalConstant::CelsiusZeroInKelvin,
                                  1.8);  //
+                    gw_val_gp.poro = assem->MediaProp->Porosity(
+                        assem->GetElementIndex(), 1.0);
+                    double unit[] = {0., 0., 0.};
+                    gw_val_gp.tort = assem->MediaProp->TortuosityFunction(
+                        assem->GetElementIndex(), unit, 1.0);
+                    gw_val_gp.Dv =
+                        gw_val_gp.tort * gw_val_gp.poro * gw_val_gp.Dvp;
+
+                    heat_capacity_fluids +=
+                        (1 - Sw) * PhysicalConstant::specific_heat_water_vapor *
+                        rho_gw;
+
+                    if (m_mfp0->useLatentHeat())
+                    {
+                        double alpha_T_l;  // - (drho_w/dT)/rho_w
+                        if (m_mfp0->compressibility_model_temperature > 0)
+                        {
+                            double arg[2];
+                            arg[0] = 0.0;  // p = 0 of p < 0
+                            arg[1] = TG;   // T
+                            alpha_T_l = -m_mfp0->drhodT(arg) / rhow;
+                        }
+                        else
+                        {
+                            alpha_T_l = -m_mfp0->drho_dT;  // negative sign is
+                            // required due to OGS
+                            // input
+                        }
+
+                        const double L0 =
+                            rhow *
+                            MaterialLib::Fluid::LinearWaterVapourLatentHeat(TG);
+                        gw_val_gp.L0 = L0;
+
+                        // alpha_T_l = - (drho_w/dT)/rho_w
+                        heat_capacity_fluids +=
+                            L0 * (1.0 - Sw) *
+                            (drho_gw_dT + rho_gw * alpha_T_l) / rhow;
+                    }
                 }
 
                 // heat_capacity_fluids +=

@@ -36,6 +36,8 @@ const double CelsiusZeroInKelvin = 273.15;
 */
 const double IdealGasConstant = 8.3144621;
 
+const double specific_heat_water_vapor = 1996;  // J/kg/K
+
 /**
  * Molar masses of certain elements and chemical compounds
  */
