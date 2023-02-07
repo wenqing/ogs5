@@ -154,6 +154,20 @@ void DOMRead(string file_base_name)
     }      // eof
     //----------------------------------------------------------------------
     ScreenMessage("%d domains\n", dom_vector.size());
+
+#if defined(USE_MPI)
+    int size;
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    if (dom_vector.size() != static_cast<std::size_t>(size))
+    {
+        Display::ScreenMessage(
+            "Error: partition size %d is not identical to the number of "
+            "requested compute cores %d!\n",
+            dom_vector.size(), size);
+        MPI_Finalize();
+        exit(1);
+    }
+#endif
     //----------------------------------------------------------------------
 }
 
