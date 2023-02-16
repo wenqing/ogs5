@@ -2797,6 +2797,12 @@ double CMediumProperties::HeatCapacity(const int gp, long number, double theta,
                 porosity * heat_capacity_fluids +
                 (1.0 - porosity) * specific_heat_capacity_solid * density_solid;
             break;
+        case 11:
+            group = m_pcs->m_msh->ele_vector[number]->GetPatchIndex();
+            m_msp = msp_vector[group];
+            specific_heat_capacity_solid = m_msp->Heat_Capacity();
+            density_solid = fabs(m_msp->Density());
+            return specific_heat_capacity_solid * density_solid;
         case 2:  // boiling model for YD
             // YD/OK: n c rho = n S^g c^g rho^g + n S^l c^l rho^l + (1-n) c^s
             // rho^s assem->GetNodalVal(1); WW

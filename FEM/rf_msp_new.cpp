@@ -221,6 +221,7 @@ std::ios::pos_type CSolidProperties::Read(std::ifstream* msp_file)
                     }
                     break;
                 case 1:  //  = const
+                case 11:  //  = const but no fluid phase
                     data_Capacity = new Matrix(1);
                     in_sd >> (*data_Capacity)(0);
                     in_sd.clear();
@@ -307,6 +308,7 @@ std::ios::pos_type CSolidProperties::Read(std::ifstream* msp_file)
                     conductivity_pcs_name_vector.push_back("TEMPERATURE1");
                     break;
                 case 1:  //  = const
+                case 11:  //  = const but no fluid phase
                     data_Conductivity = new Matrix(1);
                     in_sd >> (*data_Conductivity)(0);
                     in_sd.clear();
@@ -1536,6 +1538,7 @@ double CSolidProperties::Heat_Capacity(double refence)
             val = CalulateValue(data_Capacity, refence);
             break;
         case 1:
+        case 11:
             val = (*data_Capacity)(0);
             break;
         case 3:
@@ -1729,6 +1732,7 @@ double CSolidProperties::Heat_Conductivity(double reference)
             val = CalulateValue(data_Conductivity, reference);
             break;
         case 1:
+        case 11:
             val = (*data_Conductivity)(0);
             break;
         case 2:

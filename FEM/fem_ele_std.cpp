@@ -2572,14 +2572,17 @@ void CFiniteElementStd::CalCoefLaplace(const bool Gravity,
         case EPT_COMPONENTAL_FLOW:  // Componental flow
             break;
         case EPT_HEAT_TRANSPORT:  // heat transport
-            if (SolidProp->GetConductModel() ==
-                2)  // Boiling model. DECOVALEX THM2
+            if ((SolidProp->GetConductModel() == 11) ||
+                (SolidProp->GetConductModel() ==
+                 2)  // Boiling model. DECOVALEX THM2
+            )
             {
                 TG = interpolate(NodalVal1);
                 for (size_t i = 0; i < dim * dim; i++)
                     mat[i] = 0.0;
+                const double lamda = SolidProp->Heat_Conductivity(TG);
                 for (size_t i = 0; i < dim; i++)
-                    mat[i * dim + i] = SolidProp->Heat_Conductivity(TG);
+                    mat[i * dim + i] = lamda;
             }
             // DECOVALEX THM1 or Curce 12.09. WW
             else if ((SolidProp->GetConductModel() != 0 &&
