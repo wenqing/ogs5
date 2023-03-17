@@ -10523,12 +10523,13 @@ void CRFProcess::CopyTimestepNODValues(bool forward)
             nidx1--;
         }
 
-        if (dX_idx > 0)
+        if (dX_idx > 0 && dt > 0.0)
         {
             for (size_t l = 0; l < m_msh->GetNodesNumber(Quadr); l++)
             {
-                SetNodeValue(l, dX_idx,
-                             GetNodeValue(l, nidx1) - GetNodeValue(l, nidx0));
+                SetNodeValue(
+                    l, dX_idx,
+                    (GetNodeValue(l, nidx1) - GetNodeValue(l, nidx0)) / dt);
             }
         }
 

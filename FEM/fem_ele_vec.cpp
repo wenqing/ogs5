@@ -2638,7 +2638,11 @@ void CFiniteElementVec::ExtropolateGuassStrain()
         ComputeStrain(gp);
         if (F_Flag)
         {
-            eleV_DM->dstrain_v[gp] = dstrain[0] + dstrain[1] + dstrain[2];
+            if (dt > 0.0)
+            {
+                eleV_DM->dstrain_v_dt[gp] =
+                    (dstrain[0] + dstrain[1] + dstrain[2]) / dt;
+            }
         }
         RecordGuassStrain(gp, gp_r, gp_s, gp_t);
     }
@@ -3800,7 +3804,7 @@ ElementValue_DM::ElementValue_DM(CElem* ele, const int NGP, bool HM_Staggered)
       Stress_i(NULL),
       Stress_j(NULL),
       pStrain(NULL),
-      dstrain_v(NULL),
+      dstrain_v_dt(NULL),
       y_surface(NULL),
       prep0(NULL),
       e_i(NULL),
@@ -3851,10 +3855,10 @@ ElementValue_DM::ElementValue_DM(CElem* ele, const int NGP, bool HM_Staggered)
     if (HM_Staggered)
     {
         Stress_j = new Matrix(LengthBS, NGPoints);
-        dstrain_v = new double[NGPoints];
+        dstrain_v_dt = new double[NGPoints];
         for (int i = 0; i < NGPoints; i++)
         {
-            dstrain_v[i] = 0.0;
+            dstrain_v_dt[i] = 0.0;
         }
     }
 
@@ -3959,7 +3963,7 @@ void ElementValue_DM::Write_BIN(std::fstream& os, const bool last_step)
     if (pStrain)
         pStrain->Write_BIN(os);
 
-    os.write((char*)dstrain_v, Stress_i->Cols() * sizeof(double));
+    os.write((char*)dstrain_v_dt, Stress_i->Cols() * sizeof(double));
 
     if (y_surface)
         y_surface->Write_BIN(os);
@@ -4000,7 +4004,7 @@ void ElementValue_DM::Read_BIN(std::fstream& is)
 {
     Stress0->Read_BIN(is);
     Stress_i->Read_BIN(is);
-    is.read((char*)dstrain_v, Stress_i->Cols() * sizeof(double));
+    is.read((char*)dstrain_v_dt, Stress_i->Cols() * sizeof(double));
 
     if (pStrain)
         pStrain->Read_BIN(is);
@@ -4080,9 +4084,9 @@ ElementValue_DM::~ElementValue_DM()
     if (pStrain)
         delete pStrain;
 
-    if (dstrain_v)
+    if (dstrain_v_dt)
     {
-        delete[] dstrain_v;
+        delete[] dstrain_v_dt;
     }
 
     if (y_surface)

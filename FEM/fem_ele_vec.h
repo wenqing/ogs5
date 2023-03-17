@@ -69,7 +69,7 @@ public:
 
     double getVolumeStrainIncrement(const int gp) const
     {
-        return dstrain_v[gp];
+        return dstrain_v_dt[gp];
     }
 
 private:
@@ -84,7 +84,7 @@ private:
     Math_Group::Matrix* Stress_i;
     Math_Group::Matrix* Stress_j;
     Math_Group::Matrix* pStrain;
-    double* dstrain_v;
+    double* dstrain_v_dt;
     Math_Group::Matrix* y_surface;
     // Preconsolidation pressure
     Math_Group::Matrix* prep0;

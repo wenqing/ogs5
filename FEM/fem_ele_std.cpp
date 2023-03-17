@@ -9202,7 +9202,7 @@ void CFiniteElementStd::Assemble_strainCPL(const int phase)
 
             getShapefunctValues(gp, 1);
 
-            double dstrain_v = eleV_DM->getVolumeStrainIncrement(gp);
+            double dstrain_v_dt_portion = eleV_DM->getVolumeStrainIncrement(gp);
             double const coefficient =
                 CalCoefStrainCouping(gp, phase) * fabs(SolidProp->biot_const);
 
@@ -9210,20 +9210,22 @@ void CFiniteElementStd::Assemble_strainCPL(const int phase)
             if (pcs->m_num->fixed_stress_coupling)
             {
                 double const Kr = SolidProp->getBulkModulus();
-                double const dp_n_0 = interpolate(dp_idx, pcs);
-                dstrain_v -= 3.0 * coefficient * dp_n_0 / Kr;
+                double const dp_dt_n_0 = interpolate(dp_idx, pcs);
+                // dp_dt_n+1 has already added to the mass term
+                dstrain_v_dt_portion -= 3.0 * coefficient * dp_dt_n_0 / Kr;
 
                 if (cpl_pcs &&
                     cpl_pcs->getProcessType() == FiniteElement::HEAT_TRANSPORT)
                 {
-                    double const dT_n_0 = interpolate(dT_idx, cpl_pcs);
-                    dstrain_v += 3.0 * SolidProp->Thermal_Expansion() *
-                                 (val_ip.T - val_ip.T0 - dT_n_0);
+                    double const dT_dt_n_0 = interpolate(dT_idx, cpl_pcs);
+                    dstrain_v_dt_portion +=
+                        3.0 * SolidProp->Thermal_Expansion() *
+                        ((val_ip.T - val_ip.T0) / dt - dT_dt_n_0);
                 }
             }
 
             //
-            double const factor = fkt * dstrain_v * coefficient / dt;
+            double const factor = fkt * dstrain_v_dt_portion * coefficient;
             for (i = 0; i < nnodes; i++)
             {
                 NodalVal[i] -= factor * shapefct[i];
