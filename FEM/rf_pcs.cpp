@@ -4189,6 +4189,13 @@ void CRFProcess::Def_Variable_LiquidFlow()
     pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 0;
     pcs_number_of_secondary_nvals++;
 
+    // Pressure increment of the previous time step.
+    pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
+        "dX_t_n_minus_1";
+    pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "Pa";
+    pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 0;
+    pcs_number_of_secondary_nvals++;
+
     if (Neglect_H_ini == 2)
     {
         pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
