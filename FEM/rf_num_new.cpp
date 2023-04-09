@@ -135,6 +135,7 @@ CNumerics::CNumerics(string name)
     newton_damping_tolerance = 1.e3;
 
     fixed_stress_coupling = false;
+    fixed_stress_coupling_optimal_factor = 1.0;
     non_strain_coupling = false;
 
     nls_abs_residual_tolerance = std::numeric_limits<double>::max();
@@ -400,6 +401,18 @@ ios::pos_type CNumerics::Read(ifstream* num_file)
         if (line_string.find("$FIXED_STRESS_HM_COUPLING") != string::npos)
         {
             fixed_stress_coupling = true;
+            std::istringstream ss(line_string);
+            std::string token;
+            int counter = 0;
+            while (std::getline(ss, token, ' '))
+            {
+                if (counter == 1)
+                {
+                    std::istringstream ss_t(token);
+                    ss_t >> fixed_stress_coupling_optimal_factor;
+                }
+                counter++;
+            }
             continue;
         }
 

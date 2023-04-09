@@ -18,6 +18,7 @@
 // C++ STL
 #include <cfloat>
 #include <cmath>
+#include <sstream>
 //#include <iostream>
 //#include <limits>	// PCH to better use system max and min
 #include "memory.h"
@@ -1646,7 +1647,8 @@ double CFiniteElementStd::CalCoefMass(const int gp)
                 pcs->m_num->fixed_stress_coupling)
             {
                 double const alpha_B = SolidProp->getBiotsConstant();
-                val += 3.0 * alpha_B * alpha_B / SolidProp->getBulkModulus();
+                val += 3.0 * pcs->m_num->fixed_stress_coupling_optimal_factor *
+                       alpha_B * alpha_B / SolidProp->getBulkModulus();
             }
 
             return FluidProp->useDensityScaling() ? val : val * rhow;
@@ -1840,8 +1842,9 @@ double CFiniteElementStd::CalCoefMass(const int gp)
                     MediaProp->GetEffectiveSaturationForPerm(Sw, 0);
                 const double bishop = SolidProp->getBishopCoefficient(S_e, PG);
                 double const alpha_B = SolidProp->getBiotsConstant();
-                val += 3.0 * bishop * alpha_B * alpha_B /
-                       SolidProp->getBulkModulus();
+                val += 3.0 * bishop *
+                       pcs->m_num->fixed_stress_coupling_optimal_factor *
+                       alpha_B * alpha_B / SolidProp->getBulkModulus();
             }
 
             return FluidProp->useDensityScaling() ? val : val * rhow;
@@ -9212,7 +9215,9 @@ void CFiniteElementStd::Assemble_strainCPL(const int phase)
                 double const Kr = SolidProp->getBulkModulus();
                 double const dp_dt_n_0 = interpolate(dp_idx, pcs);
                 // dp_dt_n+1 has already added to the mass term
-                dstrain_v_dt_portion -= 3.0 * coefficient * dp_dt_n_0 / Kr;
+                dstrain_v_dt_portion -=
+                    3.0 * pcs->m_num->fixed_stress_coupling_optimal_factor *
+                    coefficient * dp_dt_n_0 / Kr;
 
                 if (cpl_pcs &&
                     cpl_pcs->getProcessType() == FiniteElement::HEAT_TRANSPORT)
