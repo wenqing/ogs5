@@ -452,13 +452,17 @@ void OUTData(double time_current, int time_step_number, bool force_output)
                     break;
                 //------------------------------------------------------------------
                 case GEOLIB::POINT:  // breakthrough curves in points
-                    if (m_out->dat_type_name.compare("GNUPLOT") !=
-                        0)  // JOD 5.3.07
-                        cout << "Data output: Breakthrough curves - "
-                             << m_out->getGeoName() << "\n";
-                    m_out->NODWritePNTDataTEC(time_current, time_step_number);
-                    if (!m_out->_new_file_opened)
-                        m_out->_new_file_opened = true;  // WW
+                    if (OutputBySteps)
+                    {
+                        if (m_out->dat_type_name.compare("GNUPLOT") !=
+                            0)  // JOD 5.3.07
+                            cout << "Data output: Breakthrough curves - "
+                                 << m_out->getGeoName() << "\n";
+                        m_out->NODWritePNTDataTEC(time_current,
+                                                  time_step_number);
+                        if (!m_out->_new_file_opened)
+                            m_out->_new_file_opened = true;  // WW
+                    }
                     break;
                 //------------------------------------------------------------------
                 case GEOLIB::SURFACE:  // profiles at surfaces

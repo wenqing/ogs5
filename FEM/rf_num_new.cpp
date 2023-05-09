@@ -135,6 +135,7 @@ CNumerics::CNumerics(string name)
     newton_damping_tolerance = 1.e3;
 
     fixed_stress_coupling = false;
+    fixed_stress_rate_over_coupling = false;
     fixed_stress_coupling_optimal_factor = 1.0;
     non_strain_coupling = false;
 
@@ -396,8 +397,16 @@ ios::pos_type CNumerics::Read(ifstream* num_file)
             line.clear();
             continue;
         }
+
         //....................................................................
         // subkeyword found
+        if (line_string.find("$FIXED_STRESS_RATE_OVER_COUPLING") !=
+            string::npos)
+        {
+            fixed_stress_rate_over_coupling = true;
+            continue;
+        }
+
         if (line_string.find("$FIXED_STRESS_HM_COUPLING") != string::npos)
         {
             fixed_stress_coupling = true;
@@ -415,7 +424,6 @@ ios::pos_type CNumerics::Read(ifstream* num_file)
             }
             continue;
         }
-
         // subkeyword found
         if (line_string.find("$NON_STRAIN_COUPLING") != string::npos)
         {

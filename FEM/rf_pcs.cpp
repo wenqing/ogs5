@@ -6575,7 +6575,7 @@ void CRFProcess::dectivateConditionInExcavatedSubDomain(const int material_ID)
 #if !defined(USE_PETSC)  // && !defined(other parallel libs)//03~04.3012. WW
     else
     {
-        CPARDomain* m_dom = dom_vector[rank];
+        // CPARDomain* m_dom = dom_vector[rank];
         if (rank == 0)
             begin = 0;
         else
@@ -10133,6 +10133,31 @@ double CRFProcess::ExecuteNonLinear(int loop_process_number, bool print_pcs)
     configured_in_nonlinearloop = false;
 #endif
 #endif
+
+    if (m_num->fixed_stress_rate_over_coupling)
+    {
+        const int dX_idx = GetNodeValueIndex("dX_t_n_minus_1");
+
+        bool Quadr = false;  // WW
+        if (type == 4 || type == 41)
+            Quadr = true;
+
+        if (dX_idx > 0 && dt > 0.0)
+        {
+            for (int j = 0; j < pcs_number_of_primary_nvals; j++)
+            {
+                int nidx0 = GetNodeValueIndex(pcs_primary_function_name[j]);
+                int nidx1 = nidx0 + 1;
+
+                for (size_t l = 0; l < m_msh->GetNodesNumber(Quadr); l++)
+                {
+                    SetNodeValue(
+                        l, dX_idx,
+                        (GetNodeValue(l, nidx1) - GetNodeValue(l, nidx0)) / dt);
+                }
+            }
+        }
+    }
     return nonlinear_iteration_error;
 }
 
@@ -10530,6 +10555,8 @@ void CRFProcess::CopyTimestepNODValues(bool forward)
             nidx1--;
         }
 
+        //        if (dX_idx > 0 && dt > 0.0 &&
+        //        !(m_num->fixed_stress_rate_over_coupling))
         if (dX_idx > 0 && dt > 0.0)
         {
             for (size_t l = 0; l < m_msh->GetNodesNumber(Quadr); l++)

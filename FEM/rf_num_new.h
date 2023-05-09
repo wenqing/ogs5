@@ -122,6 +122,7 @@ public:
     double nls_rel_unknown_tolerance;
 
     bool fixed_stress_coupling;
+    bool fixed_stress_rate_over_coupling;
     double fixed_stress_coupling_optimal_factor;
     bool non_strain_coupling;
     //

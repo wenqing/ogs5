@@ -72,6 +72,11 @@ public:
         return dstrain_v_dt[gp];
     }
 
+    void setVolumeStrainIncrement(const int gp, const double dstrain_dt)
+    {
+        dstrain_v_dt[gp] = dstrain_dt;
+    }
+
 private:
     // Friend class
     friend class MaterialLib::solid::BGRaCreep;

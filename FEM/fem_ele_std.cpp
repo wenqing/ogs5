@@ -9171,19 +9171,85 @@ void CFiniteElementStd::Assemble_strainCPL(const int phase)
     {
         int gp_r, gp_s, gp_t;
 
-        // Compute grad N, det(J), and etc.
-        // ComputeGradShapefctInElement(false);
+        ElementValue_DM* eleV_DM = ele_value_dm[MeshElement->GetIndex()];
 
-        const int dp_idx = pcs->GetNodeValueIndex("dX_t_n_minus_1");
-        const int dT_idx =
-            cpl_pcs ? cpl_pcs->GetNodeValueIndex("dX_t_n_minus_1") : -1;
+        const bool use_current_strain_rate =
+            (pcs->m_num->fixed_stress_rate_over_coupling ||
+             !pcs->m_num->fixed_stress_coupling);
+        if (use_current_strain_rate)
+        {
+            SetHighOrderNodes();
+
+            ComputeGradShapefctInElement(false);
+
+            double norm_du = 0.0;
+            for (i = 0; i < nnodesHQ; i++)
+            {
+                NodalVal2[i] = (dm_pcs->GetNodeValue(nodes[i], Idx_dm1[0]) -
+                                dm_pcs->GetNodeValue(nodes[i], Idx_dm0[0])) /
+                               dt;
+                norm_du += std::fabs(NodalVal2[i]);
+                NodalVal3[i] = (dm_pcs->GetNodeValue(nodes[i], Idx_dm1[1]) -
+                                dm_pcs->GetNodeValue(nodes[i], Idx_dm0[1])) /
+                               dt;
+                norm_du += std::fabs(NodalVal3[i]);
+                if (dim == 3)  // 3D.
+                {
+                    NodalVal4[i] =
+                        (dm_pcs->GetNodeValue(nodes[i], Idx_dm1[2]) -
+                         dm_pcs->GetNodeValue(nodes[i], Idx_dm0[2])) /
+                        dt;
+                    norm_du += std::fabs(NodalVal4[i]);
+                }
+            }
+
+            if (norm_du > 0.0)
+            {
+                for (gp = 0; gp < nGaussPoints; gp++)
+                {
+                    GetGaussData(gp, gp_r, gp_s, gp_t);
+
+                    getGradShapefunctValues(gp, 2);
+                    getShapefunctValues(gp, 1);
+                    getShapefunctValues(gp, 2);
+
+                    if (axisymmetry)
+                    {
+                        Radius = 0.0;
+                        for (int i = 0; i < nnodes; i++)
+                            Radius += shapefct[i] * X[i];
+                    }
+                    //
+                    double dstrain_dt = 0.0;
+                    for (int l = 0; l < nnodesHQ; l++)
+                    {
+                        dstrain_dt += NodalVal2[l] * dshapefctHQ[l] +
+                                      NodalVal3[l] * dshapefctHQ[l + nnodesHQ];
+                        if (axisymmetry)
+                        {
+                            dstrain_dt += NodalVal2[l] / Radius;
+                        }
+                        if (dim == 3)
+                        {
+                            dstrain_dt +=
+                                NodalVal4[l] * dshapefctHQ[l + 2 * nnodesHQ];
+                        }
+                    }
+
+                    eleV_DM->setVolumeStrainIncrement(gp, dstrain_dt);
+                }
+            }
+            setOrder(1);
+        }
 
         for (i = 0; i < nnodes; i++)
         {
             NodalVal[i] = 0.0;
         }
 
-        ElementValue_DM const* eleV_DM = ele_value_dm[MeshElement->GetIndex()];
+        const int dp_idx = pcs->GetNodeValueIndex("dX_t_n_minus_1");
+        const int dT_idx =
+            cpl_pcs ? cpl_pcs->GetNodeValueIndex("dX_t_n_minus_1") : -1;
 
         // Loop over Gauss points
         for (int gp = 0; gp < nGaussPoints; gp++)
@@ -9198,6 +9264,7 @@ void CFiniteElementStd::Assemble_strainCPL(const int phase)
             getShapefunctValues(gp, 1);
 
             double dstrain_v_dt_portion = eleV_DM->getVolumeStrainIncrement(gp);
+
             double const coefficient =
                 CalCoefStrainCouping(gp, phase) * fabs(SolidProp->biot_const);
 
