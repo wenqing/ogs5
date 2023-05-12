@@ -2904,7 +2904,7 @@ double* CMediumProperties::HeatConductivityTensor(int number)
         else
         {
             if (Fem_Ele_Std->FluidProp->density_model == 14 &&
-                Fem_Ele_Std->MediaProp->heat_diffusion_model == 1 &&
+                Fem_Ele_Std->MediaProp->heat_diffusion_model > 0 &&
                 Fem_Ele_Std->cpl_pcs)
             {
                 double dens_arg[3];
@@ -8882,6 +8882,19 @@ void CMediumProperties::setFrictionPhase(
     FiniteElement::FrictionPhase fric_phase)
 {
     _fric_phase = fric_phase;
+}
+
+double CMediumProperties::getDiffusionCoefficient(double const T,
+                                                  double const pg) const
+{
+    if (heat_diffusion_model == 1)
+    {
+        // FEBEX
+        return base_heat_diffusion_coefficient *
+               std::pow(T / PhysicalConstant::CelsiusZeroInKelvin, 1.8);
+    }
+
+    return base_heat_diffusion_coefficient * std::pow(T, 2.3) / pg;
 }
 
 FiniteElement::FrictionPhase CMediumProperties::getFrictionPhase() const

@@ -2579,7 +2579,7 @@ double MFPCalcFluidsHeatCapacity(const int gp, CFiniteElementStd* assem)
                         (1. - Sw) * assem->GasProp->Density() *
                         assem->GasProp->SpecificHeatCapacity();
 
-                if (assem->MediaProp->heat_diffusion_model == 1)
+                if (assem->MediaProp->heat_diffusion_model > 0)
                 {
                     const double TG = assem->interpolate(assem->NodalVal1);
                     const double humi = exp(
@@ -2601,10 +2601,8 @@ double MFPCalcFluidsHeatCapacity(const int gp, CFiniteElementStd* assem)
                         rho_gw / (SpecificGasConstant::WaterVapour * TG * rhow);
 
                     gw_val_gp.Dvp =
-                        assem->MediaProp->base_heat_diffusion_coefficient *
-                        (1 - Sw) *
-                        std::pow(TG / PhysicalConstant::CelsiusZeroInKelvin,
-                                 1.8);  //
+                        assem->MediaProp->getDiffusionCoefficient(TG) *
+                        (1 - Sw);
                     gw_val_gp.poro = assem->MediaProp->Porosity(
                         assem->GetElementIndex(), 1.0);
                     double unit[] = {0., 0., 0.};

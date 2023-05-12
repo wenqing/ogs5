@@ -145,6 +145,10 @@ public:
     double HeatTransferCoefficient(long number,
                                    double theta,
                                    CFiniteElementStd* assem);  // NW
+
+    double getDiffusionCoefficient(double const T,
+                                   double const pg = 1.0e+5) const;
+
     double ParticleDiameter();
     unsigned GetGeoDimension(void) { return geo_dimension; }
     /**
@@ -249,7 +253,6 @@ public:
     double heat_conductivity_tensor[9];
     int fct_number;  // functions
     int heat_diffusion_model;
-    double base_heat_diffusion_coefficient;
     int evaporation;  // if it is 647 then evaporation ON, else OFF: and
                       // corresponding heat loss will compensated by heat
     // ST
@@ -299,6 +302,8 @@ public:
     double betaexpo;
 
 private:
+    double base_heat_diffusion_coefficient;
+
     // WW
     friend class FiniteElement::CFiniteElementStd;
     // Data base

@@ -1787,7 +1787,7 @@ double CFiniteElementStd::CalCoefMass(const int gp)
                 drho_dp_rho = (FluidProp->compressibility_model_pressure > 0)
                                   ? FluidProp->drhodP(args) / rhow
                                   : FluidProp->drho_dp;
-                if (MediaProp->heat_diffusion_model == 1)
+                if (MediaProp->heat_diffusion_model > 0)
                 {
                     const double humi =
                         exp(std::min(PG, 0.0) /
@@ -1813,7 +1813,7 @@ double CFiniteElementStd::CalCoefMass(const int gp)
 
                 drho_dp_rho = val_ip.fluid_compressibility;
 
-                if (MediaProp->heat_diffusion_model == 1)
+                if (MediaProp->heat_diffusion_model > 0)
                 {
                     const double rhov = val_ip.rho_gw;
                     //
@@ -1878,7 +1878,7 @@ double CFiniteElementStd::CalCoefMass2(const int dof_index, const int gp)
 
     bool diffusion = false;  // 08.05.2008 WW
 
-    if (MediaProp->heat_diffusion_model == 1 && cpl_pcs)
+    if (MediaProp->heat_diffusion_model > 0 && cpl_pcs)
         diffusion = true;
     dens_arg[1] = 293.15;
     //
@@ -2058,11 +2058,7 @@ double CFiniteElementStd::CalCoefMassPSGLOBAL(int dof_index)
     int Index = MeshElement->GetIndex();
     double val = 0.0, variables[3];
     double P, T;
-    // OK411 double expfactor = 0.0;
-    // WW bool diffusion = false;                     //08.05.2008 WW
-    // WWif(MediaProp->heat_diffusion_model==273&&cpl_pcs)
-    // WW  diffusion = true;
-    //
+
     switch (dof_index)
     {
         case 0:
@@ -2604,7 +2600,7 @@ void CFiniteElementStd::CalCoefLaplace(const bool Gravity,
                     mat[i] = 0.0;
                 mat_fac = SolidProp->Heat_Conductivity(Sw);
 
-                if (MediaProp->heat_diffusion_model == 1 &&
+                if (MediaProp->heat_diffusion_model > 0 &&
                     FluidProp->useLatentHeat() && Sw < 1.0)
                 {
                     const IntegrationPointVariableBuffer gw_val_ip =
@@ -2621,8 +2617,7 @@ void CFiniteElementStd::CalCoefLaplace(const bool Gravity,
                 for (size_t i = 0; i < dim; i++)
                     mat[i * dim + i] = mat_fac;
             }
-            // WW        else if(SolidProp->GetCapacityModel()==1 &&
-            // MediaProp->heat_diffusion_model == 273){
+
             else if (SolidProp->GetConductModel() == 1)
             {
                 TG = interpolate(NodalVal1);
@@ -2753,7 +2748,7 @@ void CFiniteElementStd::CalCoefLaplace(const bool Gravity,
                 mat[i] = tensor[i] * fac;
             }
 
-            if (MediaProp->heat_diffusion_model == 1 && !Gravity)
+            if (MediaProp->heat_diffusion_model > 0 && !Gravity)
             {
                 Dpv = val_ip.Dv * time_unit_factor * val_ip.rho_gw /
                       (SpecificGasConstant::WaterVapour * val_ip.rho_w * TG);
@@ -2893,7 +2888,7 @@ void CFiniteElementStd::CalCoefLaplace2(const bool Gravity, const int dof_index,
     expfactor = D_gw = D_ga = 0.0;
     double dens_arg[3];      // 08.05.2008 WW
     bool diffusion = false;  // 08.05.2008 WW
-    if (MediaProp->heat_diffusion_model == 1 && cpl_pcs)
+    if (MediaProp->heat_diffusion_model > 0 && cpl_pcs)
         diffusion = true;
     //
     dens_arg[1] = 293.15;
@@ -2952,10 +2947,8 @@ void CFiniteElementStd::CalCoefLaplace2(const bool Gravity, const int dof_index,
                 {
                     tort = MediaProp->TortuosityFunction(Index, unit,
                                                          pcs->m_num->ls_theta);
-                    tort *=
-                        MediaProp->base_heat_diffusion_coefficient * (1 - Sw) *
-                        poro *
-                        pow(TG / PhysicalConstant::CelsiusZeroInKelvin, 1.8);
+                    tort *= MediaProp->getDiffusionCoefficient(TG) * (1 - Sw) *
+                            poro;
                     expfactor =
                         1.0 / (rhow * SpecificGasConstant::WaterVapour * TG);
                     rho_gw = FluidProp->vaporDensity(TG) * exp(-PG * expfactor);
@@ -3730,7 +3723,7 @@ double CFiniteElementStd::CalCoefAdvection()
             break;
         case EPT_HEAT_TRANSPORT:  // heat transport
             if (FluidProp->density_model == 14 &&
-                MediaProp->heat_diffusion_model == 1 && cpl_pcs)
+                MediaProp->heat_diffusion_model > 0 && cpl_pcs)
             {
                 dens_arg[0] = interpolate(NodalValC1);
                 dens_arg[1] = interpolate(NodalVal1);
@@ -5507,7 +5500,7 @@ void CFiniteElementStd::CalcAdvection()
 
     const bool single_phase_water_vapor =
         ((cpl_pcs->getProcessType() == FiniteElement::RICHARDS_FLOW) &&
-         (MediaProp->heat_diffusion_model == 1));
+         (MediaProp->heat_diffusion_model > 0));
 
     //----------------------------------------------------------------------
     // Loop over Gauss points
@@ -5550,7 +5543,7 @@ void CFiniteElementStd::CalcAdvection()
             dens_aug[0] = interpolate(NodalVal_p2);
             dens_aug[1] = interpolate(NodalVal1);
             rho_gw = 0.0;
-            if (MediaProp->heat_diffusion_model == 1)
+            if (MediaProp->heat_diffusion_model > 0)
             {
                 PG = interpolate(NodalValC1);
                 TG = dens_aug[1];
@@ -5820,7 +5813,7 @@ void CFiniteElementStd::CalcValuesAtIntegrationPoint(
 
         val_ip.poro = MediaProp->Porosity(Index, pcs->m_num->ls_theta);
 
-        if (MediaProp->heat_diffusion_model != 1)
+        if (MediaProp->heat_diffusion_model < 0)
         {
             continue;
         }
@@ -5831,9 +5824,8 @@ void CFiniteElementStd::CalcValuesAtIntegrationPoint(
             exp(std::min(val_ip.p, 0.0) /
                 (SpecificGasConstant::WaterVapour * val_ip.T * val_ip.rho_w));
 
-        val_ip.Dvp = MediaProp->base_heat_diffusion_coefficient *
-                     (1 - val_ip.S_w) *
-                     pow(val_ip.T / PhysicalConstant::CelsiusZeroInKelvin, 1.8);
+        val_ip.Dvp =
+            MediaProp->getDiffusionCoefficient(val_ip.T) * (1 - val_ip.S_w);
 
         val_ip.Dv = val_ip.tort * val_ip.poro * val_ip.Dvp;
         val_ip.rho_gw = val_ip.humidity * FluidProp->vaporDensity(val_ip.T);
@@ -9728,14 +9720,14 @@ void CFiniteElementStd::Assembly()
             // CMCD4213
             AssembleMixedHyperbolicParabolicEquation();
 
-            if (MediaProp->heat_diffusion_model == 1 &&
+            if (MediaProp->heat_diffusion_model > 0 &&
                 FluidProp->useLatentHeat())
             {
                 Assemble_RHS_LATENT_HEAT_TRANSPORT();
             }
 
             if (FluidProp->density_model == 14 &&
-                MediaProp->heat_diffusion_model == 1 && cpl_pcs)
+                MediaProp->heat_diffusion_model > 0 && cpl_pcs)
                 Assemble_RHS_HEAT_TRANSPORT();  // This include when need
                                                 // pressure terms n dp/dt +
                                                 // nv.Nabla p//AKS
@@ -9767,7 +9759,7 @@ void CFiniteElementStd::Assembly()
         //....................................................................
         case EPT_RICHARDS_FLOW:  // Richards flow
             CalcValuesAtIntegrationPoint(true);
-            if (MediaProp->heat_diffusion_model == 1)
+            if (MediaProp->heat_diffusion_model > 0)
                 CalcRHS_by_ThermalDiffusion();
             AssembleParabolicEquation();  // OK
             Assemble_Gravity();
@@ -9790,7 +9782,7 @@ void CFiniteElementStd::Assembly()
             // To account advection like term nv.Nabla p
             AssembleMixedHyperbolicParabolicEquation();
             // AKS
-            if (MediaProp->heat_diffusion_model == 1 && cpl_pcs)
+            if (MediaProp->heat_diffusion_model > 0 && cpl_pcs)
                 Assemble_RHS_AIR_FLOW();  // n*drho/dt + Nabla.[rho*k/mu rho
                                           // g]//AKS
 #if defined(USE_PETSC)  // || defined(other parallel libs)//03~04.3012. WW
@@ -9803,7 +9795,7 @@ void CFiniteElementStd::Assembly()
             CalcValuesAtIntegrationPoint(true);
             AssembleParabolicEquation();
             Assemble_Gravity();
-            if (cpl_pcs && MediaProp->heat_diffusion_model == 1)
+            if (cpl_pcs && MediaProp->heat_diffusion_model > 0)
                 Assemble_RHS_T_MPhaseFlow();
             if (dm_pcs)
                 Assemble_RHS_M();
@@ -10854,8 +10846,7 @@ double CFiniteElementStd::CalCoef_RHS_T_MPhase(int dof_index)
             // From grad (p_gw/p_g)
             tort = MediaProp->TortuosityFunction(Index, unit,
                                                  pcs->m_num->ls_theta);
-            tort *= MediaProp->base_heat_diffusion_coefficient * (1 - Sw) *
-                    poro * pow(TG / PhysicalConstant::CelsiusZeroInKelvin, 1.8);
+            tort *= MediaProp->getDiffusionCoefficient(TG) * (1 - Sw) * poro;
             p_gw = rho_gw * SpecificGasConstant::WaterVapour * TG;
             dens_arg[0] = PG2 - p_gw;
             dens_arg[1] = TG;
@@ -11995,7 +11986,7 @@ double CFiniteElementStd::CalCoef_RHS_M_MPhase(int dof_index)
     double dens_aug[3];
     dens_aug[1] = 293.15;
     bool diffusion = false;  // 08.05.2008 WW
-    if (MediaProp->heat_diffusion_model == 1 && cpl_pcs)
+    if (MediaProp->heat_diffusion_model > 0 && cpl_pcs)
         diffusion = true;
     //======================================================================
     switch (dof_index)
