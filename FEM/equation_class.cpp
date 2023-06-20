@@ -1112,7 +1112,7 @@ inline bool Linear_EQS::CheckNormRHS(const double normb_new)
             return true;
         }
     bNorm = normb_new;
-    if (bNorm < DBL_MIN)
+    if (bNorm < DBL_EPSILON)
     {
         error = 0.;
         Message();
@@ -1232,7 +1232,7 @@ int Linear_EQS::BiCG()
         TransPrecond(rt, zt);
         const double rho1 = dot(z, rt);
         //
-        if (fabs(rho1) < DBL_MIN)
+        if (fabs(rho1) < DBL_EPSILON)
         {
             Message();
             return iter <= max_iter;
@@ -1341,7 +1341,7 @@ int Linear_EQS::BiCGStab()
     for (iter = 1; iter <= max_iter; iter++)
     {
         rho_1 = dot(r0, r);
-        if (fabs(rho_1) < DBL_MIN)  // DBL_EPSILON
+        if (fabs(rho_1) < DBL_EPSILON)  // DBL_EPSILON
         {
             Message();
             return 0;
@@ -1387,7 +1387,7 @@ int Linear_EQS::BiCGStab()
             A->multiVec(s_h, t);
         //
         tt = dot(t, t);
-        if (tt > DBL_MIN)
+        if (tt > DBL_EPSILON)
             omega = dot(t, s) / tt;
         else
             omega = 1.0;
@@ -1405,7 +1405,7 @@ int Linear_EQS::BiCGStab()
             Message();
             return iter;
         }
-        if (fabs(omega) < DBL_MIN)
+        if (fabs(omega) < DBL_EPSILON)
         {
             error = norm_r / bNorm;
             Message();
@@ -1462,7 +1462,7 @@ int Linear_EQS::CGS()
     for (iter = 1; iter <= max_iter; iter++)
     {
         rho_1 = dot(r0, r);
-        if (fabs(rho_1) < DBL_MIN)  //  DBL_EPSILON
+        if (fabs(rho_1) < DBL_EPSILON)  //  DBL_EPSILON
         {
             Message();
             return 0;
@@ -1643,7 +1643,7 @@ int Linear_EQS::GMRES()
     Precond(r, w);  // Mr-->w
     beta = Norm(w);
 
-    if (normb < DBL_MIN)
+    if (normb < DBL_EPSILON)
         normb = 1;
 
     // if ((error = Norm(r) / normb) <= tol)
@@ -1761,7 +1761,7 @@ void Linear_EQS::Precond_Jacobi(const double* vec_s, double* vec_r)
     {
         val = prec_M[i];
         //  <DBL_EPSILON
-        if (fabs(val) < DBL_MIN)
+        if (fabs(val) < DBL_EPSILON)
             val = 1.0;
         vec_r[i] = vec_s[i] / val;
     }
@@ -1956,7 +1956,7 @@ int Linear_EQS::CGS(double* xg, const long n)
     for (iter = 1; iter <= max_iter; iter++)
     {
         rho_1 = dot(r0, r);
-        if (fabs(rho_1) < DBL_MIN)  //  DBL_EPSILON
+        if (fabs(rho_1) < DBL_EPSILON)  //  DBL_EPSILON
             break;
         //
         if (iter == 1)
@@ -2136,7 +2136,7 @@ int Linear_EQS::BiCGStab(double* xg, const long n)
     for (iter = 1; iter <= max_iter; iter++)
     {
         const double rho_1 = dot(r0, r);
-        if (fabs(rho_1) < DBL_MIN)
+        if (fabs(rho_1) < DBL_EPSILON)
             break;
 
 #ifdef TEST_MPI
@@ -2201,7 +2201,7 @@ int Linear_EQS::BiCGStab(double* xg, const long n)
         Dum << "  tt  " << tt << "\n";
 #endif
 
-        if (tt > DBL_MIN)
+        if (tt > DBL_EPSILON)
             omega = dot(t, s) / tt;
         else
             omega = 1.0;
@@ -2227,7 +2227,7 @@ int Linear_EQS::BiCGStab(double* xg, const long n)
 
         if ((error = norm_v1 / bNorm) < tol)
             break;
-        if (fabs(omega) < DBL_MIN)
+        if (fabs(omega) < DBL_EPSILON)
         {
             error = norm_v1 / bNorm;
             break;
@@ -2358,7 +2358,7 @@ int Linear_EQS::BiCG(double* xg, const long n)
 #endif
 
         //
-        if (fabs(rho1) < DBL_MIN)
+        if (fabs(rho1) < DBL_EPSILON)
         {
             Message();
             break;
@@ -2414,7 +2414,6 @@ int Linear_EQS::BiCG(double* xg, const long n)
     exit(0);
 #endif
 
-    //
     return iter <= max_iter;
 }
 #endif
