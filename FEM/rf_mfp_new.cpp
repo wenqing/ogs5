@@ -3667,6 +3667,7 @@ double MFPGetNodeValue(long node, const std::string& mfp_name, int phase_number,
 
     // std::vector<double> arguments(vec_var_names->size());
     std::vector<double> arguments(std::max(size_t(3ul), vec_var_names->size()));
+    arguments[1] = PhysicalConstant::CelsiusZeroInKelvin + 20.0;
     for (unsigned i = 0; i < vec_var_names->size(); i++)
     {
         CRFProcess* pcs = PCSGet((*vec_var_names)[i], true);
