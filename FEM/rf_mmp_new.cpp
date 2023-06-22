@@ -819,13 +819,9 @@ std::ios::pos_type CMediumProperties::Read(std::ifstream* mmp_file)
                     break;
                 case 7:  // RW/WW
                 {
-                    if (!PCSGet("DEFORMATION"))
-                    {
-                        ScreenMessage(
-                            "Error: Porosity model 7 must be combined with "
-                            "deformation process");
-                        exit(EXIT_FAILURE);
-                    }
+                    ScreenMessage(
+                        "Warning: Porosity model 7 must be combined with "
+                        "elastic model");
                 }
                 break;
             }
