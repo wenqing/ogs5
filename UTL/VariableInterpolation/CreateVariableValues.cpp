@@ -114,12 +114,52 @@ bool isPointInElement(MeshLib::CElem const& element, const double x[3])
             return (std::fabs(v0 - v1) < tol);
         }
         break;
+        case MshElemType::PRISM:
+        {
+            double const* x_node[6];
+            for (int i = 0; i < 6; i++)
+            {
+                x_node[i] = element.GetNode(i)->getData();
+            }
+
+            const double v0 = element.GetVolume();
+            const double v1 =
+                computePyramidVolume(x_node[0], x_node[2], x_node[5], x_node[3],
+                                     x) +
+                computePyramidVolume(x_node[0], x_node[3], x_node[4], x_node[1],
+                                     x) +
+                computePyramidVolume(x_node[1], x_node[4], x_node[5], x_node[2],
+                                     x) +
+                ComputeDetTex(x_node[0], x_node[1], x_node[2], x) +
+                ComputeDetTex(x_node[3], x_node[5], x_node[4], x);
+
+            return (std::fabs(v0 - v1) < tol);
+        }
+        case MshElemType::PYRAMID:
+        {
+            double const* x_node[5];
+            for (int i = 0; i < 5; i++)
+            {
+                x_node[i] = element.GetNode(i)->getData();
+            }
+
+            const double v0 = element.GetVolume();
+            const double v1 =
+                computePyramidVolume(x_node[0], x_node[1], x_node[2], x_node[3],
+                                     x) +
+                ComputeDetTex(x_node[1], x_node[4], x_node[2], x) +
+                ComputeDetTex(x_node[2], x_node[4], x_node[3], x) +
+                ComputeDetTex(x_node[0], x_node[4], x_node[1], x) +
+                ComputeDetTex(x_node[3], x_node[4], x_node[0], x);
+
+            return (std::fabs(v0 - v1) < tol);
+        }
+        break;
         default:
         {
             Display::ScreenMessage(
-                "Only TRIANGLE, QUAD, HEXAHEDRON and TETRAHEDRON are supported "
-                "to "
-                "identify a point in it.\n");
+                "The element type is not supported to identify a point in "
+                "it.\n");
             exit(1);
         }
     }
