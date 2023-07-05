@@ -5824,11 +5824,14 @@ void CFiniteElementStd::CalcValuesAtIntegrationPoint(
             exp(std::min(val_ip.p, 0.0) /
                 (SpecificGasConstant::WaterVapour * val_ip.T * val_ip.rho_w));
 
+        val_ip.rho_gw = val_ip.humidity * FluidProp->vaporDensity(val_ip.T);
+        const double pg =
+            1.e+5 + val_ip.rho_gw * SpecificGasConstant::WaterVapour * TG;
+
         val_ip.Dvp =
-            MediaProp->getDiffusionCoefficient(val_ip.T) * (1 - val_ip.S_w);
+            MediaProp->getDiffusionCoefficient(val_ip.T, pg) * (1 - val_ip.S_w);
 
         val_ip.Dv = val_ip.tort * val_ip.poro * val_ip.Dvp;
-        val_ip.rho_gw = val_ip.humidity * FluidProp->vaporDensity(val_ip.T);
     }
 }
 

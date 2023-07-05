@@ -2600,8 +2600,11 @@ double MFPCalcFluidsHeatCapacity(const int gp, CFiniteElementStd* assem)
                     gw_val_gp.drho_gw_dp =
                         rho_gw / (SpecificGasConstant::WaterVapour * TG * rhow);
 
+                    const double pg =
+                        1.e+5 + gw_val_gp.rho_gw *
+                                    SpecificGasConstant::WaterVapour * TG;
                     gw_val_gp.Dvp =
-                        assem->MediaProp->getDiffusionCoefficient(TG) *
+                        assem->MediaProp->getDiffusionCoefficient(TG, pg) *
                         (1 - Sw);
                     gw_val_gp.poro = assem->MediaProp->Porosity(
                         assem->GetElementIndex(), 1.0);
