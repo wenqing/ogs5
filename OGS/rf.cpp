@@ -233,7 +233,7 @@ int main(int argc, char* argv[])
             std::cout << BuildInfo::OGS_VERSION << "\n";
             exit(0);
         }
-        if (anArg == "--output-directory")
+        if (anArg == "--output-directory" || anArg == "-o")
         {
             if (i + 1 >= arg_strings.size())
             {
