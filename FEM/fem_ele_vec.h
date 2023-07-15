@@ -255,8 +255,7 @@ private:
     double *Sxx, *Syy, *Szz, *Sxy, *Sxz, *Syz, *pstr;
 
     /// Extrapolation
-    bool RecordGuassStrain(const int gp, const int gp_r, const int gp_s,
-                           int gp_t);
+    bool RecordGuassStrain(const int gp);
     // Effective strain
     double CalcStrain_v();
     void ExtropolateGuassStrain();

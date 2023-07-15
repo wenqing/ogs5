@@ -14,7 +14,9 @@
 
 #include "ShapeFunctionPool.h"
 
-#include <cassert> /* assert */
+#include <cassert>
+
+#include "display.h"
 #include "fem_ele.h"
 
 namespace FiniteElement
@@ -72,6 +74,8 @@ ShapeFunctionPool::ShapeFunctionPool(
     _shape_function_center.resize(n_ele_types);
     _grad_shape_function.resize(n_ele_types);
     _grad_shape_function_center.resize(n_ele_types);
+    _extrapolate_matrix.resize(n_ele_types);
+
     for (std::size_t i = 0; i < elem_types.size(); i++)
     {
         const MshElemType::type e_type = elem_types[i];
@@ -104,6 +108,57 @@ ShapeFunctionPool::ShapeFunctionPool(
 
     computeQuadratures(elem_types, num_elem_nodes, dim_elem, quadrature,
                        num_sample_gs_pnts);
+
+    if (quadrature.getOrder() > 1)
+    {
+        return;
+    }
+
+    std::vector<Eigen::MatrixXd> t;
+
+    for (std::size_t i = 0; i < elem_types.size(); i++)
+    {
+        const MshElemType::type e_type = elem_types[i];
+        if (e_type == MshElemType::INVALID)
+            continue;
+        // Set number of integration points.
+        quadrature.SetGaussPointNumber(num_sample_gs_pnts);
+        quadrature.SetIntegrationPointNumber(e_type);
+
+        const int type_id = static_cast<int>(e_type) - 1;
+        int num_int_pnts = quadrature.GetNumGaussPoints();
+        const int num_nodes =
+            num_elem_nodes[quadrature.getOrder() - 1][type_id];
+
+        if (num_int_pnts < num_nodes)
+        {
+            Display::ScreenMessage(
+                "Number of integration points are less than the element "
+                "vertexes for extrapolation.");
+            exit(1);
+        }
+
+        Eigen::MatrixXd shapefunctuion_matrix(num_int_pnts, num_nodes);
+
+        double const* shape_functions = getShapeFunctionValues(e_type);
+        for (int gp = 0; gp < num_int_pnts; gp++)
+        {
+            double const* shp = &shape_functions[num_nodes * gp];
+
+            for (int n_id = 0; n_id < num_nodes; n_id++)
+            {
+                shapefunctuion_matrix(gp, n_id) = shp[n_id];
+            }
+        }
+
+        Eigen::MatrixXd const shapefunctuion_matrix_trans =
+            shapefunctuion_matrix.transpose();
+        Eigen::MatrixXd const extrapolate_matrix =
+            (shapefunctuion_matrix_trans * shapefunctuion_matrix).inverse() *
+            shapefunctuion_matrix_trans;
+
+        _extrapolate_matrix[type_id] = extrapolate_matrix;
+    }
 }
 
 void ShapeFunctionPool::computeQuadratures(

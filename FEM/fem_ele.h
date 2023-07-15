@@ -23,6 +23,7 @@
 class CPARDomain;
 #endif
 
+#include "Eigen/Dense"
 #include "MSHEnums.h"
 
 namespace Math_Group
@@ -77,7 +78,6 @@ public:
     void ConfigElement(CElem* MElement, const bool FaceIntegration = false);
 
     void setElement(CElem* MElement) { MeshElement = MElement; }
-
     void setOrder(const int order);
     int getOrder() const { return Order; }
     // Set Gauss point
@@ -144,7 +144,7 @@ public:
     // For axisymmetrical problems
     void calculateRadius(const int gp);
     //
-    void setUnitCoordinates(double const*const u)
+    void setUnitCoordinates(double const* const u)
     {
         for (int i = 0; i < 3; i++)
             unit[i] = u[i];
@@ -156,7 +156,6 @@ public:
     // Set the number of Gauss points
     // 26.03.2007 WW
     void SetGaussPointNumber(const int nGuassP) { nGauss = nGuassP; }
-
     void SetIntegrationPointNumber(const MshElemType::type elem_type);
 
     // Get values;
@@ -164,7 +163,6 @@ public:
     int GetNumGaussSamples() const { return nGauss; }
     int Dim() const { return ele_dim; }
     double Getdshapefct(int in) { return dshapefct[in]; }
-
     // Integrate Neumman type BC
     void FaceIntegration(double* NodeVal);
     void DomainIntegration(double* NodeVal);
@@ -180,7 +178,6 @@ public:
     bool isFluidPressureCoupling() const { return F_Flag; }
     int isDeformationCoupling() const { return D_Flag; }
     int isConcentrationCoupling() const { return C_Flag; }
-
     // Interpolate Gauss values
     double interpolate(double const* const nodalVal, const int order = 1) const;
     double interpolate(const int idx, CRFProcess* m_pcs, const int order = 1);
@@ -208,6 +205,8 @@ public:
     {
         PT_Flag = idx;
     }
+
+    Eigen::VectorXd extrapolate(Eigen::VectorXd const& ip_values);
 
 protected:
     CElem* MeshElement;

@@ -21,9 +21,9 @@
 #include <sstream>
 //#include <iostream>
 //#include <limits>	// PCH to better use system max and min
-#include "memory.h"
-
+#include "Eigen/Dense"
 #include "display.h"
+#include "memory.h"
 
 // Method
 #include "mathlib.h"
@@ -2374,7 +2374,7 @@ void CFiniteElementStd::CalCoefLaplace(const bool Gravity,
                 mat[i] = fac * tensor[i];
             }
         }
-            break;
+        break;
         case EPT_GROUNDWATER_FLOW:  // Groundwater flow
             /* SB4218 - moved to ->PermeabilityTensor(Index, ip);
                     if(MediaProp->permeability_model==2){ //?efficiency
@@ -2762,7 +2762,7 @@ void CFiniteElementStd::CalCoefLaplace(const bool Gravity,
                     mat[i * dim + i] += fac1;
             }
         }
-            break;
+        break;
         //------------------------------------------------------------------
         case EPT_GAS_FLOW:  // Air flow
             dens_arg[0] = interpolate(NodalVal1);
@@ -3817,7 +3817,7 @@ double CFiniteElementStd::CalCoefStrainCouping(const int ip, const int phase)
             break;
         case EPT_OVERLAND_FLOW:  // Overland flow
             break;
-        case EPT_RICHARDS_FLOW:                // Richard flow
+        case EPT_RICHARDS_FLOW:  // Richard flow
         {
             IntegrationPointVariableBuffer const val_ip =
                 vapor_variable_buffer[ip];
@@ -10076,101 +10076,126 @@ void CFiniteElementStd::ExtropolateGauss(MeshLib::CElem& elem,
     ElementValue* gp_ele = ele_gp_value[MeshElement->GetIndex()];
     //
     int gp, gp_r, gp_s, gp_t;
-    int i_s, i_e, ish;
-    double EV, EV1 = 0.0, varx = 0.0;
     gp_r = gp_s = gp_t = gp = 0;
     //
     SetIntegrationPointNumber(ElementType);
     for (gp = 0; gp < nGaussPoints; gp++)
     {
-        int i = gp;
         SetGaussPoint(gp, gp_r, gp_s, gp_t);
-        if (ElementType == MshElemType::QUAD ||
-            ElementType == MshElemType::HEXAHEDRON)
-        {
-            i = GetLocalIndex(gp_r, gp_s, gp_t);
-            if (i == -1)
-                continue;
-        }
 
-        NodalVal1[i] = gp_ele->Velocity(idof, gp) * time_unit_factor;
+        NodalVal1[gp] = gp_ele->Velocity(idof, gp) * time_unit_factor;
         //
         //
         // PCH 05.2009
         if (m_pcs->type == 1212 || m_pcs->type == 1313 || m_pcs->type == 42)
-            NodalVal2[i] = gp_ele->Velocity_g(idof, gp) * time_unit_factor;
+            NodalVal2[gp] = gp_ele->Velocity_g(idof, gp) * time_unit_factor;
     }
 
-    CalcXi_p();
-
-    //
-    i_s = 0;
-    i_e = nnodes;
-    ish = 0;
-    if (ElementType == MshElemType::TETRAHEDRON)  // tet
+    /*if ((ElementType != MshElemType::TETRAHEDRON) &&
+        (ElementType != MshElemType::PRISM) &&
+        (ElementType != MshElemType::PYRAMID))
     {
-        i_s = 1;
-        i_e = nnodes + 1;
-        ish = 1;
-    }
-    //---------------------------------------------------------
-    // Mapping Gauss point strains to nodes and update nodes
-    // strains:
-    //---------------------------------------------------------
-    double avgEV = .0;
-    double avgEV1 = .0;
-    if (this->GetExtrapoMethod() == ExtrapolationMethod::EXTRAPO_AVERAGE)
-    {
-        // average
-        avgEV = CalcAverageGaussPointValues(NodalVal1);
-        if (m_pcs->type == 1212 || m_pcs->type == 1313)
-            avgEV1 = CalcAverageGaussPointValues(NodalVal2);
-    }
+             int i_s, i_e, ish;
+             double EV, EV1 = 0.0, varx = 0.0;
 
-    ConfigShapefunction(ElementType);
-    for (int i = 0; i < nnodes; i++)
-    {
-        EV = EV1 = varx = 0.0;
+             CalcXi_p();
 
-        // Calculate values at nodes
-        if (this->GetExtrapoMethod() == ExtrapolationMethod::EXTRAPO_LINEAR)
-        {
-            SetExtropoGaussPoints(i);
-            //
-            ComputeShapefct(1, dbuff0);  // Linear interpolation function
-            for (int j = i_s; j < i_e; j++)
-                EV += NodalVal1[j] * dbuff0[j - ish];
-        }
-        else if (this->GetExtrapoMethod() ==
-                 ExtrapolationMethod::EXTRAPO_AVERAGE)
-            // average
-            EV = avgEV;
-        // for(j=i_s; j<i_e; j++)
-        // EV += NodalVal1[j];
-        // EV /=(i_e-i_s);	//WX:09.2010. Use average value for nodes.
-        // Average value of the contribution of ell neighbor elements
-        EV /= dbuff[i];
-        EV += m_pcs->GetNodeValue(nodes[i], idx_vel[idof]);
-        m_pcs->SetNodeValue(nodes[i], idx_vel[idof], EV);
         //
-        // Multi-phase flow PCH 05.2009
-        if (m_pcs->type == 1212 || m_pcs->type == 1313 || m_pcs->type == 42)
+        i_s = 0;
+        i_e = nnodes;
+        ish = 0;
+
+        //---------------------------------------------------------
+        // Mapping Gauss point strains to nodes and update nodes
+        // strains:
+        //---------------------------------------------------------
+        double avgEV = .0;
+        double avgEV1 = .0;
+        if (this->GetExtrapoMethod() == ExtrapolationMethod::EXTRAPO_AVERAGE)
         {
+            // average
+            avgEV = CalcAverageGaussPointValues(NodalVal1);
+            if (m_pcs->type == 1212 || m_pcs->type == 1313)
+                avgEV1 = CalcAverageGaussPointValues(NodalVal2);
+        }
+
+        ConfigShapefunction(ElementType);
+        for (int i = 0; i < nnodes; i++)
+        {
+            EV = EV1 = varx = 0.0;
+
             // Calculate values at nodes
             if (this->GetExtrapoMethod() == ExtrapolationMethod::EXTRAPO_LINEAR)
+            {
+                SetExtropoGaussPoints(i);
+                //
+                ComputeShapefct(1, dbuff0);  // Linear interpolation function
                 for (int j = i_s; j < i_e; j++)
-                    EV1 += NodalVal2[j] * dbuff0[j - ish];
+                    EV += NodalVal1[j] * dbuff0[j - ish];
+            }
             else if (this->GetExtrapoMethod() ==
                      ExtrapolationMethod::EXTRAPO_AVERAGE)
                 // average
-                EV1 = avgEV1;
+                EV = avgEV;
             // for(j=i_s; j<i_e; j++)
             // EV += NodalVal1[j];
             // EV /=(i_e-i_s);	//WX:09.2010. Use average value for nodes.
+            // Average value of the contribution of ell neighbor elements
+            EV /= dbuff[i];
+            EV += m_pcs->GetNodeValue(nodes[i], idx_vel[idof]);
+            m_pcs->SetNodeValue(nodes[i], idx_vel[idof], EV);
             //
-            EV1 /= dbuff[i];
-            EV1 += m_pcs->GetNodeValue(nodes[i], idx_v2);
-            m_pcs->SetNodeValue(nodes[i], idx_v2, EV1);
+            // Multi-phase flow PCH 05.2009
+            if (m_pcs->type == 1212 || m_pcs->type == 1313 || m_pcs->type == 42)
+            {
+                // Calculate values at nodes
+                if (this->GetExtrapoMethod() ==
+                    ExtrapolationMethod::EXTRAPO_LINEAR)
+                    for (int j = i_s; j < i_e; j++)
+                        EV1 += NodalVal2[j] * dbuff0[j - ish];
+                else if (this->GetExtrapoMethod() ==
+                         ExtrapolationMethod::EXTRAPO_AVERAGE)
+                    // average
+                    EV1 = avgEV1;
+                // for(j=i_s; j<i_e; j++)
+                // EV += NodalVal1[j];
+                // EV /=(i_e-i_s);	//WX:09.2010. Use average value for nodes.
+                //
+                EV1 /= dbuff[i];
+                EV1 += m_pcs->GetNodeValue(nodes[i], idx_v2);
+                m_pcs->SetNodeValue(nodes[i], idx_v2, EV1);
+            }
+        }
+        return;
+    }*/
+
+    std::vector<Eigen::VectorXd> ip_data_vector;
+    std::vector<int> idxs;
+
+    Eigen::VectorXd ip_data1 =
+        Eigen::Map<Eigen::VectorXd>(NodalVal1, nGaussPoints);
+    ip_data_vector.push_back(ip_data1);
+    idxs.push_back(idx_vel[idof]);
+
+    if (m_pcs->type == 1212 || m_pcs->type == 1313 || m_pcs->type == 42)
+    {
+        Eigen::VectorXd ip_data =
+            Eigen::Map<Eigen::VectorXd>(NodalVal2, nGaussPoints);
+
+        ip_data_vector.push_back(ip_data);
+        idxs.push_back(idx_v2);
+    }
+
+    for (std::size_t ipd = 0; ipd < ip_data_vector.size(); ipd++)
+    {
+        Eigen::VectorXd const ip_data = ip_data_vector[ipd];
+        Eigen::VectorXd const extrapolated_data = extrapolate(ip_data);
+
+        for (int i = 0; i < nnodes; i++)
+        {
+            double EV = extrapolated_data[i] / dbuff[i];
+            EV += m_pcs->GetNodeValue(nodes[i], idxs[ipd]);
+            m_pcs->SetNodeValue(nodes[i], idxs[ipd], EV);
         }
     }
 }
@@ -10336,18 +10361,7 @@ void CFiniteElementStd::CalcSaturation(MeshLib::CElem& elem)
     for (gp = 0; gp < nGaussPoints; gp++)
     {
         SetGaussPoint(gp, gp_r, gp_s, gp_t);
-        int i = gp;
-        if (ElementType == MshElemType::QUAD ||
-            ElementType == MshElemType::HEXAHEDRON)
-        {
-            i = GetLocalIndex(gp_r, gp_s, gp_t);
-            if (i == -1)
-                continue;
-        }
 
-        //
-        if (i > nnodes)
-            continue;
         getShapefunctValues(gp, 1);
         //
         // CB_merge_0513 in case of het K, store local K
@@ -10355,58 +10369,86 @@ void CFiniteElementStd::CalcSaturation(MeshLib::CElem& elem)
         double* tens = MediaProp->PermeabilityTensor(Index, gp);
         MediaProp->local_permeability = tens[0];
         PG = interpolate(NodalVal0);
-        NodalVal_Sat[i] = MediaProp->SaturationCapillaryPressureFunction(PG);
+        NodalVal_Sat[gp] = MediaProp->SaturationCapillaryPressureFunction(PG);
     }
 
-    CalcXi_p();
-
-    //
-    int i_s, i_e, ish;
-    i_s = 0;
-    i_e = nnodes;
-    ish = 0;
-    if (ElementType == MshElemType::TETRAHEDRON)  // tet
+    /*if ((ElementType != MshElemType::TETRAHEDRON) &&
+        (ElementType != MshElemType::PRISM) &&
+        (ElementType != MshElemType::PYRAMID))
     {
-        i_s = 1;
-        i_e = nnodes + 1;
-        ish = 1;
-    }
-    //---------------------------------------------------------
-    // Mapping Gauss point strains to nodes and update nodes
-    // strains:
-    //---------------------------------------------------------
-    double avgSat = .0;
-    if (this->GetExtrapoMethod() == ExtrapolationMethod::EXTRAPO_AVERAGE)
-        // average
-        avgSat = CalcAverageGaussPointValues(NodalVal_Sat);
+        CalcXi_p();
 
-    ConfigShapefunction(ElementType);
+        //
+        int i_s, i_e, ish;
+        i_s = 0;
+        i_e = nnodes;
+        ish = 0;
+        //---------------------------------------------------------
+        // Mapping Gauss point strains to nodes and update nodes
+        // strains:
+        //---------------------------------------------------------
+        double avgSat = .0;
+        if (this->GetExtrapoMethod() == ExtrapolationMethod::EXTRAPO_AVERAGE)
+            // average
+            avgSat = CalcAverageGaussPointValues(NodalVal_Sat);
+
+        ConfigShapefunction(ElementType);
+        for (int i = 0; i < nnodes; i++)
+        {
+            double eS = 0.0;
+            // Calculate values at nodes
+            if (this->GetExtrapoMethod() == ExtrapolationMethod::EXTRAPO_LINEAR)
+            {
+                SetExtropoGaussPoints(i);
+                //
+                ComputeShapefct(1, dbuff0);  // Linear interpolation function
+                for (int j = i_s; j < i_e; j++)
+                    eS += NodalVal_Sat[j] * dbuff0[j - ish];
+            }
+            else if (this->GetExtrapoMethod() ==
+                     ExtrapolationMethod::EXTRAPO_AVERAGE)
+                eS = avgSat;
+
+            // Average value of the contribution of ell neighbor elements
+            eS /= dbuff[i];
+            eS += pcs->GetNodeValue(nodes[i], idx_S);
+            // In case the node is on the material interface
+            if (eS > 1.0)
+                eS = 1.0;
+            if (MediaProp->permeability_saturation_model[0] == 10 &&
+                eS < MediaProp->capillary_pressure_values[1])  // MW: limit to
+                                                               // non-negative
+                                                               // saturation for
+                                                               // stability
+                // in unconfined gw
+                eS = MediaProp->capillary_pressure_values[1];
+            //
+            pcs->SetNodeValue(nodes[i], idx_S, eS);
+        }
+        return;
+    }*/
+
+    Eigen::VectorXd ip_data =
+        Eigen::Map<Eigen::VectorXd>(NodalVal_Sat, nGaussPoints);
+
+    Eigen::VectorXd const extrapolated_data = extrapolate(ip_data);
+
     for (int i = 0; i < nnodes; i++)
     {
-        double eS = 0.0;
-        // Calculate values at nodes
-        if (this->GetExtrapoMethod() == ExtrapolationMethod::EXTRAPO_LINEAR)
-        {
-            SetExtropoGaussPoints(i);
-            //
-            ComputeShapefct(1, dbuff0);  // Linear interpolation function
-            for (int j = i_s; j < i_e; j++)
-                eS += NodalVal_Sat[j] * dbuff0[j - ish];
-        }
-        else if (this->GetExtrapoMethod() ==
-                 ExtrapolationMethod::EXTRAPO_AVERAGE)
-            eS = avgSat;
+        double eS = extrapolated_data[i] / dbuff[i];
 
-        // Average value of the contribution of ell neighbor elements
-        eS /= dbuff[i];
         eS += pcs->GetNodeValue(nodes[i], idx_S);
         // In case the node is on the material interface
         if (eS > 1.0)
+        {
             eS = 1.0;
+        }
         if (MediaProp->permeability_saturation_model[0] == 10 &&
-            eS < MediaProp->capillary_pressure_values
-                     [1])  // MW: limit to non-negative saturation for stability
-                           // in unconfined gw
+            eS < MediaProp->capillary_pressure_values[1])  // MW: limit to
+                                                           // non-negative
+                                                           // saturation for
+                                                           // stability
+            // in unconfined gw
             eS = MediaProp->capillary_pressure_values[1];
         //
         pcs->SetNodeValue(nodes[i], idx_S, eS);
@@ -10420,16 +10462,13 @@ void CFiniteElementStd::CalcSaturation(MeshLib::CElem& elem)
 **************************************************************************/
 void CFiniteElementStd::CalcNodeMatParatemer(MeshLib::CElem& elem)
 {
-    int i, gp_r, gp_s, gp_t, idx_perm[3], idxp = 0;
-    int i_s, i_e, ish;
-    double w[3], nval = 0.0;
+    int gp_r, gp_s, gp_t, idx_perm[3], idxp = 0;
     //
     MeshElement = &elem;
     MshElemType::type ElementType = MeshElement->GetElementType();
     //----------------------------------------------------------------------
     gp = 0;
     index = MeshElement->GetIndex();
-    w[0] = w[1] = w[2] = 1.0;
     //----------------------------------------------------------------------
     setOrder(1);
     // Set material
@@ -10445,17 +10484,17 @@ void CFiniteElementStd::CalcNodeMatParatemer(MeshLib::CElem& elem)
     int idx11 = idx1;
     if (pcs->GetContinnumType() == 1)
         idx11 = idxp21;
-    for (i = 0; i < nnodes; i++)
+    for (int i = 0; i < nnodes; i++)
         NodalVal1[i] = pcs->GetNodeValue(nodes[i], idx11);
     if (PcsType == EPT_MULTIPHASE_FLOW)
-        for (i = 0; i < nnodes; i++)
+        for (int i = 0; i < nnodes; i++)
             NodalVal_p2[i] = pcs->GetNodeValue(nodes[i], idxp21);
     if (PcsType == EPT_PSGLOBAL)  // 4.3.2009 PCH
 
-        for (i = 0; i < nnodes; i++)
+        for (int i = 0; i < nnodes; i++)
             NodalVal_SatNW[i] = pcs->GetNodeValue(nodes[i], idxSn1);
     if (cpl_pcs)
-        for (i = 0; i < nnodes; i++)
+        for (int i = 0; i < nnodes; i++)
         {
             NodalValC[i] = cpl_pcs->GetNodeValue(nodes[i], idx_c0);
             NodalValC1[i] = cpl_pcs->GetNodeValue(nodes[i], idx_c1);
@@ -10475,7 +10514,7 @@ void CFiniteElementStd::CalcNodeMatParatemer(MeshLib::CElem& elem)
     if (pcs->additioanl2ndvar_print > 1)
         idxp = pcs->GetNodeValueIndex("POROSITY");
     // Number of elements associated to nodes
-    for (i = 0; i < nnodes; i++)
+    for (int i = 0; i < nnodes; i++)
         dbuff[i] =
             (double)MeshElement->nodes[i]->getConnectedElementIDs().size();
 
@@ -10486,24 +10525,15 @@ void CFiniteElementStd::CalcNodeMatParatemer(MeshLib::CElem& elem)
 
     //
     gp_r = gp_s = gp_t = gp = 0;
+    double w[3];
+    w[0] = w[1] = w[2] = 1.0;
+
     // for PG = interpolate(NodalVal0);
     getShapeFunctionPtr(MeshElement->GetElementType());
     SetIntegrationPointNumber(ElementType);
     for (gp = 0; gp < nGaussPoints; gp++)
     {
         SetGaussPoint(gp, gp_r, gp_s, gp_t);
-        if (ElementType == MshElemType::QUAD ||
-            ElementType == MshElemType::HEXAHEDRON)
-        {
-            i = GetLocalIndex(gp_r, gp_s, gp_t);
-            if (i == -1)
-                continue;
-        }
-        else
-            i = gp;
-        //
-        if (i > nnodes)
-            continue;
 
         getShapefunctValues(gp, 1);
         PG = interpolate(NodalVal1);
@@ -10525,96 +10555,144 @@ void CFiniteElementStd::CalcNodeMatParatemer(MeshLib::CElem& elem)
                 for (size_t j = 0; j < dim; j++)
                     tensor[j * dim + j] *= w[j];
             }
-            NodalVal2[i] = tensor[0];        // w[0];
-            NodalVal3[i] = tensor[dim + 1];  // w[1]; //
+            NodalVal2[gp] = tensor[0];        // w[0];
+            NodalVal3[gp] = tensor[dim + 1];  // w[1]; //
             if (dim == 3)
-                NodalVal4[i] = tensor[2 * dim + 2];  // w[2]; //
+                NodalVal4[gp] = tensor[2 * dim + 2];  // w[2]; //
         }
         // Porosity
         if (pcs->additioanl2ndvar_print > 1)
             // MediaProp->Porosity(this);
-            NodalVal0[i] = MediaProp->Porosity(MeshElement->index, 1.0);
-    }
-    //
-    Xi_p = CalcXi_p();
-    //
-    i_s = 0;
-    i_e = nnodes;
-    ish = 0;
-    if (ElementType == MshElemType::TETRAHEDRON)  // tet
-    {
-        i_s = 1;
-        i_e = nnodes + 1;
-        ish = 1;
-    }
-    //---------------------------------------------------------
-    // Mapping Gauss point strains to nodes and update nodes
-    // strains:
-    //---------------------------------------------------------
-    double avgW[3] = {};
-    double avgVal = 0.0;
-    if (this->GetExtrapoMethod() == ExtrapolationMethod::EXTRAPO_AVERAGE)
-    {
-        // average
-        if ((pcs->additioanl2ndvar_print > 0) &&
-            (pcs->additioanl2ndvar_print < 3))
-        {
-            avgW[0] = CalcAverageGaussPointValues(NodalVal2);
-            avgW[1] = CalcAverageGaussPointValues(NodalVal3);
-            avgW[2] = CalcAverageGaussPointValues(NodalVal4);
-        }
-        if (pcs->additioanl2ndvar_print > 1)
-            avgVal = CalcAverageGaussPointValues(NodalVal0);
+            NodalVal0[gp] = MediaProp->Porosity(MeshElement->index, 1.0);
     }
 
-    ConfigShapefunction(ElementType);
-    for (i = 0; i < nnodes; i++)
+    /*if ((ElementType != MshElemType::TETRAHEDRON) &&
+        (ElementType != MshElemType::PRISM) &&
+        (ElementType != MshElemType::PYRAMID))
     {
-        // Calculate values at nodes
-        if (this->GetExtrapoMethod() == ExtrapolationMethod::EXTRAPO_LINEAR)
+        int i_s, i_e, ish;
+        double w[3], nval = 0.0;
+        w[0] = w[1] = w[2] = 1.0;
+        //
+        Xi_p = CalcXi_p();
+        //
+        i_s = 0;
+        i_e = nnodes;
+        ish = 0;
+        //---------------------------------------------------------
+        // Mapping Gauss point strains to nodes and update nodes
+        // strains:
+        //---------------------------------------------------------
+        double avgW[3] = {};
+        double avgVal = 0.0;
+        if (this->GetExtrapoMethod() == ExtrapolationMethod::EXTRAPO_AVERAGE)
         {
-            SetExtropoGaussPoints(i);
-            //
-            ComputeShapefct(1, dbuff0);  // Linear interpolation function
-        }
-        if ((pcs->additioanl2ndvar_print > 0) &&
-            (pcs->additioanl2ndvar_print < 3))
-        {
-            w[0] = w[1] = w[2] = 0.0;
-            if (this->GetExtrapoMethod() == ExtrapolationMethod::EXTRAPO_LINEAR)
-                for (int j = i_s; j < i_e; j++)
-                {
-                    w[0] += NodalVal2[j] * dbuff0[j - ish];
-                    w[1] += NodalVal3[j] * dbuff0[j - ish];
-                    if (dim == 3)
-                        w[2] += NodalVal4[j] * dbuff0[j - ish];
-                }
-            else if (this->GetExtrapoMethod() ==
-                     ExtrapolationMethod::EXTRAPO_AVERAGE)
-                for (size_t k = 0; k < dim; k++)
-                    w[k] = avgW[k];
-            // Average value of the contribution of ell neighbor elements
-            for (size_t k = 0; k < dim; k++)
+            // average
+            if ((pcs->additioanl2ndvar_print > 0) &&
+                (pcs->additioanl2ndvar_print < 3))
             {
-                w[k] /= dbuff[i];
-                w[k] += pcs->GetNodeValue(nodes[i], idx_perm[k]);
+                avgW[0] = CalcAverageGaussPointValues(NodalVal2);
+                avgW[1] = CalcAverageGaussPointValues(NodalVal3);
+                avgW[2] = CalcAverageGaussPointValues(NodalVal4);
+            }
+            if (pcs->additioanl2ndvar_print > 1)
+                avgVal = CalcAverageGaussPointValues(NodalVal0);
+        }
+
+        ConfigShapefunction(ElementType);
+        for (int i = 0; i < nnodes; i++)
+        {
+            // Calculate values at nodes
+            if (this->GetExtrapoMethod() == ExtrapolationMethod::EXTRAPO_LINEAR)
+            {
+                SetExtropoGaussPoints(i);
                 //
-                pcs->SetNodeValue(nodes[i], idx_perm[k], w[k]);
+                ComputeShapefct(1, dbuff0);  // Linear interpolation function
+            }
+            if ((pcs->additioanl2ndvar_print > 0) &&
+                (pcs->additioanl2ndvar_print < 3))
+            {
+                w[0] = w[1] = w[2] = 0.0;
+                if (this->GetExtrapoMethod() ==
+                    ExtrapolationMethod::EXTRAPO_LINEAR)
+                    for (int j = i_s; j < i_e; j++)
+                    {
+                        w[0] += NodalVal2[j] * dbuff0[j - ish];
+                        w[1] += NodalVal3[j] * dbuff0[j - ish];
+                        if (dim == 3)
+                            w[2] += NodalVal4[j] * dbuff0[j - ish];
+                    }
+                else if (this->GetExtrapoMethod() ==
+                         ExtrapolationMethod::EXTRAPO_AVERAGE)
+                    for (size_t k = 0; k < dim; k++)
+                        w[k] = avgW[k];
+                // Average value of the contribution of ell neighbor elements
+                for (size_t k = 0; k < dim; k++)
+                {
+                    w[k] /= dbuff[i];
+                    w[k] += pcs->GetNodeValue(nodes[i], idx_perm[k]);
+                    //
+                    pcs->SetNodeValue(nodes[i], idx_perm[k], w[k]);
+                }
+            }
+            if (pcs->additioanl2ndvar_print > 1)
+            {
+                nval = 0.0;
+                if (this->GetExtrapoMethod() ==
+                    ExtrapolationMethod::EXTRAPO_LINEAR)
+                    for (int j = i_s; j < i_e; j++)
+                        nval += NodalVal0[j] * shapefct[j - ish];
+                else if (this->GetExtrapoMethod() ==
+                         ExtrapolationMethod::EXTRAPO_AVERAGE)
+                    nval = avgVal;
+                nval /= dbuff[i];
+                nval += pcs->GetNodeValue(nodes[i], idxp);
+                //
+                pcs->SetNodeValue(nodes[i], idxp, nval);
             }
         }
-        if (pcs->additioanl2ndvar_print > 1)
+        return;
+    }*/
+
+    std::vector<Eigen::VectorXd> ip_data_vector;
+    std::vector<int> idxs;
+
+    if (pcs->additioanl2ndvar_print > 1)
+    {
+        Eigen::VectorXd ip_data =
+            Eigen::Map<Eigen::VectorXd>(NodalVal0, nGaussPoints);
+        ip_data_vector.push_back(ip_data);
+        idxs.push_back(idxp);
+    }
+
+    if ((pcs->additioanl2ndvar_print > 0) && (pcs->additioanl2ndvar_print < 3))
+    {
+        ip_data_vector.push_back(
+            Eigen::Map<Eigen::VectorXd>(NodalVal2, nGaussPoints));
+        idxs.push_back(idx_perm[0]);
+
+        ip_data_vector.push_back(
+            Eigen::Map<Eigen::VectorXd>(NodalVal3, nGaussPoints));
+        idxs.push_back(idx_perm[1]);
+
+        if (dim == 3)
         {
-            nval = 0.0;
-            if (this->GetExtrapoMethod() == ExtrapolationMethod::EXTRAPO_LINEAR)
-                for (int j = i_s; j < i_e; j++)
-                    nval += NodalVal0[j] * shapefct[j - ish];
-            else if (this->GetExtrapoMethod() ==
-                     ExtrapolationMethod::EXTRAPO_AVERAGE)
-                nval = avgVal;
-            nval /= dbuff[i];
-            nval += pcs->GetNodeValue(nodes[i], idxp);
-            //
-            pcs->SetNodeValue(nodes[i], idxp, nval);
+            ip_data_vector.push_back(
+                Eigen::Map<Eigen::VectorXd>(NodalVal4, nGaussPoints));
+            idxs.push_back(idx_perm[2]);
+        }
+    }
+
+    for (std::size_t ipd = 0; ipd < ip_data_vector.size(); ipd++)
+    {
+        Eigen::VectorXd const ip_data = ip_data_vector[ipd];
+        Eigen::VectorXd const extrapolated_data = extrapolate(ip_data);
+
+        for (int i = 0; i < nnodes; i++)
+        {
+            double EV = extrapolated_data[i] / dbuff[i];
+            EV += pcs->GetNodeValue(nodes[i], idxs[ipd]);
+            pcs->SetNodeValue(nodes[i], idxs[ipd], EV);
         }
     }
 }
@@ -10853,9 +10931,8 @@ double CFiniteElementStd::CalCoef_RHS_T_MPhase(int dof_index)
             p_gw = rho_gw * SpecificGasConstant::WaterVapour * TG;
             dens_arg[0] = PG2 - p_gw;
             dens_arg[1] = TG;
-            rho_ga = GasProp->Density(
-                dens_arg);  // AKS SEP 2010
-                            // //(PG2-p_gw)*GasProp->molar_mass/(FluidConstant::GasConstant()*TG);
+            rho_ga = GasProp->Density(dens_arg);  // AKS SEP 2010
+            // //(PG2-p_gw)*GasProp->molar_mass/(FluidConstant::GasConstant()*TG);
             rho_g = rho_ga + rho_gw;
             // 1/Mg
             M_g = (rho_gw / Mw + rho_ga / GasProp->molar_mass) / rho_g;

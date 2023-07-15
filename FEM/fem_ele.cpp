@@ -395,10 +395,10 @@ void CElement::SetIntegrationPointNumber(const MshElemType::type elem_type)
             // nGauss = 3;               // Fixed to 3
             return;
         case MshElemType::PYRAMID:
-            if (Order == 1)
-                nGaussPoints = 5;  // nGauss = 5;
-            else
-                nGaussPoints = 8;  // nGauss = 8;  //13;
+            // if (Order == 1)
+            // nGaussPoints = 5;  // nGauss = 5;
+            // else
+            nGaussPoints = 8;  // nGauss = 8;  //13;
             return;
         case MshElemType::INVALID:
             std::cerr << "[CElement::ConfigNumerics] invalid element type"
@@ -494,10 +494,10 @@ void CElement::ConfigShapefunction(MshElemType::type elem_type)
             return;
         case MshElemType::PYRAMID:
             ele_dim = 3;
-            if (Order == 1)
-                nGaussPoints = 5;  // nGauss = 5;
-            else
-                nGaussPoints = 8;  // nGauss = 8;  //13;
+            // if (Order == 1)
+            // nGaussPoints = 5;  // nGauss = 5;
+            // else
+            nGaussPoints = 8;  // nGauss = 8;  //13;
             ShapeFunction = ShapeFunctionPyra;
             ShapeFunctionHQ = ShapeFunctionPyraHQ13;
             GradShapeFunction = GradShapeFunctionPyra;
@@ -925,11 +925,11 @@ void CElement::SetGaussPoint(const MshElemType::type elem_type, const int gp,
             unit[2] = MXPGaussPkt(gp_s, gp_t);
             return;
         case MshElemType::PYRAMID:  // Pyramid
-            if (Order == 1)
-                SamplePointPyramid5(gp, unit);
-            else
-                SamplePointPyramid8(gp,
-                                    unit);  // SamplePointPyramid13(gp, unit);
+            // if (Order == 1)
+            // SamplePointPyramid5(gp, unit);
+            // else
+            SamplePointPyramid8(gp,
+                                unit);  // SamplePointPyramid13(gp, unit);
             return;
         default:
             std::cerr
@@ -989,11 +989,11 @@ double CElement::GetGaussData(int gp, int& gp_r, int& gp_s, int& gp_t)
             return _determinants_all[gp] * MXPGaussFktTri(3, gp_r) *
                    MXPGaussFkt(gp_s, gp_t);
         case MshElemType::PYRAMID:  // Pyramid
-            if (Order == 1)
-                SamplePointPyramid5(gp, unit);
-            else
-                SamplePointPyramid8(gp,
-                                    unit);  // SamplePointPyramid13(gp, unit);
+                                    // if (Order == 1)
+                                    // SamplePointPyramid5(gp, unit);
+                                    // else
+            SamplePointPyramid8(gp,
+                                unit);  // SamplePointPyramid13(gp, unit);
             return _determinants_all[gp] * unit[3];  // Weights
         default:
             std::cerr
@@ -1773,6 +1773,13 @@ void CElement::FaceNormalFluxIntegration(long /*element_index*/,
         NodeVal[i] = dbuff[i];
         NodeVal_adv[i] = dbuff_adv[i];
     }
+}
+
+Eigen::VectorXd CElement::extrapolate(Eigen::VectorXd const& ip_values)
+{
+    return _shape_function_pool_ptr[0]->getExtrapolationMatrix(
+               MeshElement->GetElementType()) *
+           ip_values;
 }
 
 }  // end namespace FiniteElement

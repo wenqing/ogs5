@@ -16,6 +16,7 @@
 
 #include <vector>
 
+#include "Eigen/Dense"
 #include "MSHEnums.h"
 
 namespace FiniteElement
@@ -53,6 +54,12 @@ public:
     const double* getGradShapeFunctionCenterValues(
         const MshElemType::type elem_type) const;
 
+    Eigen::MatrixXd getExtrapolationMatrix(
+        const MshElemType::type elem_type) const
+    {
+        return _extrapolate_matrix[static_cast<int>(elem_type) - 1];
+    }
+
 private:
     /// Results of shape functions of all integration points.
     std::vector<std::vector<double> > _shape_function;
@@ -68,6 +75,9 @@ private:
     /// Results of the gradient of shape functions of all integration points at
     /// element centroid.
     std::vector<std::vector<double> > _grad_shape_function_center;
+
+    /// Normalized shape function matrix for extrapolation
+    std::vector<Eigen::MatrixXd> _extrapolate_matrix;
 
     void computeQuadratures(
         const std::vector<MshElemType::type>& elem_types,
