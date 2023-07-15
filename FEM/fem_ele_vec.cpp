@@ -2519,37 +2519,16 @@ bool CFiniteElementVec::RecordGuassStrain(const int gp)
     //---------------------------------------------------------
     switch (MeshElement->GetElementType())
     {
-        case MshElemType::QUAD:  // Quadralateral
-            Sxx[gp] = dstrain[0];
-            Syy[gp] = dstrain[1];
-            Sxy[gp] = dstrain[3];
-            Szz[gp] = dstrain[2];
-            break;
+        case MshElemType::QUAD:      // Quadralateral
         case MshElemType::TRIANGLE:  // Triangle
             Sxx[gp] = dstrain[0];
             Syy[gp] = dstrain[1];
-            Szz[gp] = dstrain[2];
             Sxy[gp] = dstrain[3];
-            break;
-        case MshElemType::HEXAHEDRON:  // Hexahedra
-            // LoIndex = GetLocalIndex(gp_r, gp_s, gp_t);
-            // if (LoIndex < 0)
-            //     return false;
-            Sxx[gp] = dstrain[0];
-            Syy[gp] = dstrain[1];
             Szz[gp] = dstrain[2];
-            Sxy[gp] = dstrain[3];
-            Sxz[gp] = dstrain[4];
-            Syz[gp] = dstrain[5];
             break;
+        case MshElemType::HEXAHEDRON:   // Hexahedra
         case MshElemType::TETRAHEDRON:  // Tedrahedra
-            Sxx[gp] = dstrain[0];
-            Syy[gp] = dstrain[1];
-            Szz[gp] = dstrain[2];
-            Sxy[gp] = dstrain[3];
-            Sxz[gp] = dstrain[4];
-            Syz[gp] = dstrain[5];
-            break;
+        case MshElemType::PRISM:
         case MshElemType::PYRAMID:
             Sxx[gp] = dstrain[0];
             Syy[gp] = dstrain[1];
