@@ -247,7 +247,6 @@ VariableValues* createVariableValues(
     for (std::size_t i = 0; i < elements.size(); i++)
     {
         MeshLib::CElem* element = elements[i];
-        bool done_ConfigElement = false;
         for (std::size_t j = 0; j < specified_points.size(); j++)
         {
             // Done
@@ -257,15 +256,16 @@ VariableValues* createVariableValues(
             double* x = specified_points[j].x;
             if (isPointInElement(*element, x))
             {
-                if (!done_ConfigElement)
-                {
-                    quadrature->ConfigElementWithoutQuature(element);
-                    quadrature->ConfigShapefunction(element->GetElementType());
-
-                    done_ConfigElement = true;
-                }
+                quadrature->ConfigElementWithoutQuature(element);
+                quadrature->ConfigShapefunction(element->GetElementType());
                 specified_points[j].element_coverred_point = element;
 
+                // 2D mesh,  x-z coordinate
+                if (mesh->GetCoordinateFlag() % 10 == 2)
+                {
+                    x[1] = x[2];
+                    x[2] = 0.0;
+                }
                 quadrature->UnitCoordinates(specified_points[j].x, tol);
             }
         }
