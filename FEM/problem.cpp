@@ -1269,7 +1269,12 @@ void Problem::Euler_TimeDiscretize()
             ScreenMessage(
                 "Stop this simulation. New time step size is same as the "
                 "rejected one.\n");
-            break;
+            for (std::size_t j = 0; j < pcs_vector.size(); j++)
+            {
+                pcs_vector[j]->setLastTimeStepFlag(false);
+            }
+            this->Problem::~Problem();
+            exit(1);
         }
 
         SetTimeActiveProcesses();  // JT2012: Activate or deactivate processes

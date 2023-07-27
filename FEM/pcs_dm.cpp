@@ -107,17 +107,24 @@ CRFProcessDeformation::CRFProcessDeformation()
 
 CRFProcessDeformation::~CRFProcessDeformation()
 {
-    const bool last_step = true;
 #ifdef USE_MPI
     if (myrank == 0)
-#endif
-        WriteGaussPointStress(last_step);
-    if (type == 41 && (_init_domain_data_type == FiniteElement::WRITE ||
-                       _init_domain_data_type == FiniteElement::READ_WRITE))
     {
-        // mono-deformation-liquid
-        WriteSolution();
+#endif
+        if (this->_is_last_time_step)
+        {
+            WriteGaussPointStress(this->_is_last_time_step);
+            if (type == 41 &&
+                (_init_domain_data_type == FiniteElement::WRITE ||
+                 _init_domain_data_type == FiniteElement::READ_WRITE))
+            {
+                // mono-deformation-liquid
+                WriteSolution();
+            }
+        }
+#ifdef USE_MPI
     }
+#endif
 
     if (ARRAY)
         delete[] ARRAY;

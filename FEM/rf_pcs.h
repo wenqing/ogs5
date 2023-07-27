@@ -256,6 +256,9 @@ protected:  // WW
     bool accepted;     // 25.08.1008. WW
     int accept_steps;  // 27.08.1008. WW
     int reject_steps;  // 27.08.1008. WW
+
+    bool _is_last_time_step;
+
     //
     int dof;         // WW
     long orig_size;  // Size of source term nodes
@@ -920,6 +923,11 @@ public:
     void initializeRHS_with_u0(const int min_id,
                                const int max_id);  // in rf_pcs1.cpp
 #endif
+
+    void setLastTimeStepFlag(const bool last_time_step)
+    {
+        _is_last_time_step = last_time_step;
+    }
 
 private:
     /**

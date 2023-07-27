@@ -419,6 +419,8 @@ CRFProcess::CRFProcess(void)
     _pcs_constant_model = 0;
     _pcs_constant_value = .0;
     _pcs_constant_curve = 0;
+
+    _is_last_time_step = true;
 }
 
 void CRFProcess::setProblemObjectPointer(Problem* problem)
@@ -456,10 +458,12 @@ CRFProcess::~CRFProcess(void)
     if (myrank == 0)
     {
 #endif
-        if (getProcessType() != FiniteElement::DEFORMATION ||
-            getProcessType() != FiniteElement::DEFORMATION_DYNAMIC ||
-            getProcessType() != FiniteElement::DEFORMATION_FLOW ||
-            getProcessType() != FiniteElement::DEFORMATION_H2)
+
+        if (_is_last_time_step &&
+            (getProcessType() != FiniteElement::DEFORMATION ||
+             getProcessType() != FiniteElement::DEFORMATION_DYNAMIC ||
+             getProcessType() != FiniteElement::DEFORMATION_FLOW ||
+             getProcessType() != FiniteElement::DEFORMATION_H2))
         {
             WriteSolution(true);
         }
