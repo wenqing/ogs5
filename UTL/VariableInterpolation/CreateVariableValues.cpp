@@ -261,7 +261,8 @@ VariableValues* createVariableValues(
                 specified_points[j].element_coverred_point = element;
 
                 // 2D mesh,  x-z coordinate
-                if (mesh->GetCoordinateFlag() % 10 == 2)
+                if (mesh->GetCoordinateFlag() % 10 == 2 &&
+                    element->GetDimension() == 2)
                 {
                     x[1] = x[2];
                     x[2] = 0.0;
