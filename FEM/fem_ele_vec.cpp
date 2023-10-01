@@ -860,13 +860,27 @@ void CFiniteElementVec::ComputeMatrix_RHS(const double fkt, const Matrix* p_D)
         // NW      setTransB_Matrix(i);
         tmp_B_matrix_T = this->vec_B_matrix_T[i];
         // Local assembly of A*u=int(B^t*sigma) for Newton-Raphson method
-        for (int j = 0; j < ele_dim; j++)
+
+        if (pcs->Neglect_H_ini > 0)
         {
-            const int jj = j * nnodesHQ;
-            for (int k = 0; k < ns; k++)
-                (*RHS)[jj + i] +=
-                    (*tmp_B_matrix_T)(j, k) * (dstress[k] - stress0[k]) * fkt;
-            // TEST             (*B_matrix_T)(j,k)*dstress[k]*fkt;
+            for (int j = 0; j < ele_dim; j++)
+            {
+                const int jj = j * nnodesHQ;
+                for (int k = 0; k < ns; k++)
+                    (*RHS)[jj + i] += (*tmp_B_matrix_T)(j, k) *
+                                      (dstress[k] - stress0[k]) * fkt;
+                // TEST             (*B_matrix_T)(j,k)*dstress[k]*fkt;
+            }
+        }
+        else
+        {
+            for (int j = 0; j < ele_dim; j++)
+            {
+                const int jj = j * nnodesHQ;
+                for (int k = 0; k < ns; k++)
+                    (*RHS)[jj + i] +=
+                        (*tmp_B_matrix_T)(j, k) * dstress[k] * fkt;
+            }
         }
         if (PreLoad == 11)
             continue;
