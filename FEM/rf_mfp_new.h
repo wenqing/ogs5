@@ -230,6 +230,8 @@ private:
      */
     double drho_dC;
 
+    double rho_pressure_cutoff;
+
     double diffusion;       /*SB:2p */
     double diffusion_coef;  // AKS
     // Viscosity

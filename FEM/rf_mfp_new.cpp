@@ -131,6 +131,8 @@ CFluidProperties::CFluidProperties()
     cmpN = 0;
 
     fluid_id = 1;  // Water
+
+    rho_pressure_cutoff = 1.0e5;
 #ifdef MFP_TEST  // WW
     scatter_data = NULL;
 #endif
@@ -393,7 +395,7 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
                 density_pcs_name_vector.push_back("CONCENTRATION1");
                 density_pcs_name_vector.push_back("TEMPERATURE1");
             }
-            if (density_model == 6 ||
+            if (density_model == 6 || density_model == 61 ||
                 density_model ==
                     14)  // rho(p,T) = rho_0*(1+beta_p*(p-p_0)+beta_T*(T-T_0))
             {
@@ -403,6 +405,13 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
                 in >> T_0;
                 T_0 += TemperatureUnitOffset();
                 in >> drho_dT;
+
+                if (density_model == 61)
+                {
+                    in >> rho_pressure_cutoff;
+                    density_model = 6;
+                }
+
                 density_pcs_name_vector.push_back("PRESSURE1");
                 density_pcs_name_vector.push_back("TEMPERATURE1");
                 compressibility_model_temperature = 6;
@@ -1223,8 +1232,10 @@ double CFluidProperties::Density(double* variables)
                 break;
             case 6:  // rho(p,T) = rho_0*(1+beta_p*(p-p_0)+beta_T*(T-T_0))
                 density =
-                    rho_0 * (1. + drho_dp * (max(variables[0], 0.0) - p_0) +
-                             drho_dT * (max(variables[1], 0.0) - T_0));
+                    rho_0 *
+                    (1. +
+                     drho_dp * (max(variables[0], rho_pressure_cutoff) - p_0) +
+                     drho_dT * (variables[1] - T_0));
                 break;
             case 7:  // Pefect gas. WW
                 density = variables[0] * molar_mass /
@@ -1422,8 +1433,10 @@ double CFluidProperties::Density(double* variables)
             case 6:  // rho(p,T) = rho_0*(1+beta_p*(p-p_0)+beta_T*(T-T_0))
                 density =
                     rho_0 *
-                    (1. + drho_dp * (max(primary_variable[0], 0.0) - p_0) +
-                     drho_dT * (max(primary_variable[1], 0.0) - T_0));
+                    (1. +
+                     drho_dp *
+                         (max(primary_variable[0], rho_pressure_cutoff) - p_0) +
+                     drho_dT * (primary_variable[1] - T_0));
                 break;
             case 7:  // rho_w^l(p,T) for gas phase
                 /* //WW
