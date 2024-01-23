@@ -4032,7 +4032,10 @@ void ElementValue_DM::Write_BIN(std::fstream& os, const bool last_step)
     if (pStrain)
         pStrain->Write_BIN(os);
 
-    os.write((char*)dstrain_v_dt, Stress_i->Cols() * sizeof(double));
+    if (dstrain_v_dt)
+    {
+        os.write((char*)dstrain_v_dt, Stress_i->Cols() * sizeof(double));
+    }
 
     if (y_surface)
         y_surface->Write_BIN(os);
