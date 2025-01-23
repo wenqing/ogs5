@@ -439,8 +439,13 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
                 density_pcs_name_vector.push_back("TEMPERATURE1");
             }
             if (density_model == 9)  // WW
+            {
                 // Molar mass
                 in >> molar_mass;
+                compressibility_model_temperature = 7;
+                compressibility_model_pressure = 7;
+                density_model = 7;
+            }
 
             if ((density_model ==
                  10)  // NB 4.8.01  read density from a rho-P-T table
@@ -1237,7 +1242,7 @@ double CFluidProperties::Density(double* variables)
                      drho_dp * (max(variables[0], rho_pressure_cutoff) - p_0) +
                      drho_dT * (variables[1] - T_0));
                 break;
-            case 7:  // Pefect gas. WW
+            case 7:  // ideal gas
                 density = variables[0] * molar_mass /
                           (PhysicalConstant::IdealGasConstant * variables[1]);
                 break;
@@ -1438,18 +1443,10 @@ double CFluidProperties::Density(double* variables)
                          (max(primary_variable[0], rho_pressure_cutoff) - p_0) +
                      drho_dT * (primary_variable[1] - T_0));
                 break;
-            case 7:  // rho_w^l(p,T) for gas phase
-                /* //WW
-                {
-                    const double vapour_pressure =
-                MFPCalcVapourPressure(primary_variable[0]); air_gas_density =
-                (MolarMass::Air * (primary_variable[1]-vapour_pressure)) /
-                (PhysicalConstant::IdealGasConstant*(primary_variable[0]+0.0));
-                    vapour_density = (MolarMass::Water * vapour_pressure) /
-                (PhysicalConstant::IdealGasConstant*(primary_variable[0]+0.0));
-                    density = vapour_density + air_gas_density;
-                }
-                */
+            case 7:  // ideal gas
+                density =
+                    primary_variable[0] * molar_mass /
+                    (PhysicalConstant::IdealGasConstant * primary_variable[1]);
                 break;
             case 8:  // M14 von JdJ
             {
