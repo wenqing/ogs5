@@ -5499,7 +5499,8 @@ void CFiniteElementStd::CalcAdvection()
     (*Advection) = 0.0;
 
     const bool single_phase_water_vapor =
-        ((cpl_pcs->getProcessType() == FiniteElement::RICHARDS_FLOW) &&
+        (cpl_pcs &&
+         (cpl_pcs->getProcessType() == FiniteElement::RICHARDS_FLOW) &&
          (MediaProp->heat_diffusion_model > 0));
 
     //----------------------------------------------------------------------
