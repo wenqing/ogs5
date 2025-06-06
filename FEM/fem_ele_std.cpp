@@ -1874,7 +1874,6 @@ double CFiniteElementStd::CalCoefMass2(const int dof_index, const int gp)
     double val = 0.0;
     double expfactor = 0.0;
     double dens_arg[3];               // 08.05.2008 WW
-    double pert = sqrt(DBL_EPSILON);  // 15.08.2011. WW
 
     bool diffusion = false;  // 08.05.2008 WW
 
@@ -1974,7 +1973,7 @@ double CFiniteElementStd::CalCoefMass2(const int dof_index, const int gp)
             break;
         case 3:  //
             // Approximation of d dens_g/dp_g 16.08.2011. WW
-            dens_arg[0] = PG2 + pert;
+            dens_arg[0] = PG2;
             if (diffusion)
                 dens_arg[1] = TG;
             /// d dens_g/dp_g:
@@ -1983,8 +1982,7 @@ double CFiniteElementStd::CalCoefMass2(const int dof_index, const int gp)
                 val = (1.0 - Sw) * poro * GasProp->rho_0 * GasProp->drho_dp /
                       rhow;
             else
-                val = (1.0 - Sw) * poro *
-                      (GasProp->Density(dens_arg) - rho_ga) / (pert * rhow);
+                val = (1.0 - Sw) * poro * GasProp->drhodP(dens_arg) / rhow;
             // Storage WX:11.2012
             if (SolidProp)
             {
