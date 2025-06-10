@@ -172,7 +172,8 @@ void MatrixBase::Read_BIN(std::fstream& is)
 }
 
 // Constructors
-Matrix::Matrix(size_t rows, size_t cols) : MatrixBase(rows, cols, rows * cols)
+Matrix::Matrix(size_t const rows, size_t const cols)
+    : MatrixBase(rows, cols, rows * cols)
 {
 }
 
@@ -180,7 +181,7 @@ Matrix::Matrix() : MatrixBase(0, 0, 0) {}
 
 Matrix::Matrix(const Matrix& m) : MatrixBase(m) {}
 
-void Matrix::resize(size_t rows, size_t cols)
+void Matrix::resize(size_t const rows, size_t const cols)
 {
     if (size > 0)
     {
@@ -1129,8 +1130,8 @@ CSparseMatrix::CSparseMatrix(const SparseTable& sparse_table, const int dof)
                         // I = ii * rows + i; // row in global matrix
                         // column in global matrix
                         const int J = jj * rows + entry_column[counter];
-                        const int K = (ii * DOF + jj) *
-                                          size_entry_column + counter;
+                        const int K =
+                            (ii * DOF + jj) * size_entry_column + counter;
 
                         // Store column index for CRS
                         col_idx[counter_col_idx] = J;

@@ -32,7 +32,7 @@ class CFEMesh;
 // 08.2007 WW
 class CPARDomain;
 #endif
-//#define OverLoadNEW_DELETE
+// #define OverLoadNEW_DELETE
 
 namespace Math_Group
 {
@@ -173,11 +173,11 @@ public:
     using MatrixBase::operator*=;
     using MatrixBase::operator/=;
 
-    explicit Matrix(size_t rows, size_t cols = 1);
+    explicit Matrix(size_t const rows, size_t const cols = 1);
     Matrix();
     Matrix(const Matrix& m);
     //
-    void resize(size_t rows, size_t cols = 1);
+    void resize(const size_t rows, size_t const cols = 1);
     //
     virtual ~Matrix();
 
