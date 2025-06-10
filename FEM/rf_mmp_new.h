@@ -19,20 +19,19 @@
 /* Schutz gegen mehrfaches Einfuegen */
 
 // C++ STL
-//#include <list>
-//#include <string>
-//#include <vector>
-//#include <fstream>
+// #include <list>
+// #include <string>
+// #include <vector>
+// #include <fstream>
 
 // GeoLib
 #include "GeoType.h"
+#include "PhysicalConstant.h"
 #include "makros.h"  // JT
 
-#include "PhysicalConstant.h"
-
 // PCSLib
-#include "rf_pcs.h"
 #include "Material/PorousMedium/DamageZonePermeability.h"
+#include "rf_pcs.h"
 
 namespace FiniteElement
 {
@@ -110,7 +109,7 @@ public:
     void CalStressPermeabilityFactor3_Coef();  // WW
     void CalStressPermeabilityFactor4(double* kfac, double);
     // CMCD 9/2004 GeoSys 4
-    double StorageFunction(long number, double* gp, double theta);
+    double StorageFunction(long number, int const ip, double theta);
     double HeatCapacity(const int gp, long number, double theta,
                         CFiniteElementStd* assem = NULL);
     double* HeatConductivityTensor(int number);          // MX

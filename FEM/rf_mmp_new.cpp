@@ -14,21 +14,22 @@
    01/2004 OK Implementation
 **************************************************************************/
 
-//#include "makros.h"
-// C++ STL
-//#include <iostream>
+// #include "makros.h"
+//  C++ STL
+// #include <iostream>
 #include <cfloat>
+
 #include "display.h"
 
 // FEMLib
 #include "tools.h"
-//#include "rf_pcs.h"
-//#include "femlib.h"
+// #include "rf_pcs.h"
+// #include "femlib.h"
 extern double* GEOGetELEJacobianMatrix(long number, double* detjac);
 #include "mathlib.h"
-//#include "rf_mfp_new.h"
+// #include "rf_mfp_new.h"
 #include "rf_msp_new.h"
-//#include "material.h"
+// #include "material.h"
 #include "rf_tim_new.h"
 #include "rfmat_cp.h"
 extern double gravity_constant;
@@ -37,16 +38,15 @@ extern double gravity_constant;
 #include "files0.h"
 // this
 #include "rf_mmp_new.h"
-//#include "rf_react.h"
-// Gauss point veclocity
+// #include "rf_react.h"
+//  Gauss point veclocity
 #include "fem_ele_std.h"
 #include "fem_ele_vec.h"
 // MSHLib
-//#include "msh_lib.h"
-#include "pcs_dm.h"  //WX
-
+// #include "msh_lib.h"
 #include "Material/PorousMedium/DamageZonePermeability.h"
 #include "PhysicalConstant.h"
+#include "pcs_dm.h"  //WX
 
 // MAT-MP data base lists
 list<string> keywd_list;
@@ -230,7 +230,7 @@ bool MMPRead(std::string base_file_name)
             mmp_vector.push_back(m_mat_mp);
             mp_file.seekg(position, std::ios::beg);
         }  // keyword found
-    }      // eof
+    }  // eof
     return true;
     // Tests
 }
@@ -482,20 +482,19 @@ std::ios::pos_type CMediumProperties::Read(std::ifstream* mmp_file)
                     break;
                 case 10:  // Chemical swelling model (constrained swelling,
                           // constant I)
-                    {
-                        int m;
-                        in >> porosity_model_values[0];  // Initial porosity
-                        in >> m;                         // m
-                        if (m > 15)
-                            std::cout
-                                << "Maximal number of solid phases is now "
-                                   "limited to be 15!!!"
-                                << "\n";
-                        for (int i = 0; i < m + 1; i++)
-                            // molar volume [l/mol]
-                            in >> porosity_model_values[i + 1];
-                        break;
-                    }
+                {
+                    int m;
+                    in >> porosity_model_values[0];  // Initial porosity
+                    in >> m;                         // m
+                    if (m > 15)
+                        std::cout << "Maximal number of solid phases is now "
+                                     "limited to be 15!!!"
+                                  << "\n";
+                    for (int i = 0; i < m + 1; i++)
+                        // molar volume [l/mol]
+                        in >> porosity_model_values[i + 1];
+                    break;
+                }
                 case 11:  // MB: read from file ToDo
                     // in >> porosity_file; // CB
                     in >> porosity_model_values[0];  // CB some dummy default
@@ -807,23 +806,43 @@ std::ios::pos_type CMediumProperties::Read(std::ifstream* mmp_file)
                     in >> storage_model_values[8];  // Fracture density
                     pcs_name_vector.push_back("PRESSURE1");
                     break;
+                case 7:  // RW/WW
+                {
+                    ScreenMessage(
+                        "Warning: Storage model 7 must be combined with "
+                        "elastic model");
+                }
+                break;
                 case 10:  // S=const for permeability_saturation_model = 10
                     storage_model_values[0] = 1;
                     break;
                 case 11:
                     storage_model_values[0] = 1;
                     break;
+                case 12:  // Poroelastoplastic Model defned with two curves.
+                {
+                    ScreenMessage(
+                        "Warning: Storage model 12 must be combined with "
+                        "elastic model");
+                    in >> storage_model_values[0];  // curve number for elastic
+                                                    // volumetric strain
+                    in >> storage_model_values[1];  // curve number for plastic
+                                                    // volumetric strain //
+                                                    // volumetric strain
+                    if (storage_model_values[0] < 0 ||
+                        storage_model_values[1] < 0)
+                    {
+                        std::cerr << "Error: Invalid curve number. "
+                                  << "Value must be greater than 0.\n";
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                break;
+
                 default:
                     cout << "Error in MMPRead: no valid storativity model"
                          << "\n";
                     break;
-                case 7:  // RW/WW
-                {
-                    ScreenMessage(
-                        "Warning: Porosity model 7 must be combined with "
-                        "elastic model");
-                }
-                break;
             }
             in.clear();
             continue;
@@ -3059,8 +3078,7 @@ double* CMediumProperties::HeatDispersionTensorNew(int ip)
 
     if (abs(vg) > MKleinsteZahl  // For the case of diffusive transport only
                                  // WW
-        &&
-        (alpha_l > MKleinsteZahl || alpha_t > MKleinsteZahl))
+        && (alpha_l > MKleinsteZahl || alpha_t > MKleinsteZahl))
     {
         switch (Dim)
         {
@@ -3682,7 +3700,7 @@ void read_keywd_list(void)
             }
             // keywd_list.remove(keyword);
         }  // eof
-    }      // if eingabe.good
+    }  // if eingabe.good
     else
         printf("No keyword file: mat_mp_keywords.dat");
 }
@@ -3735,7 +3753,7 @@ void comp_keywd_list(std::string csv_file_name)
                     in = z_rest;
                 }
             }  // while mat_name
-        }      // keyword found
+        }  // keyword found
         //-----------------------------------------------
         // 2 - create MAT-SP instances
         CMediumProperties* m_mat_mp = NULL;
@@ -3785,8 +3803,8 @@ void comp_keywd_list(std::string csv_file_name)
                 }  //
                 ++pm;
             }  // kwlist
-        }      // eof
-    }          // if eingabe.good
+        }  // eof
+    }  // if eingabe.good
 }
 
 ///*************************************************************************************************
@@ -4368,9 +4386,8 @@ double CMediumProperties::Porosity(CElement* assem)
                      FiniteElement::GROUNDWATER_FLOW) ||
                     (pcs_temp->getProcessType() == FiniteElement::RICHARDS_FLOW)
                     // TF
-                    ||
-                    (pcs_temp->getProcessType() ==
-                     FiniteElement::MULTI_PHASE_FLOW))
+                    || (pcs_temp->getProcessType() ==
+                        FiniteElement::MULTI_PHASE_FLOW))
                 {
                     int idx = pcs_temp->GetElementValueIndex("POROSITY");
                     porosity = pcs_temp->GetElementValue(number, idx);
@@ -5054,21 +5071,20 @@ double CMediumProperties::PermeabilityFunctionStrain(
         }
         case 3:  // if StrainP>0, factor=f(StrainP), else
                  // factor=f(strain_Volume)
+        {
+            if (strainp > 0)
+                fac_perm_strain = GetCurveValue(
+                    permeability_strain_model_value[1], 0, strainp, &gueltig);
+            else
             {
-                if (strainp > 0)
-                    fac_perm_strain =
-                        GetCurveValue(permeability_strain_model_value[1], 0,
-                                      strainp, &gueltig);
-                else
-                {
-                    fac_perm_strain =
-                        GetCurveValue(permeability_strain_model_value[0], 0,
-                                      vol_strain_temp, &gueltig);
-                }
-                if (fac_perm_strain <= 0.)
-                    fac_perm_strain = 1.;
-                break;
+                fac_perm_strain =
+                    GetCurveValue(permeability_strain_model_value[0], 0,
+                                  vol_strain_temp, &gueltig);
             }
+            if (fac_perm_strain <= 0.)
+                fac_perm_strain = 1.;
+            break;
+        }
         case 4:  // factor = f(strainP+strain_Volume)
         {
             double tmpfkt = 1.;
@@ -5096,13 +5112,11 @@ double CMediumProperties::PermeabilityFunctionStrain(
                 threshold = GetCurveValue(permeability_strain_model_value[3], 0,
                                           vol_strain_temp, &gueltig);
             if (vol_strain_temp <= threshold)
-                fac_perm_strain = 1 -
-                                  permeability_strain_model_value[1] *
-                                      (threshold - vol_strain_temp);
+                fac_perm_strain = 1 - permeability_strain_model_value[1] *
+                                          (threshold - vol_strain_temp);
             else
-                fac_perm_strain = 1 +
-                                  permeability_strain_model_value[2] *
-                                      (vol_strain_temp - threshold);
+                fac_perm_strain = 1 + permeability_strain_model_value[2] *
+                                          (vol_strain_temp - threshold);
             fac_perm_strain =
                 MRange(permeability_strain_model_value[4], fac_perm_strain,
                        permeability_strain_model_value[5]);
@@ -7657,6 +7671,28 @@ double CMediumProperties::NonlinearFlowFunction(long index, int gp,
     return k_rel;
 }
 
+double getStoragePoroelastoplasticModelCurves(
+    int const ip, int const curve_elastic, int const curve_plastic,
+    CFiniteElementStd const& assembler)
+{
+    int const element_index = assembler.GetElementIndex();
+    process::CRFProcessDeformation* dm_pcs = assembler.getDeformationProcess();
+
+    FiniteElement::ElementValue_DM const* dm_ele_ip_data =
+        ele_value_dm[element_index];
+
+    double const eps_pls = dm_ele_ip_data->getEquivalentPlasticStrain(ip);
+    double const eps_vol = dm_ele_ip_data->getVolumeStrain(ip);
+
+    int gueltig;
+    double const storge_eps_vol =
+        GetCurveValue(curve_elastic, 0, eps_vol, &gueltig);
+    double const storge_eps_pls =
+        GetCurveValue(curve_plastic, 0, eps_pls, &gueltig);
+
+    return storge_eps_vol + storge_eps_pls;
+}
+
 /**************************************************************************
    ROCKFLOW - Funktion: Storage Function
 
@@ -7685,11 +7721,11 @@ Storage as normal stress in element in stress field defined by KTB stress field.
 6 Storage as normal stress in element in stress field defined by KTB stress
 field, function to increase storage with distance from borehole.
 **************************************************************************/
-double CMediumProperties::StorageFunction(long index, double* gp, double theta)
+double CMediumProperties::StorageFunction(long index, int const ip,
+                                          double theta)
 {
     // OK411
     theta = theta;
-    gp = gp;
     index = index;
 
     switch (storage_model)
@@ -7732,7 +7768,7 @@ double CMediumProperties::StorageFunction(long index, double* gp, double theta)
 
             storage = exp(storage_model_values[0] -
                           storage_model_values[1] * log(sigma));
-#endif  //#ifdef obsolete //WW. 06.11.2008
+#endif  // #ifdef obsolete //WW. 06.11.2008
             break;
 
         case 3:
@@ -8046,6 +8082,10 @@ double CMediumProperties::StorageFunction(long index, double* gp, double theta)
                              "intended for LIQUID_FLOW)."
                           << std::endl;
             break;
+        case 12:
+            return getStoragePoroelastoplasticModelCurves(
+                ip, storage_model_values[0], storage_model_values[1],
+                *(m_pcs->GetAssember()));
         default:
             storage = 0.0;  // OK DisplayMsgLn("The requested storativity model
                             // is unknown!!!");
