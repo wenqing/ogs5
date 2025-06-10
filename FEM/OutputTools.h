@@ -12,8 +12,8 @@
 
 #include <iostream>
 
-#include "rf_mmp_new.h"
 #include "fem_ele_std.h"
+#include "rf_mmp_new.h"
 
 using namespace std;
 
@@ -32,7 +32,7 @@ struct ELEMENT_MMP_VALUES
                 mat_value = mmp->PermeabilityTensor(i_e)[0];
                 break;
             case 2:
-                mat_value = mmp->StorageFunction(i_e, gp, theta);
+                mat_value = mmp->StorageFunction(i_e, 0, theta);
                 break;
             default:
                 cout

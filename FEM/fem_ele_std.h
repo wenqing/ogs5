@@ -18,17 +18,16 @@
 #define fem_std_INC
 
 #include <vector>
-//#include "FEMEnums.h"
+// #include "FEMEnums.h"
 
 #include "fem_ele.h"
 #include "matrix_class.h"
 
 // Problems
 #include "rf_mfp_new.h"
-//#include "rf_msp_new.h"
-#include "rf_out_new.h"  //OK
-
+// #include "rf_msp_new.h"
 #include "Eigen/Eigen"
+#include "rf_out_new.h"  //OK
 
 //-----------------------------------------------------
 // Process type
@@ -298,6 +297,11 @@ public:
 
     std::vector<IntegrationPointVariableBuffer> vapor_variable_buffer;
 
+    process::CRFProcessDeformation* getDeformationProcess() const
+    {
+        return dm_pcs;
+    }
+
 private:
     bool newton_raphson;  // 24.05.2007 WW
     long index;
@@ -481,9 +485,9 @@ protected:
     void Assemble_RHS_T_MPhaseFlow();
     // Assembly of RHS by deformation. 27.2.2007 WW
     void Assemble_RHS_M();
-    void Assemble_RHS_Pc();               // 03.2009 PCH
-    void Assemble_RHS_AIR_FLOW();         // AKS
-    void Assemble_RHS_HEAT_TRANSPORT();   // AKS
+    void Assemble_RHS_Pc();              // 03.2009 PCH
+    void Assemble_RHS_AIR_FLOW();        // AKS
+    void Assemble_RHS_HEAT_TRANSPORT();  // AKS
     void Assemble_RHS_LATENT_HEAT_TRANSPORT();
     void Assemble_RHS_TNEQ();             // AKS
     void Assemble_RHS_TES();              // AKS

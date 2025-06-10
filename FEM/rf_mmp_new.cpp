@@ -7676,7 +7676,6 @@ double getStoragePoroelastoplasticModelCurves(
     CFiniteElementStd const& assembler)
 {
     int const element_index = assembler.GetElementIndex();
-    process::CRFProcessDeformation* dm_pcs = assembler.getDeformationProcess();
 
     FiniteElement::ElementValue_DM const* dm_ele_ip_data =
         ele_value_dm[element_index];

@@ -3874,9 +3874,8 @@ ElementValue_DM::ElementValue_DM(CElem* ele, const int NGP, bool HM_Staggered)
       Stress_i(NULL),
       Stress_j(NULL),
       pStrain(NULL),
-      dstrain_v_dt(NULL),
       strain_v(NULL),
-      y_surface(NULL),
+      dstrain_v_dt(NULL),
       prep0(NULL),
       e_i(NULL),
       xi(NULL),
@@ -3939,6 +3938,10 @@ ElementValue_DM::ElementValue_DM(CElem* ele, const int NGP, bool HM_Staggered)
     // plastic strain dependent curves.
     {
         strain_v = new double[NGPoints];
+        for (int i = 0; i < NGPoints; i++)
+        {
+            strain_v[i] = 0.0;
+        }
     }
 
     //
@@ -4172,7 +4175,7 @@ void ElementValue_DM::ResetStress(bool cpl_loop)
 
 double ElementValue_DM::getEquivalentPlasticStrain(const int gp) const
 {
-    return (*pStrain)(gp);
+    return pStrain == NULL ? 0.0 : (*pStrain)(gp);
 }
 
 ElementValue_DM::~ElementValue_DM()

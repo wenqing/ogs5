@@ -19,8 +19,8 @@
 #include <cfloat>
 #include <cmath>
 #include <sstream>
-//#include <iostream>
-//#include <limits>	// PCH to better use system max and min
+// #include <iostream>
+// #include <limits>	// PCH to better use system max and min
 #include "Eigen/Dense"
 #include "display.h"
 #include "memory.h"
@@ -28,17 +28,16 @@
 // Method
 #include "mathlib.h"
 // Problems
-//#include "rf_mfp_new.h"
+// #include "rf_mfp_new.h"
 #include "SparseMatrixDOK.h"
 #include "eos.h"
+#include "pcs_dm.h"  // displacement coupled
 #include "rf_mmp_new.h"
 #include "rf_msp_new.h"
-
-#include "pcs_dm.h"  // displacement coupled
 #include "rfmat_cp.h"
 // Steps
-//#include "rf_pcs.h"
-//#include "rf_tim_new.h"
+// #include "rf_pcs.h"
+// #include "rf_tim_new.h"
 #if defined(USE_PETSC)  // || defined(other parallel libs)//03~04.3012. WW
 #include "PETSC/PETScLinearSolver.h"
 #else
@@ -48,9 +47,9 @@
 #endif
 #endif
 // Parallel computing
-//#include "par_ddc.h"
+// #include "par_ddc.h"
 // MSHLib
-//#include "msh_elem.h"
+// #include "msh_elem.h"
 // Solver
 #ifdef NEW_EQS
 #include "equation_class.h"
@@ -72,9 +71,8 @@ extern "C"
 }
 #endif
 
-#include "pcs_dm.h"  // displacement coupled
-
 #include "PhysicalConstant.h"
+#include "pcs_dm.h"  // displacement coupled
 
 extern double gravity_constant;  // TEST, must be put in input file
 
@@ -1628,8 +1626,6 @@ double CFiniteElementStd::CalCoefMass(const int gp)
             {
                 val += val_ip.poro * val_ip.fluid_compressibility;
             }
-            val +=
-                MediaProp->StorageFunction(Index, unit, pcs->m_num->ls_theta);
 
             // AS,WX: 08.2012 storage function eff stress
             if (MediaProp->storage_effstress_model > 0)
@@ -1640,6 +1636,11 @@ double CFiniteElementStd::CalCoefMass(const int gp)
                 storage_effstress =
                     MediaProp->StorageFunctionEffStress(Index, nnodes, h_fem);
                 val += storage_effstress;
+            }
+            else
+            {
+                val +=
+                    MediaProp->StorageFunction(Index, gp, pcs->m_num->ls_theta);
             }
 
             if (dm_pcs &&
@@ -1661,8 +1662,8 @@ double CFiniteElementStd::CalCoefMass(const int gp)
             if (MediaProp->unconfined_flow_group > 0)  // OK
                 val = MediaProp->Porosity(Index, pcs->m_num->ls_theta);
             else
-                val = MediaProp->StorageFunction(Index, unit,
-                                                 pcs->m_num->ls_theta);
+                val =
+                    MediaProp->StorageFunction(Index, gp, pcs->m_num->ls_theta);
             break;
         case EPT_TWOPHASE_FLOW:  // Two-phase flow
             // val = (1/rho*n*d_rho/d_p*S + Se*S )
@@ -1676,7 +1677,7 @@ double CFiniteElementStd::CalCoefMass(const int gp)
                     NodalVal_Sat[i] = cpl_pcs->GetNodeValue(nodes[i], idxS + 1);
                 Sw = 1.0 - interpolate(NodalVal_Sat);
                 // Is this really needed?
-                val = MediaProp->StorageFunction(Index, unit,
+                val = MediaProp->StorageFunction(Index, gp,
                                                  pcs->m_num->ls_theta) *
                       MMax(0., Sw);
 
@@ -1825,9 +1826,8 @@ double CFiniteElementStd::CalCoefMass(const int gp)
             }
 
             // Storativity
-            val +=
-                MediaProp->StorageFunction(Index, unit, pcs->m_num->ls_theta) *
-                Sw;
+            val += MediaProp->StorageFunction(Index, gp, pcs->m_num->ls_theta) *
+                   Sw;
 
             // Fluid compressibility
             val += poro * Sw * drho_dp_rho;
@@ -1873,7 +1873,7 @@ double CFiniteElementStd::CalCoefMass2(const int dof_index, const int gp)
     int Index = MeshElement->GetIndex();
     double val = 0.0;
     double expfactor = 0.0;
-    double dens_arg[3];               // 08.05.2008 WW
+    double dens_arg[3];  // 08.05.2008 WW
 
     bool diffusion = false;  // 08.05.2008 WW
 
@@ -1903,9 +1903,9 @@ double CFiniteElementStd::CalCoefMass2(const int dof_index, const int gp)
                 Sw, true);  // JT: dSdp now returns actual sign (i.e. <0)
             poro = MediaProp->Porosity(Index, pcs->m_num->ls_theta);
             // Storativity   28.05.2008
-            // val = MediaProp->StorageFunction(Index,unit,pcs->m_num->ls_theta)
-            // *Sw; Fluid compressibility val += poro  *Sw* FluidProp->drho_dp /
-            // rhow;
+            // val = MediaProp->StorageFunction(Index, gp,
+            // pcs->m_num->ls_theta) *Sw; Fluid compressibility val += poro
+            // *Sw* FluidProp->drho_dp / rhow;
             if (SolidProp)
             {
                 if (SolidProp->Ks > MKleinsteZahl)  // Storativity WX:28.05.2008
@@ -2023,7 +2023,7 @@ void CFiniteElementStd::CalCoefMassMCF()
     // Mass Matrix Elements value--start
     MassMatrixElements[0] =
         rho * (poro * beta_p +
-               MediaProp->StorageFunction(Index, unit, pcs->m_num->ls_theta));
+               MediaProp->StorageFunction(Index, gp, pcs->m_num->ls_theta));
     MassMatrixElements[1] = poro * rho * beta_T;
     if (FluidProp->mu_JT == "ON")
         MassMatrixElements[nDF] = -poro * arg_PV[1] * beta_T;  // JOD
@@ -3468,7 +3468,7 @@ void CFiniteElementStd::UpwindUnitCoord(int p, int point, int ind)
                 }
                 else  // regard all quantities in the center of element
                     if (fabs(alpha[i]) > 1.)
-                    scale = MMin(scale, (1. / fabs(alpha[i])));
+                        scale = MMin(scale, (1. / fabs(alpha[i])));
             }
             for (size_t i = 0; i < ele_dim; i++)
             {
@@ -3983,7 +3983,7 @@ void CFiniteElementStd::CalcMass()
 #endif
             }
         }  // end else
-    }      // loop gauss points
+    }  // loop gauss points
 
 // WW/CB //NW
 #ifndef USE_PETSC
@@ -5154,7 +5154,7 @@ void CFiniteElementStd::CalcLaplace()
                             }
                         }
                     }  // j: nodes
-                }      // i: nodes
+                }  // i: nodes
 #else
                 //---------------------------------------------------------
                 for (int i = 0; i < nnodes; i++)
@@ -5176,7 +5176,7 @@ void CFiniteElementStd::CalcLaplace()
                             }
                         }
                     }  // j: nodes
-                }      // i: nodes
+                }  // i: nodes
 #endif
             }
         }
@@ -5536,7 +5536,7 @@ void CFiniteElementStd::CalcAdvection()
                 vel[0] = mat_factor * gp_ele->Velocity_g(0, gp);
                 vel[1] = mat_factor * gp_ele->Velocity_g(1, gp);
                 vel[2] = mat_factor * gp_ele->Velocity_g(2, gp);
-            }            // SB, BG
+            }  // SB, BG
         if (multiphase)  // 02/2007 WW
         {
             dens_aug[0] = interpolate(NodalVal_p2);
@@ -8426,13 +8426,13 @@ void CFiniteElementStd::add2GlobalMatrixII()
 #ifdef assmb_petsc_test
                 os_t << "(" << local_idx[in] << ") "
                      << local_matrix[i * dim_full + j] << " ";
-#endif  //#ifdef assmb_petsc_test
+#endif  // #ifdef assmb_petsc_test
             }
 
 // TEST
 #ifdef assmb_petsc_test
             os_t << "\n";
-#endif  //#ifdef assmb_petsc_test
+#endif  // #ifdef assmb_petsc_test
         }
     }
     else
@@ -8925,32 +8925,32 @@ void CFiniteElementStd::AssembleMixedHyperbolicParabolicEquation()
     }  // end: femFCTmode
        //----------------------------------------------------------------------
        // Debug output
-       /*
-          if(Index < 10){
-          cout << " Element Number " << Index << "\n";
-          cout << " Mass matrix" << "\n";
-          Mass->Write();
-          cout << " Advection matrix" << "\n";
-          Advection->Write();
-          cout << " Dispersion matrix" << "\n";
-          Laplace->Write();
-          cout << " Storage matrix" << "\n";
-          Storage->Write();
-          cout << " Content matrix" << "\n";
-          Content->Write();
-          cout << " Left matrix" << "\n";
-          StiffMatrix->Write();
-          cout << " Right matrix" << "\n";
-          AuxMatrix1->Write();
-          cout << "RHS: " << endl ;
-          for (i=0;i<nnodes; i++) cout << "| " << NodalVal[i] << " |" << "\n";
-          cout << " initial concentrations" << "\n";
-          for (i=0;i<nnodes; i++) cout << "| " << NodalVal1[i] << " |" << "\n";
-          //	cout << " RHS vector: " << "\n";
-          //	for (i=0;i<nnodes; i++) cout << "| " <<    (double)(*RHS)(i+LocalShift)
-          << " |" << "\n";
-          }
-        */
+    /*
+       if(Index < 10){
+       cout << " Element Number " << Index << "\n";
+       cout << " Mass matrix" << "\n";
+       Mass->Write();
+       cout << " Advection matrix" << "\n";
+       Advection->Write();
+       cout << " Dispersion matrix" << "\n";
+       Laplace->Write();
+       cout << " Storage matrix" << "\n";
+       Storage->Write();
+       cout << " Content matrix" << "\n";
+       Content->Write();
+       cout << " Left matrix" << "\n";
+       StiffMatrix->Write();
+       cout << " Right matrix" << "\n";
+       AuxMatrix1->Write();
+       cout << "RHS: " << endl ;
+       for (i=0;i<nnodes; i++) cout << "| " << NodalVal[i] << " |" << "\n";
+       cout << " initial concentrations" << "\n";
+       for (i=0;i<nnodes; i++) cout << "| " << NodalVal1[i] << " |" << "\n";
+       //	cout << " RHS vector: " << "\n";
+       //	for (i=0;i<nnodes; i++) cout << "| " << (double)(*RHS)(i+LocalShift)
+       << " |" << "\n";
+       }
+     */
 }
 /**************************************************************************
    FEMLib-Method:
@@ -9154,7 +9154,7 @@ void CFiniteElementStd::Assemble_strainCPL(const int phase)
         Residual = 0;
     else                            // Mono
         if (pcs_deformation > 100)  // Pls
-        Residual = 1;
+            Residual = 1;
     if (dynamic)
     {
         Residual = 2;
@@ -12609,7 +12609,7 @@ void CFiniteElementStd::CalcEnergyNorm_Dual(double& err_norm0,
     //
     //
 }
-#endif  //#ifdef E_NORM
+#endif  // #ifdef E_NORM
 /**************************************************************************
    PCSLib-Method:
    02/2009 PCH Implementation
