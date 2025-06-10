@@ -17,8 +17,8 @@
 
 #include <vector>
 
-#include "fem_ele.h"
 #include "FEMEnums.h"
+#include "fem_ele.h"
 
 namespace SolidProp
 {
@@ -31,7 +31,7 @@ namespace solid
 {
 class BGRaCreep;
 }
-}
+}  // namespace MaterialLib
 class CRFProcess;
 class CFluidProperties;
 class CMediumProperties;
@@ -72,6 +72,13 @@ public:
         return dstrain_v_dt[gp];
     }
 
+    double getVolumeStrain(const int gp) const
+    {
+        return strain_v == NULL ? 0.0 : strain_v[gp];
+    }
+
+    double getEquivalentPlasticStrain(const int gp) const;
+
 private:
     // Friend class
     friend class MaterialLib::solid::BGRaCreep;
@@ -84,6 +91,7 @@ private:
     Math_Group::Matrix* Stress_i;
     Math_Group::Matrix* Stress_j;
     Math_Group::Matrix* pStrain;
+    double* strain_v;  // Volumetric strain
     double* dstrain_v_dt;
     Math_Group::Matrix* y_surface;
     // Preconsolidation pressure

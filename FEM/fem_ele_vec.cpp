@@ -14,23 +14,18 @@
 
 #include "fem_ele_vec.h"
 
-#include <cfloat>
 #include <algorithm>
+#include <cfloat>
 
+#include "Material/Solid/BGRaCreep.h"
+#include "PhysicalConstant.h"
 #include "display.h"
-
 #include "mathlib.h"
 #include "matrix_class.h"
 #include "matrix_routines.h"
 #include "pcs_dm.h"
-
-#include "PhysicalConstant.h"
-
 #include "rf_mfp_new.h"
 #include "rf_msp_new.h"
-
-#include "Material/Solid/BGRaCreep.h"
-
 #include "tools.h"  //12.2009. WW
 // Equation
 #if defined(NEW_EQS)
@@ -913,7 +908,7 @@ void CFiniteElementVec::ComputeMatrix_RHS(const double fkt, const Matrix* p_D)
                         (*tmp_AuxMatrix)(k, l) * fkt;
             }
         }  // loop j
-    }      // loop i
+    }  // loop i
 
     // should restore pointer NW
     B_matrix = old_B_matrix;
@@ -1055,7 +1050,7 @@ void CFiniteElementVec::LocalAssembly(const int update)
 #endif
     }
     else
-#endif  //#if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
+#endif  // #if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
     // WW
     {
 #if defined(USE_PETSC)  // || defined (other parallel solver lib). 04.2012 WW
@@ -1085,8 +1080,8 @@ void CFiniteElementVec::LocalAssembly(const int update)
             eqs_number[i] = element_nodes_dom[i];
     }
     else
-#endif  //#if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
-        // WW
+#endif  // #if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
+        //  WW
 #if !defined(USE_PETSC)  // && !defined(other parallel libs)//03.3012. WW
     {
         for (int i = 0; i < nnodesHQ; i++)
@@ -1107,7 +1102,7 @@ void CFiniteElementVec::LocalAssembly(const int update)
             for (j = 0; j < nnodesHQ; j++)
             {
                 // Increment of acceleration, da
-                (*dAcceleration)(i * nnodesHQ + j) =
+                (*dAcceleration)(i* nnodesHQ + j) =
                     pcs->GetNodeValue(nodes[j], Idx_dm0[i]);
                 // Increment of displacement
                 // du = v_n*dt+0.5*a_n*dt*dt+0.5*beta2*da*dt*dt
@@ -1507,7 +1502,7 @@ void CFiniteElementVec::GlobalAssembly_Stiffness()
 #endif
                 }
             }  // loop j
-        }      // loop i
+        }  // loop i
     }
 
     // Assemble stiffness matrix
@@ -1533,7 +1528,7 @@ void CFiniteElementVec::GlobalAssembly_Stiffness()
                 }
             }
         }  // loop j
-    }      // loop i
+    }  // loop i
 
     // TEST OUT
     // Stiffness->Write();
@@ -1551,7 +1546,8 @@ void CFiniteElementVec::GlobalAssembly_Stiffness()
     if (PressureC_S_dp)
         GlobalAssembly_PressureCoupling(PressureC_S_dp, -f2 * biot, 0);
 }
-#endif  //#if defined(USE_PETSC) // || defined(other parallel libs)//07.2013. WW
+#endif  // #if defined(USE_PETSC) // || defined(other parallel libs)//07.2013.
+        // WW
 //--------------------------------------------------------------------------
 /*!
    \brief Assembe the pressure coupling matrix
@@ -2640,6 +2636,11 @@ void CFiniteElementVec::ExtropolateGuassStrain()
                         (dstrain[0] + dstrain[1] + dstrain[2]) / dt;
                 }
             }
+        }
+
+        if (eleV_DM->strain_v)
+        {
+            eleV_DM->strain_v[gp] += dstrain[0] + dstrain[1] + dstrain[2];
         }
         RecordGuassStrain(gp);
     }
@@ -3774,7 +3775,7 @@ void CFiniteElementVec::LocalAssembly_EnhancedStrain(const int update)
 
                 for (size_t k = 0; k < ele_dim; k++)
                     for (size_t l = 0; l < ele_dim; l++)
-                        (*BDG)(k, ele_dim * i + l) += fkt * (*AuxMatrix)(k, l);
+                        (*BDG)(k, ele_dim* i + l) += fkt * (*AuxMatrix)(k, l);
                 //
                 // P*D*B
                 setB_Matrix(i);
@@ -3782,7 +3783,7 @@ void CFiniteElementVec::LocalAssembly_EnhancedStrain(const int update)
                 PeDe->multi(*B_matrix, *AuxMatrix);
                 for (size_t k = 0; k < ele_dim; k++)
                     for (size_t l = 0; l < ele_dim; l++)
-                        (*PDB)(ele_dim * i + k, l) +=
+                        (*PDB)(ele_dim* i + k, l) +=
                             fkt * (*AuxMatrix)(k, l) / area;
             }
         }
@@ -3874,6 +3875,7 @@ ElementValue_DM::ElementValue_DM(CElem* ele, const int NGP, bool HM_Staggered)
       Stress_j(NULL),
       pStrain(NULL),
       dstrain_v_dt(NULL),
+      strain_v(NULL),
       y_surface(NULL),
       prep0(NULL),
       e_i(NULL),
@@ -3929,6 +3931,14 @@ ElementValue_DM::ElementValue_DM(CElem* ele, const int NGP, bool HM_Staggered)
         {
             dstrain_v_dt[i] = 0.0;
         }
+    }
+
+    CMediumProperties const* mmp = mmp_vector[ele->GetPatchIndex()];
+    if (mmp->storage_model ==
+        12)  // Poroelastoplastic Model defned with two volume strain and
+    // plastic strain dependent curves.
+    {
+        strain_v = new double[NGPoints];
     }
 
     //
@@ -4037,6 +4047,11 @@ void ElementValue_DM::Write_BIN(std::fstream& os, const bool last_step)
         os.write((char*)dstrain_v_dt, Stress_i->Cols() * sizeof(double));
     }
 
+    if (strain_v)
+    {
+        os.write((char*)strain_v, Stress_i->Cols() * sizeof(double));
+    }
+
     if (y_surface)
         y_surface->Write_BIN(os);
     if (xi)
@@ -4076,10 +4091,19 @@ void ElementValue_DM::Read_BIN(std::fstream& is)
 {
     Stress0->Read_BIN(is);
     Stress_i->Read_BIN(is);
-    is.read((char*)dstrain_v_dt, Stress_i->Cols() * sizeof(double));
 
     if (pStrain)
         pStrain->Read_BIN(is);
+
+    if (dstrain_v_dt)
+    {
+        is.read((char*)dstrain_v_dt, Stress_i->Cols() * sizeof(double));
+    }
+    if (strain_v)
+    {
+        is.read((char*)strain_v, Stress_i->Cols() * sizeof(double));
+    }
+
     if (y_surface)
         y_surface->Read_BIN(is);
     if (xi)
@@ -4146,6 +4170,11 @@ void ElementValue_DM::ResetStress(bool cpl_loop)
     }
 }
 
+double ElementValue_DM::getEquivalentPlasticStrain(const int gp) const
+{
+    return (*pStrain)(gp);
+}
+
 ElementValue_DM::~ElementValue_DM()
 {
     delete Stress0;
@@ -4159,6 +4188,10 @@ ElementValue_DM::~ElementValue_DM()
     if (dstrain_v_dt)
     {
         delete[] dstrain_v_dt;
+    }
+    if (strain_v)
+    {
+        delete[] strain_v;
     }
 
     if (y_surface)
