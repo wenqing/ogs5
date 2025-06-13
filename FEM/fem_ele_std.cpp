@@ -10461,7 +10461,7 @@ void CFiniteElementStd::CalcSaturation(MeshLib::CElem& elem)
 **************************************************************************/
 void CFiniteElementStd::CalcNodeMatParatemer(MeshLib::CElem& elem)
 {
-    int gp_r, gp_s, gp_t, idx_perm[3], idxp = 0;
+    int gp_r, gp_s, gp_t, idx_perm[3];
     //
     MeshElement = &elem;
     MshElemType::type ElementType = MeshElement->GetElementType();
@@ -10503,15 +10503,20 @@ void CFiniteElementStd::CalcNodeMatParatemer(MeshLib::CElem& elem)
             NodalVal_p20[i] = pcs->GetNodeValue(nodes[i], idx_c0 + 2);
         }
     //
-    if ((pcs->additioanl2ndvar_print > 0) && (pcs->additioanl2ndvar_print < 3))
+    if (pcs->output_material_parameters.permeability)
     {
         idx_perm[0] = pcs->GetNodeValueIndex("PERMEABILITY_X1");
         idx_perm[1] = pcs->GetNodeValueIndex("PERMEABILITY_Y1");
         if (dim == 3)  // 3D
             idx_perm[2] = pcs->GetNodeValueIndex("PERMEABILITY_Z1");
     }
-    if (pcs->additioanl2ndvar_print > 1)
-        idxp = pcs->GetNodeValueIndex("POROSITY");
+    int const idxp = (pcs->output_material_parameters.porosity)
+                         ? pcs->GetNodeValueIndex("POROSITY")
+                         : -1;
+    int const idx_storage = (pcs->output_material_parameters.storage)
+                                ? pcs->GetNodeValueIndex("STORAGE")
+                                : -1;
+
     // Number of elements associated to nodes
     for (int i = 0; i < nnodes; i++)
         dbuff[i] =
@@ -10527,6 +10532,8 @@ void CFiniteElementStd::CalcNodeMatParatemer(MeshLib::CElem& elem)
     double w[3];
     w[0] = w[1] = w[2] = 1.0;
 
+    std::vector<double> storage_ip;
+    storage_ip.reserve(nGaussPoints);
     // for PG = interpolate(NodalVal0);
     getShapeFunctionPtr(MeshElement->GetElementType());
     SetIntegrationPointNumber(ElementType);
@@ -10537,8 +10544,7 @@ void CFiniteElementStd::CalcNodeMatParatemer(MeshLib::CElem& elem)
         getShapefunctValues(gp, 1);
         PG = interpolate(NodalVal1);
         //
-        if ((pcs->additioanl2ndvar_print > 0) &&
-            (pcs->additioanl2ndvar_print < 3))
+        if (pcs->output_material_parameters.permeability)
         {
             double* tensor =
                 MediaProp->PermeabilityTensor(MeshElement->index, gp);
@@ -10560,111 +10566,38 @@ void CFiniteElementStd::CalcNodeMatParatemer(MeshLib::CElem& elem)
                 NodalVal4[gp] = tensor[2 * dim + 2];  // w[2]; //
         }
         // Porosity
-        if (pcs->additioanl2ndvar_print > 1)
-            // MediaProp->Porosity(this);
+        if (pcs->output_material_parameters.porosity)
+        {
             NodalVal0[gp] = MediaProp->Porosity(MeshElement->index, 1.0);
+        }
+        if (pcs->output_material_parameters.storage)
+        {
+            // Storage
+            double const s_p =
+                MediaProp->StorageFunction(MeshElement->index, gp, 1.0);
+            storage_ip.push_back(s_p);
+        }
     }
-
-    /*if ((ElementType != MshElemType::TETRAHEDRON) &&
-        (ElementType != MshElemType::PRISM) &&
-        (ElementType != MshElemType::PYRAMID))
-    {
-        int i_s, i_e, ish;
-        double w[3], nval = 0.0;
-        w[0] = w[1] = w[2] = 1.0;
-        //
-        Xi_p = CalcXi_p();
-        //
-        i_s = 0;
-        i_e = nnodes;
-        ish = 0;
-        //---------------------------------------------------------
-        // Mapping Gauss point strains to nodes and update nodes
-        // strains:
-        //---------------------------------------------------------
-        double avgW[3] = {};
-        double avgVal = 0.0;
-        if (this->GetExtrapoMethod() == ExtrapolationMethod::EXTRAPO_AVERAGE)
-        {
-            // average
-            if ((pcs->additioanl2ndvar_print > 0) &&
-                (pcs->additioanl2ndvar_print < 3))
-            {
-                avgW[0] = CalcAverageGaussPointValues(NodalVal2);
-                avgW[1] = CalcAverageGaussPointValues(NodalVal3);
-                avgW[2] = CalcAverageGaussPointValues(NodalVal4);
-            }
-            if (pcs->additioanl2ndvar_print > 1)
-                avgVal = CalcAverageGaussPointValues(NodalVal0);
-        }
-
-        ConfigShapefunction(ElementType);
-        for (int i = 0; i < nnodes; i++)
-        {
-            // Calculate values at nodes
-            if (this->GetExtrapoMethod() == ExtrapolationMethod::EXTRAPO_LINEAR)
-            {
-                SetExtropoGaussPoints(i);
-                //
-                ComputeShapefct(1, dbuff0);  // Linear interpolation function
-            }
-            if ((pcs->additioanl2ndvar_print > 0) &&
-                (pcs->additioanl2ndvar_print < 3))
-            {
-                w[0] = w[1] = w[2] = 0.0;
-                if (this->GetExtrapoMethod() ==
-                    ExtrapolationMethod::EXTRAPO_LINEAR)
-                    for (int j = i_s; j < i_e; j++)
-                    {
-                        w[0] += NodalVal2[j] * dbuff0[j - ish];
-                        w[1] += NodalVal3[j] * dbuff0[j - ish];
-                        if (dim == 3)
-                            w[2] += NodalVal4[j] * dbuff0[j - ish];
-                    }
-                else if (this->GetExtrapoMethod() ==
-                         ExtrapolationMethod::EXTRAPO_AVERAGE)
-                    for (size_t k = 0; k < dim; k++)
-                        w[k] = avgW[k];
-                // Average value of the contribution of ell neighbor elements
-                for (size_t k = 0; k < dim; k++)
-                {
-                    w[k] /= dbuff[i];
-                    w[k] += pcs->GetNodeValue(nodes[i], idx_perm[k]);
-                    //
-                    pcs->SetNodeValue(nodes[i], idx_perm[k], w[k]);
-                }
-            }
-            if (pcs->additioanl2ndvar_print > 1)
-            {
-                nval = 0.0;
-                if (this->GetExtrapoMethod() ==
-                    ExtrapolationMethod::EXTRAPO_LINEAR)
-                    for (int j = i_s; j < i_e; j++)
-                        nval += NodalVal0[j] * shapefct[j - ish];
-                else if (this->GetExtrapoMethod() ==
-                         ExtrapolationMethod::EXTRAPO_AVERAGE)
-                    nval = avgVal;
-                nval /= dbuff[i];
-                nval += pcs->GetNodeValue(nodes[i], idxp);
-                //
-                pcs->SetNodeValue(nodes[i], idxp, nval);
-            }
-        }
-        return;
-    }*/
 
     std::vector<Eigen::VectorXd> ip_data_vector;
     std::vector<int> idxs;
 
-    if (pcs->additioanl2ndvar_print > 1)
+    if (pcs->output_material_parameters.porosity)
     {
         Eigen::VectorXd ip_data =
             Eigen::Map<Eigen::VectorXd>(NodalVal0, nGaussPoints);
         ip_data_vector.push_back(ip_data);
         idxs.push_back(idxp);
     }
+    if (pcs->output_material_parameters.storage)
+    {
+        Eigen::VectorXd ip_data =
+            Eigen::Map<Eigen::VectorXd>(storage_ip.data(), nGaussPoints);
+        ip_data_vector.push_back(ip_data);
+        idxs.push_back(idx_storage);
+    }
 
-    if ((pcs->additioanl2ndvar_print > 0) && (pcs->additioanl2ndvar_print < 3))
+    if (pcs->output_material_parameters.permeability)
     {
         ip_data_vector.push_back(
             Eigen::Map<Eigen::VectorXd>(NodalVal2, nGaussPoints));

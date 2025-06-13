@@ -34,8 +34,9 @@ matrix solver
 
 /*--------------------- OpenMP Parallel ------------------*/
 #if defined(LIS)
-#include "lis.h"
 #include <omp.h>
+
+#include "lis.h"
 #endif
 /*--------------------- OpenMP Parallel ------------------*/
 
@@ -46,55 +47,53 @@ matrix solver
 #endif
 
 // C++
+#include <algorithm>
 #include <cfloat>
 #include <iomanip>  //WW
 #include <iostream>
-#include <algorithm>
 #include <set>
 
-#include "isnan.h"
 #include "display.h"
+#include "isnan.h"
 #include "memory.h"
 // GEOLib
-#include "PointWithID.h"
-
 #include "FEMEnums.h"
-#include "Output.h"
 #include "MathTools.h"
-
+#include "Output.h"
 #include "PhysicalConstant.h"
+#include "PointWithID.h"
 
 /* Objects */
 #include "pcs_dm.h"
 #include "rf_st_new.h"  // ST
-//#include "rf_bc_new.h" // ST
-//#include "rf_mmp_new.h" // MAT
+// #include "rf_bc_new.h" // ST
+// #include "rf_mmp_new.h" // MAT
 #include "fem_ele_std.h"  // ELE
 #include "rf_ic_new.h"    // IC
-//#include "msh_lib.h" // ELE
-//#include "rf_tim_new.h"
-//#include "rf_out_new.h"
+// #include "msh_lib.h" // ELE
+// #include "rf_tim_new.h"
+// #include "rf_out_new.h"
 #include "rfmat_cp.h"
-//#include "rf_mfp_new.h" // MFP
-//#include "rf_num_new.h"
-//#include "gs_project.h"
+// #include "rf_mfp_new.h" // MFP
+// #include "rf_num_new.h"
+// #include "gs_project.h"
 #include "rf_fct.h"
-//#include "femlib.h"
+// #include "femlib.h"
 #include "eos.h"
+#include "fem_ele_vec.h"  //WX:08.2011
+#include "rf_kinreact.h"
 #include "rf_msp_new.h"
 #include "rf_node.h"
-#include "rf_kinreact.h"
-#include "fem_ele_vec.h"  //WX:08.2011
 
 #ifdef MFC  // WW
 #include "rf_fluid_momentum.h"
 #endif
 /* Tools */
 #include "mathlib.h"
-//#include "files0.h"
-//#include "par_ddc.h"
+// #include "files0.h"
+// #include "par_ddc.h"
 #include "tools.h"
-//#include "rf_pcs.h"
+// #include "rf_pcs.h"
 #include "files0.h"
 #ifdef GEM_REACT
 // GEMS chemical solver
@@ -113,27 +112,23 @@ REACT_BRNS* m_vec_BRNS;
 #elif defined(NEW_EQS)
 #include "equation_class.h"
 #else
-#include "solver.h"  // ConfigRenumberProperties
 #include "matrix_routines.h"
+#include "solver.h"  // ConfigRenumberProperties
 #endif
-#include "problem.h"
+#include "Density.h"
+#include "VLE.h"
 #include "msh_faces.h"
+#include "problem.h"
+#include "rf_react_int.h"
 #include "rfmat_cp.h"
 
-#include "rf_react_int.h"
-#include "VLE.h"
-#include "Density.h"
-
 // MathLib
+#include "FileTools.h"
 #include "InterpolationAlgorithms/InverseDistanceInterpolation.h"
 #include "InterpolationAlgorithms/PiecewiseLinearInterpolation.h"
-
-#include "FileTools.h"
 #include "StringTools.h"
-
-#include "fct_mpi.h"
-
 #include "TimeInterval.h"
+#include "fct_mpi.h"
 
 #ifndef USE_PETSC
 #include "par_ddc.h"
@@ -304,7 +299,7 @@ CRFProcess::CRFProcess(void)
     eqs_new = NULL;
     configured_in_nonlinearloop = false;
 #else
-    eqs = NULL;                       // WW
+    eqs = NULL;  // WW
 #endif
     dof = 1;  // WW
     //
@@ -362,9 +357,8 @@ CRFProcess::CRFProcess(void)
     compute_domain_face_normal = false;  // WW
     use_velocities_for_transport = false;
     //
-    additioanl2ndvar_print = -1;  // WW
-    flow_pcs_type = 0;            // CB default: liquid flow, Sat = 1
-    simulator = "GEOSYS";         // BG, 09/2009
+    flow_pcs_type = 0;     // CB default: liquid flow, Sat = 1
+    simulator = "GEOSYS";  // BG, 09/2009
     simulator_model_path =
         "";               // BG, 09/2009, folder with the Eclipse or DuMux files
     simulator_path = "";  // BG, 09/2009, Eclipse or Dumux
@@ -656,8 +650,8 @@ void CRFProcess::Create()
     if (getProcessType() == FiniteElement::MASS_TRANSPORT)  // SB
     {
         ScreenMessage(" for %s process with component number %d\n",
-                               pcs_primary_function_name[0],
-                               pcs_component_number);
+                      pcs_primary_function_name[0],
+                      pcs_component_number);
     }
 
     if (hasAnyProcessDeactivatedSubdomains)
@@ -735,8 +729,7 @@ void CRFProcess::Create()
     }
     if (!m_num)
     {
-        ScreenMessage(
-            "Warning in CRFProcess::Create() - no NUM data\n");
+        ScreenMessage("Warning in CRFProcess::Create() - no NUM data\n");
         m_num = new CNumerics(pcs_type_name);  // OK
                                                //		m_num = m_num_tmp;
     }
@@ -994,7 +987,7 @@ void CRFProcess::Create()
     {
         // Bypassing IC
         ScreenMessage("RELOAD is set to be %d. So, bypassing IC's\n",
-                               _init_domain_data_type);
+                      _init_domain_data_type);
     }
 
     // Take the temperature unit
@@ -1729,7 +1722,7 @@ void PCSDestroyAllProcesses(void)
 #if defined(USE_MPI)
     for (j = 0; j < (int)EQS_Vector.size(); j += 2)  // WW
 #else
-    for (j = 0; j < (int)EQS_Vector.size(); j++)   // WW
+    for (j = 0; j < (int)EQS_Vector.size(); j++)  // WW
 #endif
     {
         if (EQS_Vector[j])
@@ -1758,7 +1751,8 @@ void PCSDestroyAllProcesses(void)
     PCS_Solver.clear();  // WW
 #endif
 //------
-#endif  //#if defined(USE_PETSC) // || defined(other parallel libs)//03.3012. WW
+#endif  // #if defined(USE_PETSC) // || defined(other parallel libs)//03.3012.
+        // WW
 
     //----------------------------------------------------------------------
     // PCS
@@ -1812,8 +1806,8 @@ void PCSDestroyAllProcesses(void)
         dom_vector[i] = NULL;
     }
     dom_vector.clear();
-#endif  //#if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
-        // WW
+#endif  // #if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
+        //  WW
     //----------------------------------------------------------------------
     // ELE
     for (i = 0; i < (long)ele_val_vector.size(); i++)
@@ -1917,10 +1911,9 @@ bool PCSRead(std::string file_base_name)
 
             pcs_file.seekg(position, std::ios::beg);
         }  // keyword found
-    }      // eof
+    }  // eof
 
-    ScreenMessage("done, read  %d processes\n",
-                           pcs_vector.size());
+    ScreenMessage("done, read  %d processes\n", pcs_vector.size());
 
     return true;
 }
@@ -3811,7 +3804,7 @@ void CRFProcess::ConfigUnsaturatedFlow()
         }
 
 // TEST
-//#define DECOVALEX
+// #define DECOVALEX
 #ifdef DECOVALEX
         // DECOVALEX Test
         pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
@@ -5778,8 +5771,8 @@ void CRFProcess::GlobalAssembly()
 #endif
 }
 else
-#endif  //#if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
-        // WW
+#endif  // #if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
+        //  WW
 {       // STD
     // YDTEST. Changed to DOF 15.02.2007 WW
     for (size_t ii = 0; ii < continuum_vector.size(); ii++)
@@ -5839,7 +5832,7 @@ else
 #endif
 #if !defined(USE_PETSC) && \
     !defined(NEW_EQS)  // && !defined(other parallel libs)//03~04.3012. WW
-    //#ifndef NEW_EQS                             //WW. 07.11.2008
+    // #ifndef NEW_EQS                             //WW. 07.11.2008
     SetCPL();  // OK
 #endif
 
@@ -5850,8 +5843,8 @@ else
     IncorporateBoundaryConditions();
 
 #ifdef NEW_EQS
-   // ofstream Dum("rf_pcs.txt", ios::out); // WW
-   // eqs_new->Write(Dum);   Dum.close();
+    // ofstream Dum("rf_pcs.txt", ios::out); // WW
+    // eqs_new->Write(Dum);   Dum.close();
 #endif
 
 #define nOUTPUT_EQS_BIN
@@ -6390,8 +6383,8 @@ void CRFProcess::DDCAssembleGlobalMatrix()
     }
 #endif
 }
-#endif  //#if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
-        // WW
+#endif  // #if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
+        //  WW
 
 /*************************************************************************
    ROCKFLOW - Function:
@@ -6552,8 +6545,8 @@ void CRFProcess::SetSTWaterGemSubDomain(int myrank)
     }
 }
 
-#endif  //#if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
-        // WW
+#endif  // #if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
+        //  WW
 
 void CRFProcess::dectivateConditionInExcavatedSubDomain(const int material_ID)
 {
@@ -6649,8 +6642,8 @@ void CRFProcess::IncorporateBoundaryConditions(const int rank)
     CBoundaryCondition* m_bc;           // WW
     CFunction* m_fct = NULL;            // OK
     bool is_valid = false;              // OK
-    bool excavated = false;          // WX
-    bool onDeactiveBoundary = true;  // WX:09.2011
+    bool excavated = false;             // WX
+    bool onDeactiveBoundary = true;     // WX:09.2011
 #if defined(USE_PETSC)  // || defined(other parallel libs)//03~04.3012. WW
     vector<int> bc_eqs_id;
     vector<double> bc_eqs_value;
@@ -7998,8 +7991,8 @@ double CRFProcess::calcPressureFromHead(CBoundaryCondition const& bc,
     {
         case 0:
             // use current density at node
-            local_density = MFPGetNodeValue(node_number, "DENSITY", 0,
-                                            for_ouput);
+            local_density =
+                MFPGetNodeValue(node_number, "DENSITY", 0, for_ouput);
             break;
         case 1:
             // use given density
@@ -8009,8 +8002,8 @@ double CRFProcess::calcPressureFromHead(CBoundaryCondition const& bc,
             std::cout << "Warning! No PressureAsHeadDensity specified. "
                          "Calculating density (i.e. PressureAsHeadModel 0)!"
                       << std::endl;
-            local_density = MFPGetNodeValue(node_number, "DENSITY", 0,
-                                            for_ouput);
+            local_density =
+                MFPGetNodeValue(node_number, "DENSITY", 0, for_ouput);
             break;
     }
 
@@ -8036,8 +8029,8 @@ double CRFProcess::calcHeadFromPressure(CBoundaryCondition const& bc,
     {
         case 0:
             // use current density at node
-            local_density = MFPGetNodeValue(node_number, "DENSITY", 0,
-                                            for_ouput);
+            local_density =
+                MFPGetNodeValue(node_number, "DENSITY", 0, for_ouput);
             break;
         case 1:
             // use given density
@@ -8047,8 +8040,8 @@ double CRFProcess::calcHeadFromPressure(CBoundaryCondition const& bc,
             std::cout << "Warning! No PressureAsHeadDensity specified. "
                          "Calculating density (i.e. PressureAsHeadModel 0)!"
                       << std::endl;
-            local_density = MFPGetNodeValue(node_number, "DENSITY", 0,
-                                            for_ouput);
+            local_density =
+                MFPGetNodeValue(node_number, "DENSITY", 0, for_ouput);
             break;
     }
 
@@ -8149,9 +8142,9 @@ void CRFProcess::IncorporateSourceTerms(const int rank)
     long end = 0;
     long gindex = 0;
 
-    //###############################
-    // NB Climate Data
-    // MW Use loop for constrained ST evaluation
+    // ###############################
+    //  NB Climate Data
+    //  MW Use loop for constrained ST evaluation
 
     for (size_t i = 0; i < st_vector.size(); i++)
     {
@@ -8272,7 +8265,7 @@ void CRFProcess::IncorporateSourceTerms(const int rank)
 
     m_st = NULL;
 
-    //#####################
+    // #####################
 
     if (rank == -1)
     {
@@ -8721,7 +8714,7 @@ int CRFProcess::ExecuteLinearSolver(void)
 **************************************************************************/
 #if !defined(USE_PETSC) && \
     !defined(NEW_EQS)  // && defined(other parallel libs)//03~04.3012. WW
-//#ifndef NEW_EQS                                   //WW 07.11.2008
+// #ifndef NEW_EQS                                   //WW 07.11.2008
 int CRFProcess::ExecuteLinearSolver(LINEAR_SOLVER* eqs)
 {
     long iter_count;
@@ -9225,8 +9218,8 @@ void CRFProcess::SetIC()
                     m_ic->Set(nidx);
                     m_ic->Set(nidx + 1);
                 }  // end of if
-            }      // end of for j
-        }          // end of for i
+            }  // end of for j
+        }  // end of for i
 
     }  // end of if-else
 }
@@ -9255,10 +9248,10 @@ void CRFProcess::SetInitialConditionInElement(const MeshLib::CElem& element)
             if (m_ic->getProcessPrimaryVariable() == pv_i)
             {
                 m_ic->SetElement(element, nidx, offset);
-                m_ic->SetElement(element, nidx+1, offset);
+                m_ic->SetElement(element, nidx + 1, offset);
             }  // end of if
-        }      // end of for j
-    }          // end of for i
+        }  // end of for j
+    }  // end of for i
 }
 
 /**************************************************************************
@@ -9863,8 +9856,8 @@ double CRFProcess::ExecuteNonLinear(int loop_process_number, bool print_pcs)
     last_error = 1.0;
     for (iter_nlin = 0; iter_nlin < m_num->nls_max_iterations; iter_nlin++)
     {
-        ScreenMessage("    PCS non-linear iteration: %d/%d\n",
-                               iter_nlin, m_num->nls_max_iterations);
+        ScreenMessage("    PCS non-linear iteration: %d/%d\n", iter_nlin,
+                      m_num->nls_max_iterations);
         nonlinear_iteration_error = Execute();
         //
         // ---------------------------------------------------
@@ -10014,7 +10007,8 @@ double CRFProcess::ExecuteNonLinear(int loop_process_number, bool print_pcs)
                         "         %0.3e |"
                         " %0.3e|"
                         "     %0.3e|"
-                        " %0.3e|\n", error, norm_b, norm_x, damping);
+                        " %0.3e|\n",
+                        error, norm_b, norm_x, damping);
                     break;
             }
         }
@@ -10160,9 +10154,8 @@ void CRFProcess::PrintStandardIterationInformation(bool write_std_errors)
         {
             for (ii = 0; ii < pcs_number_of_primary_nvals; ii++)
             {
-                ScreenMessage(
-                    "         PCS error DOF[%d] %0.3e\n",
-                    ii, pcs_absolute_error[ii]);
+                ScreenMessage("         PCS error DOF[%d] %0.3e\n", ii,
+                              pcs_absolute_error[ii]);
             }
         }
         return;
@@ -10170,12 +10163,11 @@ void CRFProcess::PrintStandardIterationInformation(bool write_std_errors)
     //
     // NON-LINEAR METHODS
     if (m_num->nls_method == 0)
-        ScreenMessage("      -->End of PICARD iteration: %d/%d\n",
-                               iter_nlin, m_num->nls_max_iterations);
+        ScreenMessage("      -->End of PICARD iteration: %d/%d\n", iter_nlin,
+                      m_num->nls_max_iterations);
     else
-        ScreenMessage(
-            "      -->End of NEWTON-RAPHSON iteration: %d/%d\n",
-            iter_nlin, m_num->nls_max_iterations);
+        ScreenMessage("      -->End of NEWTON-RAPHSON iteration: %d/%d\n",
+                      iter_nlin, m_num->nls_max_iterations);
     //
     // Errors
     // --------------------------------------------------
@@ -10183,21 +10175,18 @@ void CRFProcess::PrintStandardIterationInformation(bool write_std_errors)
     {
         if (pcs_num_dof_errors == 1)
         {
-            ScreenMessage(
-                "         PCS error: %0.3e\n", pcs_absolute_error[0]);
+            ScreenMessage("         PCS error: %0.3e\n", pcs_absolute_error[0]);
         }
         else
         {
             for (ii = 0; ii < pcs_number_of_primary_nvals; ii++)
             {
-                ScreenMessage(
-                    "         PCS error DOF[%d]: %0.3e\n",
-                    ii, pcs_absolute_error[ii]);
+                ScreenMessage("         PCS error DOF[%d]: %0.3e\n", ii,
+                              pcs_absolute_error[ii]);
             }
         }
-        ScreenMessage(
-            "         ->Euclidian norm of unknowns: %0.3e\n",
-            pcs_unknowns_norm);
+        ScreenMessage("         ->Euclidian norm of unknowns: %0.3e\n",
+                      pcs_unknowns_norm);
     }
 }
 
@@ -10256,13 +10245,16 @@ void CRFProcess::Extropolation_MatValue()
     //	if (_pcs_type_name.find("FLOW") == string::npos)
     if (!isFlowProcess(this->getProcessType()))
         return;
-    if (additioanl2ndvar_print < 0)
+
+    if (output_material_parameters.areAllFalse())
+    {
         return;
+    }
 
     //
     int NS = m_msh->GetCoordinateFlag() / 10;
     //
-    if ((additioanl2ndvar_print > 0) && (additioanl2ndvar_print < 3))
+    if (output_material_parameters.permeability)
     {
         int idx[3];
         idx[0] = GetNodeValueIndex("PERMEABILITY_X1");
@@ -10275,12 +10267,19 @@ void CRFProcess::Extropolation_MatValue()
             for (int k = 0; k < NS; k++)
                 SetNodeValue(i, idx[k], 0.0);
     }
-    if (additioanl2ndvar_print > 1)
+    if (output_material_parameters.porosity)
     {
         int idxp = GetNodeValueIndex("POROSITY");
         for (size_t i = 0; i < m_msh->GetNodesNumber(false); i++)
             SetNodeValue(i, idxp, 0.0);
     }
+    if (output_material_parameters.storage)
+    {
+        int idxs = GetNodeValueIndex("STORAGE");
+        for (size_t i = 0; i < m_msh->GetNodesNumber(false); i++)
+            SetNodeValue(i, idxs, 0.0);
+    }
+
     //
     continuum = 0;
     if (continuum_vector.size() == 2)
@@ -11391,7 +11390,7 @@ void CRFProcess::AssembleParabolicEquationRHSVector()
      */
     //----------------------------------------------------------------------
 }
-#endif  //#ifndef NEW_EQS //WW. 07.11.2008
+#endif  // #ifndef NEW_EQS //WW. 07.11.2008
 /*************************************************************************
    GeoSys-FEM Function:
    06/2006 YD Implementation
@@ -13446,7 +13445,7 @@ void EQSDelete()
 **************************************************************************/
 #if !defined(USE_PETSC) && \
     !defined(NEW_EQS)  // && defined(other parallel libs)//03~04.3012. WW
-//#ifndef NEW_EQS                                   //WW 07.11.2008
+// #ifndef NEW_EQS                                   //WW 07.11.2008
 void CRFProcess::EQSDelete()
 {
     std::string pcs_type_name(
@@ -14517,71 +14516,59 @@ void CRFProcess::configMaterialParameters()
         COutput* out = out_vector[i];
         const size_t size(out->_nod_value_vector.size());
         for (size_t k = 0; k < size; k++)
+        {
             if (out->_nod_value_vector[k].find("PERMEABILITY_X1") !=
                 string::npos)
             {
-                additioanl2ndvar_print = 1;
-                break;
+                output_material_parameters.permeability = true;
             }
-        if (additioanl2ndvar_print == 1)
-            break;
-    }
-
-    for (size_t i = 0; i < out_vector_size; i++)
-    {
-        COutput* out = out_vector[i];
-        const size_t size(out->_nod_value_vector.size());
-        for (size_t k = 0; k < size; k++)
-        {
-            if (out->_nod_value_vector[k].find("POROSITY") != string::npos)
+            else if (out->_nod_value_vector[k].find("POROSITY") != string::npos)
             {
-                if (additioanl2ndvar_print > 0)
-                    additioanl2ndvar_print = 2;
-                else
-                    additioanl2ndvar_print = 3;
+                output_material_parameters.porosity = true;
             }
-            if (additioanl2ndvar_print > 1)
-                break;
+            else if (out->_nod_value_vector[k].find("STORAGE") != string::npos)
+            {
+                output_material_parameters.storage = true;
+            }
         }
-        if (additioanl2ndvar_print > 1)
-            break;
     }
 
-    if (additioanl2ndvar_print > 0)  // WW
+    if (output_material_parameters.permeability)
     {
-        if (additioanl2ndvar_print < 3)
+        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
+            "PERMEABILITY_X1";
+        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "1/m^2";
+        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+        pcs_number_of_secondary_nvals++;
+        pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
+            "PERMEABILITY_Y1";
+        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "1/m^2";
+        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+        pcs_number_of_secondary_nvals++;
+        if (max_dim == 2)  // 3D
         {
             pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-                "PERMEABILITY_X1";
+                "PERMEABILITY_Z1";
             pcs_secondary_function_unit[pcs_number_of_secondary_nvals] =
                 "1/m^2";
             pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
             pcs_number_of_secondary_nvals++;
-            pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-                "PERMEABILITY_Y1";
-            pcs_secondary_function_unit[pcs_number_of_secondary_nvals] =
-                "1/m^2";
-            pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-            pcs_number_of_secondary_nvals++;
-            if (max_dim == 2)  // 3D
-            {
-                pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-                    "PERMEABILITY_Z1";
-                pcs_secondary_function_unit[pcs_number_of_secondary_nvals] =
-                    "1/m^2";
-                pcs_secondary_function_timelevel
-                    [pcs_number_of_secondary_nvals] = 1;
-                pcs_number_of_secondary_nvals++;
-            }
         }
-        if (additioanl2ndvar_print > 1)  // WW
-        {
-            pcs_secondary_function_name[pcs_number_of_secondary_nvals] =
-                "POROSITY";
-            pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
-            pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
-            pcs_number_of_secondary_nvals++;
-        }
+    }
+    if (output_material_parameters.porosity)
+    {
+        pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "POROSITY";
+        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "-";
+        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+        pcs_number_of_secondary_nvals++;
+    }
+
+    if (output_material_parameters.storage)
+    {
+        pcs_secondary_function_name[pcs_number_of_secondary_nvals] = "STORAGE";
+        pcs_secondary_function_unit[pcs_number_of_secondary_nvals] = "1/Pa";
+        pcs_secondary_function_timelevel[pcs_number_of_secondary_nvals] = 1;
+        pcs_number_of_secondary_nvals++;
     }
 }
 
@@ -15235,7 +15222,7 @@ void CRFProcess::CalculateFluidDensitiesAndViscositiesAtNodes(CRFProcess* m_pcs)
                 double x_CO2;  // WW, x_H2O;                  // mole fraction
                                // [mol/mol]
                 mass_gas = volume_gas *
-                           Density_gas;  // mass of gas phase [kg] = m³ * kg/m³
+                           Density_gas;   // mass of gas phase [kg] = m³ * kg/m³
                 m_CO2 = mass_gas * wCO2;  // mas of CO2 [kg] = kg * kg/kg
                 m_H2O = mass_gas * wH2O;  // mass of H2O [kg] = kg * kg/kg
                 n_CO2 = m_CO2 * Molweight_CO2 /

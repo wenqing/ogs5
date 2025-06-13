@@ -26,20 +26,19 @@
 #include "msh_lib.h"
 
 // PCSLib
+#include "Eigen/Eigen"
 #include "ProcessInfo.h"
+#include "SparseMatrixDOK.h"
+#include "conversion_rate.h"  // HS, 10.2011
 #include "rf_bc_new.h"
 #include "rf_num_new.h"
 #include "rf_tim_new.h"
-#include "conversion_rate.h"  // HS, 10.2011
-#include "SparseMatrixDOK.h"
 
-#include "Eigen/Eigen"
-
-//#include "rf_st_new.h"//CMCD 02_06
-// C++ STL
-//#include <fstream>
+// #include "rf_st_new.h"//CMCD 02_06
+//  C++ STL
+// #include <fstream>
 //
-// The follows are implicit declaration. WW
+//  The follows are implicit declaration. WW
 //---------------------------------------------------------------------------
 #if defined(USE_PETSC)  // || defined(using other parallel scheme)
 namespace petsc_group
@@ -169,6 +168,15 @@ typedef struct
     int id;
 } VirialCoefficients;
 
+struct OutputMaterialParameters
+{
+    bool permeability = false;
+    bool porosity = false;
+    bool storage = false;
+
+    bool areAllFalse() const { return !permeability && !porosity && !storage; }
+};
+
 #ifdef JFNK_H2M
 /// Dirchlet BC at node. 09.2010. WW
 typedef struct
@@ -281,7 +289,7 @@ protected:  // WW
      */
     int Memory_Type;
     //....................................................................
-    int additioanl2ndvar_print;  // WW
+    OutputMaterialParameters output_material_parameters;
     // TIM
     friend class CTimeDiscretization;
     CTimeDiscretization* Tim;  // time
@@ -390,8 +398,8 @@ public:
     std::vector<long> bc_node_value_in_dom;       // WW for domain decomposition
     std::vector<long> bc_local_index_in_dom;      // WW for domain decomposition
     std::vector<long> rank_bc_node_value_in_dom;  // WW
-#endif  //#if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
-        // WW
+#endif  // #if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
+        //  WW
     std::vector<long> bc_transient_index;  // WW/CB
     std::vector<long> st_transient_index;  // WW/CB...BG
     void UpdateTransientBC();              // WW/CB
@@ -409,8 +417,8 @@ public:
     std::vector<long> st_node_value_in_dom;       // WW for domain decomposition
     std::vector<long> st_local_index_in_dom;      // WW for domain decomposition
     std::vector<long> rank_st_node_value_in_dom;  // WW
-#endif  //#if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
-        // WW
+#endif  // #if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
+        //  WW
     void RecordNodeVSize(const int Size)  // WW
     {
         orig_size = Size;
@@ -427,7 +435,7 @@ public:
     std::vector<double> continuum_vector;
 
     void WriteSolution(const bool for_destructor = false);  // WW
-    void ReadSolution();   // WW
+    void ReadSolution();                                    // WW
     //....................................................................
     // Construction / destruction
     CRFProcess(void);
@@ -695,7 +703,7 @@ public:
     /// For all PDEs excluding that for deformation. 24.11.2010l. WW
     void GlobalAssembly_std(const bool is_mixed_order, bool Check2D3D = false);
     /// Assemble EQS for deformation process.
-    virtual void GlobalAssembly_DM(){};
+    virtual void GlobalAssembly_DM() {};
 #if defined(NEW_EQS) && defined(JFNK_H2M)
     /// Jacobian free method to calculate J*v.
     // 11.08.2010.
@@ -755,8 +763,8 @@ public:
     void IncorporateBoundaryConditions(const int rank, const int axis);
 #if !defined(USE_PETSC)  // && !defined(other parallel libs)//03.3012. WW
     void SetBoundaryConditionSubDomain();  // WW
-#endif  //#if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
-        // WW
+#endif  // #if !defined(USE_PETSC) // && !defined(other parallel libs)//03.3012.
+        //  WW
 // WW void CheckBCGroup(); //OK
 #if !defined(USE_PETSC)  // && !defined(other parallel libs)//03~04.3012. WW
 #ifdef NEW_EQS           // WW
