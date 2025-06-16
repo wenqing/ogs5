@@ -9,22 +9,21 @@
 
 #include "pcs_dm.h"
 
+#include <time.h>
+
 #include <cfloat>
 #include <cmath>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <time.h>
-
-#include "display.h"
-#include "makros.h"
-
-#include "StringTools.h"
 
 #include "FEMEnums.h"
+#include "StringTools.h"
+#include "display.h"
+#include "makros.h"
 #include "mathlib.h"
-//#include "femlib.h"
-// Element
+// #include "femlib.h"
+//  Element
 #include "fem_ele_std.h"
 #include "fem_ele_vec.h"
 // BC_Dynamic
@@ -34,7 +33,7 @@
 //
 #if !defined(USE_PETSC) && \
     !defined(NEW_EQS)  // && defined(other parallel libs)//03~04.3012. WW
-//#ifndef NEW_EQS                                   //WW. 06.11.2008
+// #ifndef NEW_EQS                                   //WW. 06.11.2008
 #include "matrix_routines.h"
 #endif
 #include "fem_ele_vec.h"
@@ -49,7 +48,6 @@
 #include "msh_elem.h"
 // IC
 #include "rf_ic_new.h"
-
 #include "rf_node.h"
 
 #if defined(USE_PETSC)  // || defined(other parallel libs)//03.3012. WW
@@ -181,7 +179,11 @@ void CRFProcessDeformation::Initialization()
     //
     // Monolithic scheme
     if (type / 10 == 4)
+    {
         fem = new CFiniteElementStd(this, Axisymm * m_msh->GetCoordinateFlag());
+        fem->SetGaussPointNumber(m_num->ele_gauss_points);
+    }
+
     //
     pcs_number_deformation = pcs_number;
     //
@@ -421,13 +423,11 @@ void CRFProcessDeformation::InitialMBuffer()
  **************************************************************************/
 double CRFProcessDeformation::Execute(int loop_process_number)
 {
-    ScreenMessage(
-        "      ================================================\n");
+    ScreenMessage("      ================================================\n");
     ScreenMessage("      ->Process %d: %s\n",
-                           loop_process_number,
-                           convertProcessTypeToString(getProcessType()).data());
-    ScreenMessage(
-        "      ================================================\n");
+                  loop_process_number,
+                  convertProcessTypeToString(getProcessType()).data());
+    ScreenMessage("      ================================================\n");
 
     clock_t dm_time;
 
@@ -488,7 +488,7 @@ double CRFProcessDeformation::Execute(int loop_process_number)
         pcs_number_of_primary_nvals * m_msh->GetNodesNumber(true);
     dom->ConfigEQS(m_num, global_eqs_dim, true);
 #else
-    eqs_new->ConfigNumerics(m_num);        // 27.11.2007 WW
+    eqs_new->ConfigNumerics(m_num);  // 27.11.2007 WW
 #endif
 //
 #else
@@ -643,7 +643,7 @@ double CRFProcessDeformation::Execute(int loop_process_number)
             NormU = 1.0e+8;
 
             ScreenMessage("      Starting loading step %d/%d\n", l,
-                                   number_of_load_steps);
+                          number_of_load_steps);
             ScreenMessage("      Load factor: %g\n", LoadFactor);
         }
         ite_steps = 0;
@@ -847,7 +847,7 @@ double CRFProcessDeformation::Execute(int loop_process_number)
 
             // w = w+dw for Newton-Raphson
             UpdateIterativeStep(damping, 0);  // w = w+dw
-        }                                     // Newton-Raphson iteration
+        }  // Newton-Raphson iteration
 
         // Update stresses
         UpdateStress();
@@ -888,9 +888,8 @@ double CRFProcessDeformation::Execute(int loop_process_number)
     dm_time += clock();
 
     ScreenMessage("      CPU time elapsed in deformation: %g s\n",
-                           (double)dm_time / CLOCKS_PER_SEC);
-    ScreenMessage(
-        "      ------------------------------------------------\n");
+                  (double)dm_time / CLOCKS_PER_SEC);
+    ScreenMessage("      ------------------------------------------------\n");
 
     // Recovery the old solution.  Temp --> u_n	for flow process
     RecoverSolution();
@@ -1176,7 +1175,7 @@ void CRFProcessDeformation::InitGauss(void)
             }
 // Initial condition by LBNL
 ////////////////////////////////////////////////////////
-//#define  EXCAVATION
+// #define  EXCAVATION
 #ifdef EXCAVATION
             int gp_r, gp_s, gp_t;
             double z = 0.0;
@@ -1915,7 +1914,7 @@ double CRFProcessDeformation::NormOfUnkonwn_orRHS(bool isUnknowns)
    letzte Aenderung:
 
 **************************************************************************/
-//#define Modified_B_matrix
+// #define Modified_B_matrix
 double CRFProcessDeformation::CaclMaxiumLoadRatio(void)
 {
     double* dstrain;
@@ -2684,7 +2683,7 @@ void CRFProcessDeformation::GlobalAssembly()
     //----------------------------------------------------------------------
     // STD
     else
-#endif  //#if !defined(USE_PETSC) // && !defined(other parallel libs)//10.3012.
+#endif  // #if !defined(USE_PETSC) // && !defined(other parallel libs)//10.3012.
     // WW
     {
         GlobalAssembly_DM();
@@ -2734,8 +2733,8 @@ void CRFProcessDeformation::GlobalAssembly()
             else
                 CalcBC_or_SecondaryVariable_Dynamics(true);
         }
-//  {  		MXDumpGLS("rf_pcs1.txt",1,eqs->b,eqs->x);  //abort();}
-//
+        //  {  		MXDumpGLS("rf_pcs1.txt",1,eqs->b,eqs->x);  //abort();}
+        //
 
 #define atest_dump
 #ifdef test_dump
@@ -3281,7 +3280,7 @@ void CRFProcessDeformation::ReleaseLoadingByExcavation()
              << "\n";
         abort();
     }
-// 2. Compute the released node loading
+    // 2. Compute the released node loading
 
 #if !defined(NEW_EQS) && !defined(USE_PETSC)  // WW. 06.11.2008, 04.2012
     SetLinearSolver(eqs);
@@ -3621,17 +3620,17 @@ bool CRFProcessDeformation::CalcBC_or_SecondaryVariable_Dynamics(bool BC)
             //
             v = GetNodeValue(i, idx_disp[k]);
             v += GetNodeValue(i, idx_vel[k]) * dt +
-                 0.5 * dt * dt * (ARRAY[i + Shift[k]] +
-                                  m_num->GetDynamicDamping_beta2() *
-                                      GetNodeValue(i, idx_acc0[k]));
+                 0.5 * dt * dt *
+                     (ARRAY[i + Shift[k]] + m_num->GetDynamicDamping_beta2() *
+                                                GetNodeValue(i, idx_acc0[k]));
             SetNodeValue(i, idx_disp[k], v);
             if (bc_type[i] & (int)MathLib::fastpow(2, k + problem_dimension_dm))
                 continue;
             // v
             v = GetNodeValue(i, idx_vel[k]);
-            v += dt * ARRAY[i + Shift[k]] +
-                 m_num->GetDynamicDamping_beta1() * dt *
-                     GetNodeValue(i, idx_acc0[k]);
+            v += dt * ARRAY[i + Shift[k]] + m_num->GetDynamicDamping_beta1() *
+                                                dt *
+                                                GetNodeValue(i, idx_acc0[k]);
             SetNodeValue(i, idx_vel[k], v);
         }
 

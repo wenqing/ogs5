@@ -10453,6 +10453,26 @@ void CFiniteElementStd::CalcSaturation(MeshLib::CElem& elem)
         pcs->SetNodeValue(nodes[i], idx_S, eS);
     }
 }
+
+Eigen::VectorXd log10Scale(const Eigen::VectorXd& input)
+{
+    // Check for non-positive values to avoid undefined log10
+    if ((input.array() <= 0).any())
+    {
+        throw std::invalid_argument(
+            "Permeability or storage is non-positive values.");
+    }
+
+    // Apply log10 element-wise using array operations
+    return input.unaryExpr([](double x) { return std::log10(x); });
+}
+
+Eigen::VectorXd inverseLog10Scale(const Eigen::VectorXd& input)
+{
+    // Apply pow(10, input) element-wise
+    return input.unaryExpr([](double x) { return std::pow(10, x); });
+}
+
 /**************************************************************************
    FEMLib-Method:
    Task: Caculate material parameter at element nodes for output
@@ -10461,7 +10481,7 @@ void CFiniteElementStd::CalcSaturation(MeshLib::CElem& elem)
 **************************************************************************/
 void CFiniteElementStd::CalcNodeMatParatemer(MeshLib::CElem& elem)
 {
-    int gp_r, gp_s, gp_t, idx_perm[3];
+    int gp_r, gp_s, gp_t;
     //
     MeshElement = &elem;
     MshElemType::type ElementType = MeshElement->GetElementType();
@@ -10503,6 +10523,7 @@ void CFiniteElementStd::CalcNodeMatParatemer(MeshLib::CElem& elem)
             NodalVal_p20[i] = pcs->GetNodeValue(nodes[i], idx_c0 + 2);
         }
     //
+    int idx_perm[3] = {-1, -1, -1};
     if (pcs->output_material_parameters.permeability)
     {
         idx_perm[0] = pcs->GetNodeValueIndex("PERMEABILITY_X1");
@@ -10533,10 +10554,10 @@ void CFiniteElementStd::CalcNodeMatParatemer(MeshLib::CElem& elem)
     w[0] = w[1] = w[2] = 1.0;
 
     std::vector<double> storage_ip;
-    storage_ip.reserve(nGaussPoints);
     // for PG = interpolate(NodalVal0);
     getShapeFunctionPtr(MeshElement->GetElementType());
     SetIntegrationPointNumber(ElementType);
+    storage_ip.reserve(nGaussPoints);
     for (gp = 0; gp < nGaussPoints; gp++)
     {
         SetGaussPoint(gp, gp_r, gp_s, gp_t);
@@ -10581,6 +10602,7 @@ void CFiniteElementStd::CalcNodeMatParatemer(MeshLib::CElem& elem)
 
     std::vector<Eigen::VectorXd> ip_data_vector;
     std::vector<int> idxs;
+    std::vector<bool> log_scaling;
 
     if (pcs->output_material_parameters.porosity)
     {
@@ -10588,37 +10610,44 @@ void CFiniteElementStd::CalcNodeMatParatemer(MeshLib::CElem& elem)
             Eigen::Map<Eigen::VectorXd>(NodalVal0, nGaussPoints);
         ip_data_vector.push_back(ip_data);
         idxs.push_back(idxp);
+        log_scaling.push_back(false);
     }
     if (pcs->output_material_parameters.storage)
     {
         Eigen::VectorXd ip_data =
             Eigen::Map<Eigen::VectorXd>(storage_ip.data(), nGaussPoints);
-        ip_data_vector.push_back(ip_data);
+        ip_data_vector.push_back(log10Scale(ip_data));
         idxs.push_back(idx_storage);
+        log_scaling.push_back(true);
     }
 
     if (pcs->output_material_parameters.permeability)
     {
         ip_data_vector.push_back(
-            Eigen::Map<Eigen::VectorXd>(NodalVal2, nGaussPoints));
+            log10Scale(Eigen::Map<Eigen::VectorXd>(NodalVal2, nGaussPoints)));
         idxs.push_back(idx_perm[0]);
+        log_scaling.push_back(true);
 
         ip_data_vector.push_back(
-            Eigen::Map<Eigen::VectorXd>(NodalVal3, nGaussPoints));
+            log10Scale(Eigen::Map<Eigen::VectorXd>(NodalVal3, nGaussPoints)));
         idxs.push_back(idx_perm[1]);
+        log_scaling.push_back(true);
 
         if (dim == 3)
         {
-            ip_data_vector.push_back(
-                Eigen::Map<Eigen::VectorXd>(NodalVal4, nGaussPoints));
+            ip_data_vector.push_back(log10Scale(
+                Eigen::Map<Eigen::VectorXd>(NodalVal4, nGaussPoints)));
             idxs.push_back(idx_perm[2]);
+            log_scaling.push_back(true);
         }
     }
 
     for (std::size_t ipd = 0; ipd < ip_data_vector.size(); ipd++)
     {
         Eigen::VectorXd const ip_data = ip_data_vector[ipd];
-        Eigen::VectorXd const extrapolated_data = extrapolate(ip_data);
+        Eigen::VectorXd const extrapolated_data =
+            log_scaling[ipd] ? inverseLog10Scale(extrapolate(ip_data))
+                             : extrapolate(ip_data);
 
         for (int i = 0; i < nnodes; i++)
         {
