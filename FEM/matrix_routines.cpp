@@ -83,19 +83,20 @@
    -> schnelleres Suchen
 **************************************************************************/
 
+#include <cfloat>
+
 #include "makros.h"
 #include "solver.h"
-#include <cfloat>
 
 #define noTESTMATRIX_PERF
 #define noDUMP
 
 /* Header / Andere intern benutzte Module */
-#include "memory.h"
 #include "display.h"
 #include "files0.h"
 #include "mathlib.h"
 #include "matrix_routines.h"
+#include "memory.h"
 // MSHLib
 #include "msh_mesh.h"
 #include "msh_node.h"
@@ -2124,7 +2125,7 @@ void M6MatVek(double* b, double* erg)
     //  printf("In M6MatVek itpack_max=%d\n",itpack_max);
     for (i = 0; i < itpack_max; i++)
     {
-//#pragma omp parallel for private(j) shared(erg,itpackv,b,num,it_col)
+// #pragma omp parallel for private(j) shared(erg,itpackv,b,num,it_col)
 #ifdef SX
 #pragma cdir nodep
 #endif
@@ -2663,7 +2664,7 @@ void MXEliminateIrrNode(long index, int anz_nachbarn, long* nachbarn_index,
                     else
                         k++;
                 } /* endwhile */
-            }     /* endfor */
+            } /* endfor */
 
             for (j = 0l; j < anz_nachbarn; j++)
                 /* Der rechte Seite-Eintrag wird den Nachbarn zugeschlagen */
@@ -2793,13 +2794,13 @@ void MXEliminateIrrNode(long index, int anz_nachbarn, long* nachbarn_index,
                         }
                         j34++;
                     } /* endwhile */
-                }     /* endif */
-            }         /* endfor */
+                } /* endif */
+            } /* endfor */
 
             /* Der rechte Seite-Eintrag wird den Nachbarn zugeschlagen */
             for (j = 0l; j < anz_nachbarn; j++)
                 rechts[nachbarn_index[j]] += gewicht * rechts[index];
-                /* endfor j */
+            /* endfor j */
 
 #ifdef DUMP
             MXDumpGLS("b_zeile", 1, rechts, rechts);
@@ -2879,7 +2880,7 @@ void MXEliminateIrrNode(long index, int anz_nachbarn, long* nachbarn_index,
                     else
                         k++;
                 } /* endwhile */
-            }     /* endfor */
+            } /* endfor */
 
             for (j = 0l; j < anz_nachbarn; j++)
                 /* Der rechte Seite-Eintrag wird den Nachbarn zugeschlagen */
@@ -2956,7 +2957,7 @@ void MXEliminateIrrNode(long index, int anz_nachbarn, long* nachbarn_index,
                     else
                         k++;
                 } /* endwhile */
-            }     /* endfor */
+            } /* endfor */
 
             for (j = 0l; j < anz_nachbarn; j++)
                 /* Der rechte Seite-Eintrag wird den Nachbarn zugeschlagen */
@@ -3051,139 +3052,132 @@ void M1Vorkond(int aufgabe, double* x, double* b)
     switch (aufgabe)
     {
         case 0: /* Start des Vorkonditionierers */
-            if
-                VK_Modus(VK_Extraktion)
-                { /* immer zuerst! */
-                    x0 = (double*)Malloc(sizeof(double) * dim);
-                    r0 = (double*)Malloc(sizeof(double) * dim);
-                    MXResiduum(x, b,
-                               r0); /* Rechte Seite ex A*(Startloesung x) */
-                    for (i = 0; i < dim; i++)
-                    {
-                        b[i] = r0[i];
-                        x0[i] = x[i];
-                        x[i] = 0.0;
-                    }
-                    r0 = (double*)Free(r0);
+            if VK_Modus (VK_Extraktion)
+            { /* immer zuerst! */
+                x0 = (double*)Malloc(sizeof(double) * dim);
+                r0 = (double*)Malloc(sizeof(double) * dim);
+                MXResiduum(x, b, r0); /* Rechte Seite ex A*(Startloesung x) */
+                for (i = 0; i < dim; i++)
+                {
+                    b[i] = r0[i];
+                    x0[i] = x[i];
+                    x[i] = 0.0;
                 }
-            if
-                VK_Modus(VK_Skalierung)
-                { /* Diagonal-Skalierung */
-                    for (i = 0; i < dim; i++)
+                r0 = (double*)Free(r0);
+            }
+            if VK_Modus (VK_Skalierung)
+            { /* Diagonal-Skalierung */
+                for (i = 0; i < dim; i++)
+                {
+                    if (fabs(Aik1(i, i)) > DBL_MIN)
                     {
-                        if (fabs(Aik1(i, i)) > DBL_MIN)
-                        {
-                            h = 1. / Aik1(i, i);
-                            b[i] *= h;
-                            for (k = 0; k < dim; k++)
-                                Aik1(i, k) *= h;
-                        }
-                        else
-                        {
-                            DisplayMsg("!!! Equation system: Line: ");
-                            DisplayLong(i);
-                            DisplayMsg(" Value: ");
-                            DisplayDouble(Aik1(i, i), 0, 0);
-                            DisplayMsgLn(
-                                "!!! Diagonal near zero! Disable diagonal "
-                                "preconditioner!");
-                            exit(1);
-                        }
+                        h = 1. / Aik1(i, i);
+                        b[i] *= h;
+                        for (k = 0; k < dim; k++)
+                            Aik1(i, k) *= h;
+                    }
+                    else
+                    {
+                        DisplayMsg("!!! Equation system: Line: ");
+                        DisplayLong(i);
+                        DisplayMsg(" Value: ");
+                        DisplayDouble(Aik1(i, i), 0, 0);
+                        DisplayMsgLn(
+                            "!!! Diagonal near zero! Disable diagonal "
+                            "preconditioner!");
+                        exit(1);
                     }
                 }
+            }
             break;
 
         case 1: /* Ende des Vorkonditionierers */
-            if
-                VK_Modus(VK_iLDU) Gik = (double*)Free(Gik);
+            if VK_Modus (VK_iLDU)
+                Gik = (double*)Free(Gik);
 
-            if
-                VK_Modus(VK_Extraktion)
-                { /* immer zuletzt: Startloesung addieren */
-                    for (i = 0; i < dim; i++)
-                        x[i] += x0[i];
-                    x0 = (double*)Free(x0);
-                }
+            if VK_Modus (VK_Extraktion)
+            { /* immer zuletzt: Startloesung addieren */
+                for (i = 0; i < dim; i++)
+                    x[i] += x0[i];
+                x0 = (double*)Free(x0);
+            }
             break;
 
         case 2: /* Linkstransformation des Gesamtsystems x <= L*b */
-            if
-                VK_Modus(VK_iLDU)
-                { /*  Gauss anstelle L(D)U-Zerlegung */
-                    long ia, diag, ka = 0;
-                    if (Gik == NULL)
-                    { /* Matrix kopieren (transponiert!) und zerlegen */
-                        long ig = 0;
-                        Gik = (double*)Malloc(dim * dim * sizeof(double));
-                        for (k = 0; k < dim; k++)
+            if VK_Modus (VK_iLDU)
+            { /*  Gauss anstelle L(D)U-Zerlegung */
+                long ia, diag, ka = 0;
+                if (Gik == NULL)
+                { /* Matrix kopieren (transponiert!) und zerlegen */
+                    long ig = 0;
+                    Gik = (double*)Malloc(dim * dim * sizeof(double));
+                    for (k = 0; k < dim; k++)
+                    {
+                        ia = k;
+                        for (i = 0; i < dim; i++)
                         {
-                            ia = k;
-                            for (i = 0; i < dim; i++)
-                            {
-                                Gik[ig++] = w->matrix[ia];
-                                ia += dim;
-                            }
+                            Gik[ig++] = w->matrix[ia];
+                            ia += dim;
                         }
-
-                        for (k = 0; k < dim; k++)
-                        { /* alle Spalten/Zeilen */
-                            diag = 0;
-                            for (i = 0; i < k; i++)
-                            { /* Spalte ohne Okk */
-                                Gik[ka + i] -=
-                                    H_M1skprod(&Gik[i], dim, &Gik[ka], i);
-                                Gik[ka + i] *= Gik[diag];
-                                diag += dim + 1; /* /Uii (Kehrwert) */
-                            }                    /* i */
-
-                            ia = 0; /* Spaltenanfang Spalte i */
-                            for (i = 0; i <= k; i++)
-                            { /* Zeile incl. Ukk */
-                                Gik[ia + k] -=
-                                    H_M1skprod(&Gik[k], dim, &Gik[ia], i);
-                                ia += dim;               /* Uik */
-                            }                            /* i */
-                            Gik[diag] = 1.0 / Gik[diag]; /* 1.0/Ukk */
-                            ka += dim;                   /* naechste Spalte k */
-                        }
-                    } /* k - Matrix zerlegt */
-                    /* Gleichungssystem aufloesen */
-                    diag = 0;
-                    for (i = 0; i < dim; i++)
-                    { /*  vorwaerts einsetzen mit Uik */
-                        x[i] =
-                            (b[i] - H_M1skprod(&Gik[i], dim, x, i)) * Gik[diag];
-                        diag += dim + 1; /* naechstes Diagonalelement */
                     }
-                    diag--; /* rechts neben letztem Diagonalelement */
-                    for (i = dim; i > 0; i--)
-                    { /* rueckwaerts einsetzen mit Oik */
-                        x[i - 1] -= H_M1skprod(&Gik[diag], dim, &x[i], dim - i);
-                        diag -= dim + 1;
-                    } /* i */
-                }     /* Modus iLDU, (zerlegen und) aufloesen */
+
+                    for (k = 0; k < dim; k++)
+                    { /* alle Spalten/Zeilen */
+                        diag = 0;
+                        for (i = 0; i < k; i++)
+                        { /* Spalte ohne Okk */
+                            Gik[ka + i] -=
+                                H_M1skprod(&Gik[i], dim, &Gik[ka], i);
+                            Gik[ka + i] *= Gik[diag];
+                            diag += dim + 1; /* /Uii (Kehrwert) */
+                        } /* i */
+
+                        ia = 0; /* Spaltenanfang Spalte i */
+                        for (i = 0; i <= k; i++)
+                        { /* Zeile incl. Ukk */
+                            Gik[ia + k] -=
+                                H_M1skprod(&Gik[k], dim, &Gik[ia], i);
+                            ia += dim; /* Uik */
+                        } /* i */
+                        Gik[diag] = 1.0 / Gik[diag]; /* 1.0/Ukk */
+                        ka += dim;                   /* naechste Spalte k */
+                    }
+                } /* k - Matrix zerlegt */
+                /* Gleichungssystem aufloesen */
+                diag = 0;
+                for (i = 0; i < dim; i++)
+                { /*  vorwaerts einsetzen mit Uik */
+                    x[i] = (b[i] - H_M1skprod(&Gik[i], dim, x, i)) * Gik[diag];
+                    diag += dim + 1; /* naechstes Diagonalelement */
+                }
+                diag--; /* rechts neben letztem Diagonalelement */
+                for (i = dim; i > 0; i--)
+                { /* rueckwaerts einsetzen mit Oik */
+                    x[i - 1] -= H_M1skprod(&Gik[diag], dim, &x[i], dim - i);
+                    diag -= dim + 1;
+                } /* i */
+            } /* Modus iLDU, (zerlegen und) aufloesen */
             // fall through
-        case 3:       /* Linkstransformation des Gesamtsystems x <= L(t)*b */
-            if
-                VK_Modus(VK_iLDU)
-                { /*  Gauss anstelle L(D)U-Zerlegung */
-                    long ia = 0, diag = dim * dim - 1;
-                    /* Nur aufloesen, Matrix ist immer schon zerlegt! */
-                    for (i = 0; i < dim; i++)
-                    { /*  vorwaerts einsetzen mit Oik */
-                        x[i] = b[i] - H_M1skprod(&Gik[ia], 1l, x, i);
-                        ia += dim;
-                    }
+        case 3: /* Linkstransformation des Gesamtsystems x <= L(t)*b */
+            if VK_Modus (VK_iLDU)
+            { /*  Gauss anstelle L(D)U-Zerlegung */
+                long ia = 0, diag = dim * dim - 1;
+                /* Nur aufloesen, Matrix ist immer schon zerlegt! */
+                for (i = 0; i < dim; i++)
+                { /*  vorwaerts einsetzen mit Oik */
+                    x[i] = b[i] - H_M1skprod(&Gik[ia], 1l, x, i);
+                    ia += dim;
+                }
 
-                    ia--; /* rechts neben letztem Diagonalelement */
-                    for (i = dim; i > 0; i--)
-                    { /* rueckwaerts einsetzen mit Uik */
-                        x[i - 1] -= H_M1skprod(&Gik[ia], 1l, &x[i], dim - i);
-                        x[i - 1] *= Gik[diag];
-                        diag -= dim + 1;
-                    } /* i */
-                }     /* Modus iLDU, aufloesen mit L(t) */
-    }                 /* aufgabe */
+                ia--; /* rechts neben letztem Diagonalelement */
+                for (i = dim; i > 0; i--)
+                { /* rueckwaerts einsetzen mit Uik */
+                    x[i - 1] -= H_M1skprod(&Gik[ia], 1l, &x[i], dim - i);
+                    x[i - 1] *= Gik[diag];
+                    diag -= dim + 1;
+                } /* i */
+            } /* Modus iLDU, aufloesen mit L(t) */
+    } /* aufgabe */
 } /* M1Vorkond */
 
 /**** Modell 2 ************************************************************/
@@ -3203,65 +3197,60 @@ void M2Vorkond(int aufgabe, double* x, double* b)
     {
         //--------------------------------------------------------------------
         case 0: /* Start des Vorkonditionierers */
-            if
-                VK_Modus(VK_Extraktion)
-                { /* immer zuerst! */
-                    x0 = (double*)Malloc(sizeof(double) * dim);
-                    r0 = (double*)Malloc(sizeof(double) * dim);
-                    MXResiduum(x, b,
-                               r0); /* Rechte Seite ex A*(Startloesung x) */
-                    for (i = 0; i < dim; i++)
-                    {
-                        b[i] = r0[i];
-                        x0[i] = x[i];
-                        x[i] = 0.0;
-                    }
-                    r0 = (double*)Free(r0);
+            if VK_Modus (VK_Extraktion)
+            { /* immer zuerst! */
+                x0 = (double*)Malloc(sizeof(double) * dim);
+                r0 = (double*)Malloc(sizeof(double) * dim);
+                MXResiduum(x, b, r0); /* Rechte Seite ex A*(Startloesung x) */
+                for (i = 0; i < dim; i++)
+                {
+                    b[i] = r0[i];
+                    x0[i] = x[i];
+                    x[i] = 0.0;
                 }
-            if
-                VK_Modus(VK_Skalierung)
-                { /* Diagonal-Skalierung */
-                    for (k = 0; k < dim; k++)
+                r0 = (double*)Free(r0);
+            }
+            if VK_Modus (VK_Skalierung)
+            { /* Diagonal-Skalierung */
+                for (k = 0; k < dim; k++)
+                {
+                    if (fabs(Diag2(k)) > DBL_MIN)
                     {
-                        if (fabs(Diag2(k)) > DBL_MIN)
-                        {
-                            h = 1. / Diag2(k);
-                            b[k] *= h;
-                            for (i = 0; i < Zeil2(k).anz; i++)
-                                Aik2(k, i) *= h;
-                        }
-                        else
-                        {
-                            DisplayMsg("!!! Equation system: Line: ");
-                            DisplayLong(k);
-                            DisplayMsg(" Value: ");
-                            DisplayDouble(Diag2(k), 0, 0);
-                            DisplayMsgLn("");
-                            DisplayMsgLn(
-                                "!!! Diagonal near zero! Disable diagonal "
-                                "preconditioner!");
-                            exit(1);
-                        }
+                        h = 1. / Diag2(k);
+                        b[k] *= h;
+                        for (i = 0; i < Zeil2(k).anz; i++)
+                            Aik2(k, i) *= h;
+                    }
+                    else
+                    {
+                        DisplayMsg("!!! Equation system: Line: ");
+                        DisplayLong(k);
+                        DisplayMsg(" Value: ");
+                        DisplayDouble(Diag2(k), 0, 0);
+                        DisplayMsgLn("");
+                        DisplayMsgLn(
+                            "!!! Diagonal near zero! Disable diagonal "
+                            "preconditioner!");
+                        exit(1);
                     }
                 }
+            }
             break;
         //--------------------------------------------------------------------
         case 1: /* Ende des Vorkonditionierers */
-            if
-                VK_Modus(VK_Extraktion)
-                { /* immer zuletzt: Startloesung addieren */
-                    for (i = 0; i < dim; i++)
-                        x[i] += x0[i];
-                    x0 = (double*)Free(x0);
-                }
+            if VK_Modus (VK_Extraktion)
+            { /* immer zuletzt: Startloesung addieren */
+                for (i = 0; i < dim; i++)
+                    x[i] += x0[i];
+                x0 = (double*)Free(x0);
+            }
             break;
         //--------------------------------------------------------------------
         case 2:
         //--------------------------------------------------------------------
-        case 3: /* Linkstransformationen */
-            if
-                VK_Modus(VK_iLDU) /*  incomplete L(D)U-Zerlegung geht nicht! */
-                    DisplayMsgLn("Modell 2: kein ILU-Vorkonditionierer!");
+        case 3:                   /* Linkstransformationen */
+            if VK_Modus (VK_iLDU) /*  incomplete L(D)U-Zerlegung geht nicht! */
+                DisplayMsgLn("Modell 2: kein ILU-Vorkonditionierer!");
             //--------------------------------------------------------------------
     }
     //======================================================================
@@ -3309,16 +3298,16 @@ void M34Vorkond(int aufgabe, double* x, double* b)
                         for (l = 0; l < dim; l++)
                             M34Mul(k, l, h);
                     }
-                    /*
-                       else {
-                       DisplayMsg("!!! Equation system: Line: ");
-                       DisplayLong(k);
-                       DisplayMsg(" Value: ");
-                       DisplayDouble(w -> Diag[k], 0, 0);
-                       DisplayMsgLn("");
-                       DisplayMsgLn("!!! Diagonal near zero! Disable diagonal
-                       preconditioner!"); exit(1);
-                       }*/
+                /*
+                   else {
+                   DisplayMsg("!!! Equation system: Line: ");
+                   DisplayLong(k);
+                   DisplayMsg(" Value: ");
+                   DisplayDouble(w -> Diag[k], 0, 0);
+                   DisplayMsgLn("");
+                   DisplayMsgLn("!!! Diagonal near zero! Disable diagonal
+                   preconditioner!"); exit(1);
+                   }*/
 
 #ifdef geht_nicht
                 for (k = 0; k < dim; k++)
@@ -3401,7 +3390,7 @@ void M34Vorkond(int aufgabe, double* x, double* b)
                         w->PreD[k] = 1.0 / Dkk; /* Kehrwert speichern */
                     }
                     w->stat = 2; /* merken! */
-                }                /* Ende der Zerlegung */
+                } /* Ende der Zerlegung */
                 /* genaeherte Loesung von  A*x = b. Ergebnis: x */
                 for (k = 0; k < dim;
                      k++) /* vorwaerts einsetzen mit Untermatrix */
@@ -3411,6 +3400,9 @@ void M34Vorkond(int aufgabe, double* x, double* b)
                         r -= Bik34(k, j, u) * x[Ind34(k, j)];
                     x[k] = r;
                 }
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
                 for (k = 0; k < dim; k++)
                     x[k] *= w->PreD[k]; /* Diagonal-Normierung */
                 for (k = dim - 1; k > 0;
@@ -3421,7 +3413,7 @@ void M34Vorkond(int aufgabe, double* x, double* b)
                         x[Ind34(k, j)] -= Bik34(k, j, o) * r;
                 }
             } /* Ende ILU-Vorkonditionierer */
-    }         /* switch aufgabe */
+    } /* switch aufgabe */
 } /*M34Precond */
 
 /**** Modell 5 ************************************************************/
@@ -3444,116 +3436,111 @@ void M5Vorkond(int aufgabe, double* x, double* b)
     {
         //--------------------------------------------------------------------
         case 0: /* Start des Vorkonditionierers */
-            if
-                VK_Modus(VK_Extraktion)
-                { /* immer zuerst! */
-                    x0 = (double*)Malloc(sizeof(double) * dim);
-                    r0 = (double*)Malloc(sizeof(double) * dim);
-                    MXResiduum(x, b,
-                               r0); /* Rechte Seite ex A*(Startloesung x) */
-                    for (i = 0; i < dim; i++)
-                    {
-                        b[i] = r0[i];
-                        x0[i] = x[i];
-                        x[i] = 0.0;
-                    }
-                    r0 = (double*)Free(r0);
-                }
-            if
-                VK_Modus(VK_Skalierung)
+            if VK_Modus (VK_Extraktion)
+            { /* immer zuerst! */
+                x0 = (double*)Malloc(sizeof(double) * dim);
+                r0 = (double*)Malloc(sizeof(double) * dim);
+                MXResiduum(x, b, r0); /* Rechte Seite ex A*(Startloesung x) */
+                for (i = 0; i < dim; i++)
                 {
-                    for (k = 0; k < Dim_L; k++)
-                    {
-                        v_diag = jdiag[diag5_i[k]];
-                        if (fabs(v_diag) > DBL_MIN)
-                        {
-                            h = 1. / v_diag;
-                            b[k] *= h;
-                        }
-                        else
-                        {
-                            DisplayMsg("!!! Equation system: Line: ");
-                            DisplayLong(k);
-                            DisplayMsg(" Value: ");
-                            DisplayDouble(Diag2(k), 0, 0);
-                            DisplayMsgLn("");
-                            DisplayMsgLn(
-                                "!!! Diagonal near zero! Disable diagonal "
-                                "preconditioner!");
-                            exit(1);
-                        }
-                    }
-
-                    // For test, must be improved
-
-                    double val;
-                    for (k = 0; k < Dim_L; k++)
-                    {
-                        v_diag = MXGet(k, k);
-                        for (ii = 0; ii < Dim_L; ii++)
-                        {
-                            val = MXGet(k, ii);
-                            val /= v_diag;
-                            MXSet(k, ii, val);
-                        }
-                    }
-
-                    /*
-                       long count1 = 0;
-                       for (k = 0; k < jd_ptr_max; k++)
-                       {
-                           for (i = 0; i < jd_ptr[k]; i++)
-                           {
-                              // Row of equation system
-                              ii = jd_ptr2[i];
-                              v_diag = jdiag[diag5_i[ii]];
-                              if(fabs(v_diag) > DBL_MIN)
-                                 jdiag[count1] /= v_diag;  //
-                       count1++;
-                       }
-                       }
-                     */
-                    /////////////////////////////////////////////////
-
-                    /*
-                       // Diagonal-Skalierung
-                       for (k = 0; k < dim; k++)
-                       {
-                        if(fabs(Diag2(k)) > DBL_MIN) {
-                          h = 1. / Diag2(k);
-                          b[k] *= h;
-                          for (i = 0; i < Zeil2(k).anz; i++)
-                            Aik2(k, i) *= h;
-                        } else {
-                          DisplayMsg("!!! Equation system: Line: ");
-                       DisplayLong(k);
-                       DisplayMsg(" Value: ");
-                       DisplayDouble(Diag2(k), 0, 0);
-                       DisplayMsgLn("");
-                       DisplayMsgLn("!!! Diagonal near zero! Disable diagonal
-                       preconditioner!"); exit(1);
-                       }
-                       }
-                     */
+                    b[i] = r0[i];
+                    x0[i] = x[i];
+                    x[i] = 0.0;
                 }
+                r0 = (double*)Free(r0);
+            }
+            if VK_Modus (VK_Skalierung)
+            {
+                for (k = 0; k < Dim_L; k++)
+                {
+                    v_diag = jdiag[diag5_i[k]];
+                    if (fabs(v_diag) > DBL_MIN)
+                    {
+                        h = 1. / v_diag;
+                        b[k] *= h;
+                    }
+                    else
+                    {
+                        DisplayMsg("!!! Equation system: Line: ");
+                        DisplayLong(k);
+                        DisplayMsg(" Value: ");
+                        DisplayDouble(Diag2(k), 0, 0);
+                        DisplayMsgLn("");
+                        DisplayMsgLn(
+                            "!!! Diagonal near zero! Disable diagonal "
+                            "preconditioner!");
+                        exit(1);
+                    }
+                }
+
+                // For test, must be improved
+
+                double val;
+                for (k = 0; k < Dim_L; k++)
+                {
+                    v_diag = MXGet(k, k);
+                    for (ii = 0; ii < Dim_L; ii++)
+                    {
+                        val = MXGet(k, ii);
+                        val /= v_diag;
+                        MXSet(k, ii, val);
+                    }
+                }
+
+                /*
+                   long count1 = 0;
+                   for (k = 0; k < jd_ptr_max; k++)
+                   {
+                       for (i = 0; i < jd_ptr[k]; i++)
+                       {
+                          // Row of equation system
+                          ii = jd_ptr2[i];
+                          v_diag = jdiag[diag5_i[ii]];
+                          if(fabs(v_diag) > DBL_MIN)
+                             jdiag[count1] /= v_diag;  //
+                   count1++;
+                   }
+                   }
+                 */
+                /////////////////////////////////////////////////
+
+                /*
+                   // Diagonal-Skalierung
+                   for (k = 0; k < dim; k++)
+                   {
+                    if(fabs(Diag2(k)) > DBL_MIN) {
+                      h = 1. / Diag2(k);
+                      b[k] *= h;
+                      for (i = 0; i < Zeil2(k).anz; i++)
+                        Aik2(k, i) *= h;
+                    } else {
+                      DisplayMsg("!!! Equation system: Line: ");
+                   DisplayLong(k);
+                   DisplayMsg(" Value: ");
+                   DisplayDouble(Diag2(k), 0, 0);
+                   DisplayMsgLn("");
+                   DisplayMsgLn("!!! Diagonal near zero! Disable diagonal
+                   preconditioner!"); exit(1);
+                   }
+                   }
+                 */
+            }
             break;
         //--------------------------------------------------------------------
         case 1: /* Ende des Vorkonditionierers */
-            if
-                VK_Modus(VK_Extraktion)
-                { /* immer zuletzt: Startloesung addieren */
-                    for (i = 0; i < dim; i++)
-                        x[i] += x0[i];
-                    x0 = (double*)Free(x0);
-                }
+            if VK_Modus (VK_Extraktion)
+            { /* immer zuletzt: Startloesung addieren */
+                for (i = 0; i < dim; i++)
+                    x[i] += x0[i];
+                x0 = (double*)Free(x0);
+            }
             break;
         //--------------------------------------------------------------------
         case 2:
         //--------------------------------------------------------------------
-        case 3: /* Linkstransformationen */
-            if
-                VK_Modus(VK_iLDU) /*  incomplete L(D)U-Zerlegung geht nicht! */
-                    DisplayMsgLn("Modell 2: kein ILU-Vorkonditionierer!");
+        case 3:                   /* Linkstransformationen */
+            if VK_Modus (VK_iLDU) /*  incomplete L(D)U-Zerlegung geht nicht! */
+                DisplayMsgLn("Modell 2: kein ILU-Vorkonditionierer!");
             //--------------------------------------------------------------------
     }
     //======================================================================

@@ -49,6 +49,7 @@ option(PARALLEL_USE_MPI "Use MPI parallization" OFF)
 option(OGS_USE_JFNK "Use Jacobain free method for solving H2M" OFF)
 option(OGS_USE_LIS "Use LIS solver" OFF)
 option(OGS_USE_MKL "Use PARDISO in MKL" OFF)
+option(OGS_USE_OPENMP "Use OpenMP in the SpBICGSTAB solver" OFF)
 option(OGS_USE_CVODE "Use sundials cvode for TNEQ/TES" OFF)
 set(OGS_CPU_ARCHITECTURE "native" CACHE STRING "Processor architecture, defaults to native.")
 option(OGS_PYTHON "Enable python scripting interface" OFF)
@@ -278,12 +279,18 @@ if(PARALLEL_USE_MPI)
 	include_directories(${MPI_CXX_INCLUDE_PATH})
 endif()
 
+if (OGS_USE_OPENMP)
+    set(PARALLEL_USE_OPENMP ON CACHE INTERNAL "Use Open Multi-Processing")
+endif()
+
+
 if(PARALLEL_USE_OPENMP)
 	find_package( OpenMP REQUIRED )
 	set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}" )
 	set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}" )
 	set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgomp" )
 endif()
+
 
 if(OGS_DELETE_EDGES_AFTER_INIT)
 	add_definitions(-DOGS_DELETE_EDGES_AFTER_INIT)

@@ -159,19 +159,23 @@
 #include <mpi.h>
 #endif
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 /* Preprozessor-Definitionen */
 
+#include <algorithm>
 #include <cfloat>
 #include <cstdlib>
-#include <algorithm>
 
-//#include <stdio.h>
-#include "femlib.h"  //CMCD 03 2004
-#include "makros.h"
-#include "memory.h"
+// #include <stdio.h>
 #include "display.h"
-#include "mathlib.h"
+#include "femlib.h"       //CMCD 03 2004
 #include "geo_mathlib.h"  // for M3KreuzProdukt
+#include "makros.h"
+#include "mathlib.h"
+#include "memory.h"
 
 // WW----------------------
 #include "par_ddc.h"
@@ -474,8 +478,11 @@ double MRange(double a, double b, double c)
 
 void MNulleVec(double* vec, long g)
 {
-    register long i;
-    for (i = 0; i < g; i++)
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+    // register long i;
+    for (long i = 0; i < g; i++)
         vec[i] = 0.0;
 }
 
@@ -557,6 +564,9 @@ double MVekNorm2(double* x, long n)
     register double erg = 0.0;
 #ifdef SX
 #pragma cdir nodep
+#endif
+#ifdef _OPENMP
+#pragma omp parallel for reduction(+ : erg)
 #endif
     for (i = 0l; i < n; i++)
         erg += x[i] * x[i];
@@ -748,6 +758,9 @@ void MKopierVec(double* vecquelle, double* vecziel, long g)
 #endif
 #ifdef SX
 #pragma cdir nodep
+#endif
+#ifdef _OPENMP
+#pragma omp parallel for
 #endif
     for (i = 0; i < g; i++)
         vecziel[i] = vecquelle[i];

@@ -15,9 +15,12 @@
 **************************************************************************/
 
 #include "geo_mathlib.h"
-#include "mathlib.h"  //WW
-#include <cstdio>
+
 #include <stdlib.h>
+
+#include <cstdio>
+
+#include "mathlib.h"  //WW
 
 /**************************************************************************/
 /* GEO MathLib - Funktion: EuklVek3dDist
@@ -154,12 +157,15 @@ int M3KreuzProdukt(double* vec1, double* vec2, double* vec)
 double MSkalarprodukt(double* vec1, double* vec2, long g)
 {
 #ifndef CBLAS_MSkalarprodukt
-    register long i;
+    // register long i;
     register double sammy = 0.0;
 #ifdef SX
 #pragma cdir nodep
 #endif
-    for (i = 0l; i < g; i++)
+#ifdef _OPENMP
+#pragma omp parallel for reduction(+ : sammy)
+#endif
+    for (long i = 0l; i < g; i++)
         sammy += vec1[i] * vec2[i];
     return sammy;
 #else
@@ -535,7 +541,7 @@ long* TOLSortNodes1(long* nodes, double* criterium, int anz)
                 nodes[i + 1] = tempnode;
                 criterium[i + 1] = temp;
             } /* end if */
-              /* end for */
+        /* end for */
     } while (flag == 1);
     return nodes;
 }

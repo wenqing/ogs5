@@ -34,18 +34,22 @@ BICGStab 01/2001   CT   - Neues Fehlerkriterium: max(||Ax||, ||b||, ||r0||)
 *************************************************************************/
 #include <cfloat>
 #include <iostream>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 using namespace std;
+#include "display.h"
 #include "files0.h"
 #include "makros.h"
 #include "mathlib.h"
 #include "matrix_routines.h"
+#include "memory.h"
 #include "rf_pcs.h"  //OK_MOD"
 #include "rf_tim_new.h"
 #include "solver.h"
 #include "tools.h"
-#include "mathlib.h"
-#include "memory.h"
-#include "display.h"
 
 /* AMG-Solver */
 #ifdef AMG1R5
@@ -281,11 +285,11 @@ int SpRichardson(double* b, double* x, long n)
     if (vorkond)
         MXVorkond(0, x, b);
 
-        // WW if (cg_maxiter > 0)
-        // WW   max_iter = cg_maxiter;
+    // WW if (cg_maxiter > 0)
+    // WW   max_iter = cg_maxiter;
 
-        // OK411    if (cg_maxiter == -1)
-        // OK411        max_iter = NodeListLength;
+    // OK411    if (cg_maxiter == -1)
+    // OK411        max_iter = NodeListLength;
 
 #ifdef TESTLOES1
     DisplayMsgLn("SpRichard");
@@ -337,8 +341,8 @@ int SpRichardson(double* b, double* x, long n)
     }
     for (;;)
     {
-        if
-            VK_Modus(VK_iLDU) MXVorkond(2, r, r); /* Ra, 3/2000 */
+        if VK_Modus (VK_iLDU)
+            MXVorkond(2, r, r); /* Ra, 3/2000 */
         MVekSum(x, gls_iter_theta, r, n);
 #ifdef SOLVER_SHOW_RESULTS
         printf("\n%ld %f %f %f %f %f", (long)k, x[(long)(n * .1)],
@@ -417,8 +421,8 @@ int SpJOR(double* b, double* x, long n)
 
     if (cg_maxiter > 0)
         max_iter = cg_maxiter;
-        // OK411    if (cg_maxiter == -1)
-        // OK411        max_iter = NodeListLength;
+    // OK411    if (cg_maxiter == -1)
+    // OK411        max_iter = NodeListLength;
 
 #ifdef TESTLOES1
     DisplayMsgLn("SpJacobi");
@@ -491,8 +495,8 @@ int SpJOR(double* b, double* x, long n)
         if (k == -1)
             break;
 
-        if
-            VK_Modus(VK_iLDU) MXVorkond(2, r, r); /* Ra, 3/2000 */
+        if VK_Modus (VK_iLDU)
+            MXVorkond(2, r, r); /* Ra, 3/2000 */
         MVekSum(x, gls_iter_theta, r, n);
 #ifdef SOLVER_SHOW_RESULTS
         printf("\n%ld %f %f %f %f %f", (long)k, x[(long)(n * .1)],
@@ -575,8 +579,8 @@ int SpSOR(double* b, double* x, long n)
 
     if (cg_maxiter > 0)
         max_iter = cg_maxiter;
-        // OK411    if (cg_maxiter == -1)
-        // OK411        max_iter = NodeListLength;
+    // OK411    if (cg_maxiter == -1)
+    // OK411        max_iter = NodeListLength;
 
 #ifdef TESTLOES1
     DisplayMsgLn("SpGaussSeidel");
@@ -1297,8 +1301,8 @@ int SpBICG(double* b, double* x, long n)
 
     if (cg_maxiter > 0)
         max_iter = cg_maxiter;
-        // OK411    if (cg_maxiter == -1)
-        // OK411        max_iter = NodeListLength;
+    // OK411    if (cg_maxiter == -1)
+    // OK411        max_iter = NodeListLength;
 
 #ifdef TESTLOES4
     DisplayMsgLn("SpBICG");
@@ -1361,8 +1365,8 @@ int SpBICG(double* b, double* x, long n)
     v = (double*)Malloc(n * sizeof(double));
     tmp = (double*)Malloc(n * sizeof(double));
 
-    if
-        VK_Modus(VK_iLDU) MXVorkond(2, r, r); /* Ra, 3/2000 */
+    if VK_Modus (VK_iLDU)
+        MXVorkond(2, r, r); /* Ra, 3/2000 */
     for (i = 0; i < n; i++)
     {
         p[i] = ps[i] = 0.0;
@@ -1380,8 +1384,8 @@ int SpBICG(double* b, double* x, long n)
         }
 
         MXMatVek(p, v);
-        if
-            VK_Modus(VK_iLDU) MXVorkond(2, v, v); /* Ra, 3/2000 */
+        if VK_Modus (VK_iLDU)
+            MXVorkond(2, v, v); /* Ra, 3/2000 */
         alpha = rho / MSkalarprodukt(ps, v, n);
         for (i = 0; i < n; i++)
         {
@@ -1401,12 +1405,11 @@ int SpBICG(double* b, double* x, long n)
         if (VEKNORM_BICG(r, n) <= eps)
             break;
 
-        if
-            VK_Modus(VK_iLDU)
-            {
-                MXVorkond(3, v, ps);
-                MXMatTVek(v, tmp);
-            }
+        if VK_Modus (VK_iLDU)
+        {
+            MXVorkond(3, v, ps);
+            MXMatTVek(v, tmp);
+        }
         else
             MXMatTVek(ps, tmp); /* Ra, 3/2000 */
         for (i = 0; i < n; i++)
@@ -1486,8 +1489,7 @@ int SpBICGSTAB(double* b, double* x, long n)
 {
 /* Variablen */
 #ifdef SX
-    double *restrict r, *restrict r2, *restrict rs, *restrict p, *restrict s,
-        *restrict t, *restrict v;
+    double* restrict r, * restrict r2, * restrict rs, * restrict p, * restrict s, * restrict t, * restrict v;
 #else
     double *r, *r2, *rs, *p, *s, *t, *v;
 #endif
@@ -1571,8 +1573,8 @@ restart:
     if ((k >= max_iter) || (VEKNORM_BICGSTAB(r, n) <= eps))
         goto end;
 
-    if
-        VK_Modus(VK_iLDU) MXVorkond(2, r, r);
+    if VK_Modus (VK_iLDU)
+        MXVorkond(2, r, r);
 
     MKopierVec(r, rs, n);
     MKopierVec(r, p, n);
@@ -1598,19 +1600,25 @@ restart:
 #ifdef SX
 #pragma cdir nodep
 #endif
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
             for (i = 0; i < n; i++)
                 p[i] = r[i] + beta * (p[i] - omega * v[i]);
         }
 
         MXMatVek(p, v);
-        if
-            VK_Modus(VK_iLDU) MXVorkond(2, v, v); /* Ra, 3/2000 */
+        if VK_Modus (VK_iLDU)
+            MXVorkond(2, v, v); /* Ra, 3/2000 */
 
         rsv = MSkalarprodukt(rs, v, n);
 
         alpha = rho / rsv;
 #ifdef SX
 #pragma cdir nodep
+#endif
+#ifdef _OPENMP
+#pragma omp parallel for
 #endif
         for (i = 0; i < n; i++)
             s[i] = r[i] - alpha * v[i];
@@ -1622,6 +1630,9 @@ restart:
 #ifdef SX
 #pragma cdir nodep
 #endif
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
             for (i = 0; i < n; i++)
                 x[i] += alpha * p[i];
             break;
@@ -1629,8 +1640,8 @@ restart:
 
         MXMatVek(s, t);
 
-        if
-            VK_Modus(VK_iLDU) MXVorkond(2, t, t); /* Ra, 3/2000 */
+        if VK_Modus (VK_iLDU)
+            MXVorkond(2, t, t); /* Ra, 3/2000 */
 
         ts = MSkalarprodukt(t, s, n);
         tt = MSkalarprodukt(t, t, n);
@@ -1652,12 +1663,18 @@ restart:
 #ifdef SX
 #pragma cdir nodep
 #endif
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
         for (i = 0; i < n; i++)
             x[i] += alpha * p[i] + omega * s[i];
 
         MXResiduum(x, b, r2);
 #ifdef SX
 #pragma cdir nodep
+#endif
+#ifdef _OPENMP
+#pragma omp parallel for
 #endif
         for (i = 0; i < n; i++)
             r[i] = s[i] - omega * t[i];
@@ -1765,8 +1782,8 @@ int SpQMRCGSTAB(double* b, double* x, long n)
 
     if (cg_maxiter > 0)
         max_iter = cg_maxiter;
-        // OK411    if (cg_maxiter == -1)
-        // OK411        max_iter = NodeListLength;
+    // OK411    if (cg_maxiter == -1)
+    // OK411        max_iter = NodeListLength;
 
 #ifdef TESTLOES4
     DisplayMsgLn("SpQMRCGSTAB");
@@ -1828,8 +1845,8 @@ int SpQMRCGSTAB(double* b, double* x, long n)
     for (i = 0; i < n; i++)
         d[i] = p[i] = v[i] = 0.0;
 
-    if
-        VK_Modus(VK_iLDU) MXVorkond(2, r, r); /* Ra, 3/2000 */
+    if VK_Modus (VK_iLDU)
+        MXVorkond(2, r, r); /* Ra, 3/2000 */
     for (i = 0; i < n; i++)
         rs[i] = r[i];
 
@@ -1840,8 +1857,8 @@ int SpQMRCGSTAB(double* b, double* x, long n)
         for (i = 0; i < n; i++)
             p[i] = r[i] + beta * (p[i] - omega * v[i]);
         MXMatVek(p, v);
-        if
-            VK_Modus(VK_iLDU) MXVorkond(2, v, v); /* Ra, 3/2000 */
+        if VK_Modus (VK_iLDU)
+            MXVorkond(2, v, v); /* Ra, 3/2000 */
         alpha = rho / MSkalarprodukt(rs, v, n);
         for (i = 0; i < n; i++)
             s[i] = r[i] - alpha * v[i];
@@ -1858,8 +1875,8 @@ int SpQMRCGSTAB(double* b, double* x, long n)
         }
         /* update r */
         MXMatVek(s, t);
-        if
-            VK_Modus(VK_iLDU) MXVorkond(2, t, t); /* Ra, 3/2000 */
+        if VK_Modus (VK_iLDU)
+            MXVorkond(2, t, t); /* Ra, 3/2000 */
         omega = MSkalarprodukt(t, s, n) / MSkalarprodukt(t, t, n);
         for (i = 0; i < n; i++)
             r[i] = s[i] - omega * t[i];
@@ -1979,8 +1996,8 @@ int SpMGMRES(double* b, double* x, long n)
     if (cg_maxiter == -1)
         max_iter = NodeListLength;
 
-    if
-        VK_Modus(VK_iLDU) MXVorkond(2, b, help);
+    if VK_Modus (VK_iLDU)
+        MXVorkond(2, b, help);
     normb = VEKNORM_BICGSTAB(help, n);
 
     if (normb == 0.0)
@@ -1997,8 +2014,8 @@ int SpMGMRES(double* b, double* x, long n)
            r = M.solve(b - A * x);
          */
         MXResiduum(x0, b, r);
-        if
-            VK_Modus(VK_iLDU) MXVorkond(2, r, r);
+        if VK_Modus (VK_iLDU)
+            MXVorkond(2, r, r);
 
         beta = VEKNORM_BICGSTAB(r, n);
 
@@ -2017,8 +2034,8 @@ int SpMGMRES(double* b, double* x, long n)
         {
             /*      w = M.solve(A * v[i]); */
             MXMatVek(v[i], w);
-            if
-                VK_Modus(VK_iLDU) MXVorkond(2, w, w);
+            if VK_Modus (VK_iLDU)
+                MXVorkond(2, w, w);
 
             for (k = 0; k <= i; k++)
             {
@@ -2150,8 +2167,8 @@ int SpCG(double* b, double* x, long n)
 
     if (cg_maxiter > 0)
         max_iter = cg_maxiter;
-        // OK411    if (cg_maxiter == -1)
-        // OK411        max_iter = NodeListLength;
+    // OK411    if (cg_maxiter == -1)
+    // OK411        max_iter = NodeListLength;
 
 #ifdef TESTLOES4
     DisplayMsgLn("SpCG");
@@ -2206,16 +2223,16 @@ int SpCG(double* b, double* x, long n)
     tmp = (double*)Malloc(n * sizeof(double));
     d = (double*)Malloc(n * sizeof(double));
 
-    if
-        VK_Modus(VK_iLDU) MXVorkond(2, r, r); /* Ra, 3/2000 */
+    if VK_Modus (VK_iLDU)
+        MXVorkond(2, r, r); /* Ra, 3/2000 */
     for (i = 0; i < n; i++)
         d[i] = r[i];
 
     for (;;)
     {
         MXMatVek(d, tmp);
-        if
-            VK_Modus(VK_iLDU) MXVorkond(2, tmp, tmp); /* Ra, 3/2000 */
+        if VK_Modus (VK_iLDU)
+            MXVorkond(2, tmp, tmp); /* Ra, 3/2000 */
 
         alpha = (tmpr = MSkalarprodukt(r, r, n)) / MSkalarprodukt(d, tmp, n);
         for (i = 0; i < n; i++)
@@ -2312,8 +2329,8 @@ int SpCGNR(double* b, double* x, long n)
 
     if (cg_maxiter > 0)
         max_iter = cg_maxiter;
-        // OK411    if (cg_maxiter == -1)
-        // OK411        max_iter = NodeListLength;
+    // OK411    if (cg_maxiter == -1)
+    // OK411        max_iter = NodeListLength;
 
 #ifdef TESTLOES4
     DisplayMsgLn("SpCGNE");
@@ -2361,16 +2378,15 @@ int SpCGNR(double* b, double* x, long n)
     }
     tmp = (double*)Malloc(n * sizeof(double));
     d = (double*)Malloc(n * sizeof(double));
-    if
-        VK_Modus(VK_iLDU) h = (double*)Malloc(n * sizeof(double));
+    if VK_Modus (VK_iLDU)
+        h = (double*)Malloc(n * sizeof(double));
 
-    if
-        VK_Modus(VK_iLDU)
-        {
-            MXVorkond(2, r, r);
-            MXVorkond(3, h, r); /* Ra, 3/2000 */
-            MXMatTVek(h, tmp);
-        }
+    if VK_Modus (VK_iLDU)
+    {
+        MXVorkond(2, r, r);
+        MXVorkond(3, h, r); /* Ra, 3/2000 */
+        MXMatTVek(h, tmp);
+    }
     else
         MXMatTVek(r, tmp);
 
@@ -2381,8 +2397,8 @@ int SpCGNR(double* b, double* x, long n)
     for (;;)
     {
         MXMatVek(d, tmp);
-        if
-            VK_Modus(VK_iLDU) MXVorkond(2, tmp, tmp); /* Ra, 3/2000 */
+        if VK_Modus (VK_iLDU)
+            MXVorkond(2, tmp, tmp); /* Ra, 3/2000 */
 
         alpha = tmpr / MSkalarprodukt(tmp, tmp, n);
         for (i = 0; i < n; i++)
@@ -2415,12 +2431,11 @@ int SpCGNR(double* b, double* x, long n)
         }
 #endif
 
-        if
-            VK_Modus(VK_iLDU)
-            {
-                MXVorkond(3, h, r); /* Ra, 3/2000 */
-                MXMatTVek(h, tmp);
-            }
+        if VK_Modus (VK_iLDU)
+        {
+            MXVorkond(3, h, r); /* Ra, 3/2000 */
+            MXMatTVek(h, tmp);
+        }
         else
             MXMatTVek(r, tmp);
         beta = (tmpr1 = MSkalarprodukt(tmp, tmp, n)) / tmpr;
@@ -2485,8 +2500,8 @@ int SpCGS(double* b, double* x, long n)
 
     if (cg_maxiter > 0)
         max_iter = cg_maxiter;
-        // OK411    if (cg_maxiter == -1)
-        // OK411        max_iter = NodeListLength;
+    // OK411    if (cg_maxiter == -1)
+    // OK411        max_iter = NodeListLength;
 
 #ifdef TESTLOES4
     DisplayMsgLn("SpCGS");
@@ -2540,8 +2555,8 @@ int SpCGS(double* b, double* x, long n)
     us = (double*)Malloc(n * sizeof(double));
     tmp = (double*)Malloc(n * sizeof(double));
 
-    if
-        VK_Modus(VK_iLDU) MXVorkond(2, r, r); /* Ra, 3/2000 */
+    if VK_Modus (VK_iLDU)
+        MXVorkond(2, r, r); /* Ra, 3/2000 */
     for (i = 0; i < n; i++)
         rs[i] = r[i];
 
@@ -2556,8 +2571,8 @@ int SpCGS(double* b, double* x, long n)
             p[i] = u[i] + alpha * p[i] + beta * q[i];
         }
         MXMatVek(p, v);
-        if
-            VK_Modus(VK_iLDU) MXVorkond(2, v, v); /* Ra, 3/2000 */
+        if VK_Modus (VK_iLDU)
+            MXVorkond(2, v, v); /* Ra, 3/2000 */
         alpha = rho / MSkalarprodukt(rs, v, n);
         for (i = 0; i < n; i++)
         {
@@ -2571,8 +2586,8 @@ int SpCGS(double* b, double* x, long n)
                x[(long)(n * .9)]);
 #endif
         MXMatVek(us, tmp);
-        if
-            VK_Modus(VK_iLDU) MXVorkond(2, tmp, tmp); /* Ra, 3/2000 */
+        if VK_Modus (VK_iLDU)
+            MXVorkond(2, tmp, tmp); /* Ra, 3/2000 */
         for (i = 0; i < n; i++)
             r[i] -= alpha * tmp[i];
 
