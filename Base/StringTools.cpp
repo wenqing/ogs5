@@ -185,4 +185,46 @@ std::istream& safeGetline(std::istream& is, std::string& t)
     }
 }
 
+std::string readQuotedText(std::ifstream& input, std::streampos& pos)
+{
+    std::string result;
+
+    // Seek to the specified position
+    input.seekg(pos);
+
+    // Check if we're at a quote
+    if (input.eof() || input.peek() != '"')
+    {
+        return result;
+    }
+
+    // Move past opening quote
+    input.get();
+    pos = input.tellg();
+
+    // Read until closing quote or end of file
+    char c;
+    while (input.get(c) && c != '"')
+    {
+        // Handle escaped quotes
+        if (c == '\\' && input.peek() == '"')
+        {
+            result += '"';
+            input.get();  // Skip the escaped quote
+        }
+        else
+        {
+            result += c;
+        }
+        pos = input.tellg();
+    }
+
+    // Update position to after closing quote if it exists
+    if (!input.eof())
+    {
+        pos = input.tellg();
+    }
+
+    return result;
+}
 }  // end namespace BaseLib

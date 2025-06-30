@@ -24,6 +24,12 @@
 // #include <vector>
 // #include <fstream>
 
+#ifdef USE_EXPRTK
+#include <memory>
+
+#include "FunctionXY.h"
+#endif
+
 // GeoLib
 #include "GeoType.h"
 #include "PhysicalConstant.h"
@@ -362,6 +368,10 @@ private:
     FiniteElement::FrictionPhase _fric_phase;
 
     PorousMediumProperty::DamageZonePermeability* _damage_zone_permeability;
+
+#ifdef USE_EXPRTK
+    std::unique_ptr<BaseLib::FunctionXY> _storage_function_model;
+#endif
 };
 
 class CMediumPropertiesGroup  // YD

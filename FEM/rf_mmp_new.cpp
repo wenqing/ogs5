@@ -19,6 +19,11 @@
 // #include <iostream>
 #include <cfloat>
 
+#ifdef USE_EXPRTK
+#include <memory>
+#endif
+
+#include "StringTools.h"
 #include "display.h"
 
 // FEMLib
@@ -744,8 +749,22 @@ std::ios::pos_type CMediumProperties::Read(std::ifstream* mmp_file)
         // subkeyword found
         if (line_string.find("$STORAGE") != std::string::npos)
         {
+#ifdef USE_EXPRTK
+            if (line_string.find("$STORAGE_EXPRESSION") != std::string::npos)
+            {
+                storage_model = 8;
+                std::streampos pos = mmp_file->tellg();
+                std::string const function_expression = BaseLib::readQuotedText(
+                    *mmp_file, pos);  // Read the function name from the file
+                _storage_function_model = std::unique_ptr<BaseLib::FunctionXY>(
+                    new BaseLib::FunctionXY(function_expression, "eps_v",
+                                            "eps_p"));
+                continue;
+            }
+#endif
             in.str(GetLineFromFile1(mmp_file));
             in >> storage_model;
+
             switch (storage_model)
             {
                 case 0:                             // S=f(x)
@@ -813,6 +832,7 @@ std::ios::pos_type CMediumProperties::Read(std::ifstream* mmp_file)
                         "elastic model");
                 }
                 break;
+
                 case 10:  // S=const for permeability_saturation_model = 10
                     storage_model_values[0] = 1;
                     break;
@@ -7692,6 +7712,24 @@ double getStoragePoroelastoplasticModelCurves(
     return storge_eps_vol + storge_eps_pls;
 }
 
+#ifdef USE_EXPRTK
+std::unique_ptr<BaseLib::FunctionXY> _storage_function_model;
+double getStoragePoroelastoplasticModelFunction(
+    BaseLib::FunctionXY const& function, int const ip,
+    CFiniteElementStd const& assembler)
+{
+    int const element_index = assembler.GetElementIndex();
+
+    FiniteElement::ElementValue_DM const* dm_ele_ip_data =
+        ele_value_dm[element_index];
+
+    double const eps_pls = dm_ele_ip_data->getEquivalentPlasticStrain(ip);
+    double const eps_vol = dm_ele_ip_data->getVolumeStrain(ip);
+
+    return function(eps_vol, eps_pls);
+}
+#endif
+
 /**************************************************************************
    ROCKFLOW - Funktion: Storage Function
 
@@ -8059,6 +8097,13 @@ double CMediumProperties::StorageFunction(long index, int const ip,
             return (biots_constant - porosity) * (1.0 - biots_constant) /
                    solid_prop->getBulkModulus();
         }
+#ifdef USE_EXPRTK
+        case 8:
+        {
+            return getStoragePoroelastoplasticModelFunction(
+                *(this->_storage_function_model), ip, *(m_pcs->GetAssember()));
+        }
+#endif
         case 10:
             if (permeability_saturation_model[0] == 10)  // MW
                 storage = porosity_model_values[0] /

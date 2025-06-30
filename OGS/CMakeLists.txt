@@ -24,7 +24,6 @@ if (Shapelib_FOUND)
 	include_directories(${Shapelib_INCLUDE_DIR})
 endif ()
 
-
 # Create the library
 add_executable( ogs ${SOURCES} )
 

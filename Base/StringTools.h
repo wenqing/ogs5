@@ -11,6 +11,7 @@
 #define STRINGTOOLS_H
 
 #include <ctype.h>
+
 #include <fstream>
 #include <iostream>
 #include <list>
@@ -113,6 +114,8 @@ void extractPath(std::string const& fname, std::string& path);
  *  with a modification to avoid compilation error under C++03
  */
 std::istream& safeGetline(std::istream& is, std::string& t);
+
+std::string readQuotedText(std::ifstream& input, std::streampos& pos);
 
 }  // end namespace BaseLib
 

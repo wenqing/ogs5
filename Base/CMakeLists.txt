@@ -19,6 +19,10 @@ set( HEADERS
 	TimeInterval.h
 )
 
+if(OGS_USE_EXPRTK)
+	set( HEADERS ${HEADERS} FunctionXY.h)
+endif()
+
 set( SOURCES
 	binarySearch.cpp
 	break.cpp

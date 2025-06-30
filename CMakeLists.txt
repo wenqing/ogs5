@@ -51,6 +51,7 @@ option(OGS_USE_LIS "Use LIS solver" OFF)
 option(OGS_USE_MKL "Use PARDISO in MKL" OFF)
 option(OGS_USE_OPENMP "Use OpenMP in the SpBICGSTAB solver" OFF)
 option(OGS_USE_CVODE "Use sundials cvode for TNEQ/TES" OFF)
+option(OGS_USE_EXPRTK "Use exprtk for function model" OFF)
 set(OGS_CPU_ARCHITECTURE "native" CACHE STRING "Processor architecture, defaults to native.")
 option(OGS_PYTHON "Enable python scripting interface" OFF)
 option(OGS_BUILD_UTILITIES "Build additional utility programs?" OFF)
@@ -239,6 +240,23 @@ if(OGS_USE_MKL)
 	set(PARALLEL_USE_OPENMP ON CACHE INTERNAL "Use Open Multi-Processing")
 	set(MKL ON INTERNAL "Use Math Kernel Library")
 endif()
+
+if (OGS_USE_EXPRTK)
+    add_definitions(-DUSE_EXPRTK)
+    include(FetchContent)
+	FetchContent_Declare(
+		exprtk
+		GIT_REPOSITORY https://github.com/ArashPartow/exprtk.git
+		GIT_TAG        master
+	)
+	FetchContent_MakeAvailable(exprtk)
+	#target_include_directories(ogs PRIVATE ${exprtk_SOURCE_DIR})
+	include_directories(${exprtk_SOURCE_DIR})
+	# Use pre-compiled header for exprtk
+    #target_precompile_headers(ogs PRIVATE ${exprtk_SOURCE_DIR}/exprtk.hpp)
+
+endif ()
+
 
 if(OGS_LSOLVER STREQUAL RF)
 	set(SOLVER_PKG_NAME "Default")
