@@ -7709,7 +7709,7 @@ double getStoragePoroelastoplasticModelCurves(
     double const storge_eps_pls =
         GetCurveValue(curve_plastic, 0, eps_pls, &gueltig);
 
-    return storge_eps_vol + storge_eps_pls;
+    return storge_eps_vol * storge_eps_pls;
 }
 
 #ifdef USE_EXPRTK
