@@ -27,30 +27,36 @@
  * the preprocessor directive RFW_FRACTURE is only useable until version 4.11 of
  * OGS
  * */
-#include "BuildInfo.h"
-
+#include <chrono>
 #include <iostream>
+
+#include "BuildInfo.h"
 
 #if defined(USE_MPI) || defined(USE_MPI_PARPROC) || \
     defined(USE_MPI_REGSOIL) || defined(USE_MPI_GEMS) || defined(USE_MPI_KRC)
-#include "par_ddc.h"
 #include <mpi.h>
+
+#include "par_ddc.h"
 #endif
-#ifdef LIS
-#include "lis.h"
+
+#if defined(_OPENMP) || defined(LIS)
 #include <omp.h>
 #endif
 
+#ifdef LIS
+#include "lis.h"
+#endif
+
 /* Preprozessor-Definitionen */
-#include "makros.h"
 #include "display.h"
+#include "makros.h"
 #include "memory.h"
 #include "ogs_display.h"
 #define TEST
 /* Benutzte Module */
 #include "break.h"
-#include "timer.h"
-// 16.12.2008. WW #include "rf_apl.h"
+// #include "timer.h"
+//  16.12.2008. WW #include "rf_apl.h"
 #include "FileTools.h"
 #include "files0.h"
 #ifdef SUPERCOMPUTER
@@ -280,8 +286,10 @@ int main(int argc, char* argv[])
                 DisplayStartMsg();
     }
 
-#ifdef TESTTIME
-    TStartTimer(0);
+#if defined(_OPENMP)
+    double start_time = omp_get_wtime();  // Start timing
+#else
+    auto start = std::chrono::high_resolution_clock::now();  // Start timing
 #endif
 
     FilePath = pathDirname(FileName);
@@ -303,7 +311,7 @@ int main(int argc, char* argv[])
 
         Display::ScreenMessage(
             "         The solver setting may need to be adjusted for "
-                     "the solution accuracy!\n");
+            "the solution accuracy!\n");
     }
 
     // LB Check if file exists
@@ -351,19 +359,23 @@ int main(int argc, char* argv[])
 
 #endif
 
-    if (ClockTimeVec.size() > 0)
-        ClockTimeVec[0]->PrintTimes();  // CB time
-    DestroyClockTime();
-#ifdef TESTTIME
+#if defined(_OPENMP)
+    double exe_time =
+        omp_get_wtime() - start_time;  // Execution time in seconds
+#else
+    auto end = std::chrono::high_resolution_clock::now();  // End timing
+    std::chrono::duration<double> duration = end - start;
+    auto exe_time = duration.count();  // Execution time in seconds
+#endif
+
+    // Output the execution time
 #if defined(USE_MPI)
     if (myrank == 0)
 #endif
 #if defined(USE_PETSC)
         if (rank == 0)
 #endif
-            std::cout << "Simulation time: " << TGetTimer(0) << "s"
-                      << "\n";
-#endif
+            std::cout << "Execution time: " << exe_time << " seconds\n";
 /* Abspann ausgeben */
 /*--------- MPI Finalize ------------------*/
 #if defined(USE_MPI) || defined(USE_MPI_PARPROC) || \
