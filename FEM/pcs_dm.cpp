@@ -763,8 +763,8 @@ double CRFProcessDeformation::Execute(int loop_process_number)
                 // JT//if(ite_steps == 1 && CouplingIterations == 0)
                 if (ite_steps == 1 && this->first_coupling_iteration)
                 {
-                    InitialNorm = Norm;
-                    InitialNormU0 = NormU;
+                    InitialNorm = Norm == 0.0 ? 1.0 : Norm;
+                    InitialNormU0 = NormU == 0.0 ? 1.0 : NormU;
                     if (counter == 1)
                         InitialNormU = NormU;
                 }
