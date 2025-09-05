@@ -807,6 +807,17 @@ double CRFProcessDeformation::Execute(int loop_process_number)
                     // cpl_max_relative_error and cpl_num_dof_errors;
                 }
 
+                if (ErrorU != ErrorU || NormU != NormU || Error != Error ||
+                    Norm != Norm)  // NaN check
+                {
+                    ScreenMessage(
+                        "NaN check fails with: ErrorU = %e, ErrorU1 = %e, "
+                        "NormU = %e, InitialNormU0 "
+                        "= %e\n",
+                        ErrorU, ErrorU1, NormU, InitialNormU0);
+                    abort();
+                }
+
                 ScreenMessage(
                     "      -->End of Newton-Raphson iteration: %d/%d\n",
                     ite_steps, MaxIteration);
