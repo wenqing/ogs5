@@ -841,9 +841,9 @@ double CRFProcessDeformation::Execute(int loop_process_number)
                     "     "
                     "------------------------------------------------\n");
 
-                if (Error <= Tolerance_global_Newton &&
-                    Norm <= m_num->nls_abs_residual_tolerance &&
-                    NormU <= m_num->nls_abs_unknown_tolerance &&
+                if (Error <= Tolerance_global_Newton ||
+                    Norm <= m_num->nls_abs_residual_tolerance ||
+                    NormU <= m_num->nls_abs_unknown_tolerance ||
                     ErrorU <= m_num->nls_rel_unknown_tolerance)
                 {
                     if (ite_steps == 1)  // WX:05.2012

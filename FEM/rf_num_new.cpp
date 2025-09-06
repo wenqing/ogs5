@@ -27,9 +27,9 @@
 #ifdef USE_MPI  // WW
 #include "mpi.h"
 #include "par_ddc.h"
-//#undef SEEK_SET
-//#undef SEEK_END
-//#undef SEEK_CUR
+// #undef SEEK_SET
+// #undef SEEK_END
+// #undef SEEK_CUR
 #endif
 
 // C++ STL
@@ -40,9 +40,9 @@
 #include <list>
 #include <string>
 
+#include "display.h"
 #include "makros.h"
 #include "memory.h"
-#include "display.h"
 
 // FEM-Makros
 #include "files0.h"
@@ -138,9 +138,9 @@ CNumerics::CNumerics(string name)
     fixed_stress_coupling_optimal_factor = 1.0;
     non_strain_coupling = false;
 
-    nls_abs_residual_tolerance = std::numeric_limits<double>::max();
-    nls_abs_unknown_tolerance = std::numeric_limits<double>::max();
-    nls_rel_unknown_tolerance = std::numeric_limits<double>::max();
+    nls_abs_residual_tolerance = std::numeric_limits<double>::epsilon();
+    nls_abs_unknown_tolerance = std::numeric_limits<double>::epsilon();
+    nls_rel_unknown_tolerance = std::numeric_limits<double>::epsilon();
     //----------------------------------------------------------------------
     // Deformation
     GravityProfile = 0;
@@ -230,7 +230,7 @@ bool NUMRead(string file_base_name)
             }
 
             ScreenMessage("done, read %d numerical properties\n",
-                                   num_vector.size());
+                          num_vector.size());
             return true;
         }
         //
@@ -256,8 +256,8 @@ bool NUMRead(string file_base_name)
             num_vector.push_back(m_num);
             num_file.seekg(position, ios::beg);
             m_num->NumConfigure(overall_coupling_exists);  // JT2012
-        }                                                  // keyword found
-    }                                                      // eof
+        }  // keyword found
+    }  // eof
 
     return true;
 }
@@ -965,7 +965,7 @@ void CNumerics::Write(fstream* num_file)
 //////////////////////////////////////////////////////////////////////////
 // LINEAR_SOLVER
 //////////////////////////////////////////////////////////////////////////
-//#ifndef NEW_EQS                                   //WW. 06.11.2008
+// #ifndef NEW_EQS                                   //WW. 06.11.2008
 #if !defined(NEW_EQS) && \
     !defined(            \
         USE_PETSC)  // && !defined(other parallel solver) //WW. 04.10.2012
@@ -1187,16 +1187,16 @@ LINEAR_SOLVER* InitLinearSolver(LINEAR_SOLVER* ls)
     if (!ls)
         return NULL;
 
-    //#ifdef USE_MPI //WW
-    //    ls->matrix = NULL;
-    //#else
+    // #ifdef USE_MPI //WW
+    //     ls->matrix = NULL;
+    // #else
     if (ls->matrix)
     {
         MXSetMatrixPointer(ls->matrix);
         ls->matrix = MXDestroyMatrix();
     }
     ls->matrix = MXSetupMatrix(ls->dim, ls->store, 0l);
-    //#endif
+    // #endif
     if (ls->dim == 0)
         return ls;
 
@@ -1400,11 +1400,11 @@ void SetLinearSolverType(LINEAR_SOLVER* ls, CNumerics* m_num)
 LINEAR_SOLVER* InitializeLinearSolver(LINEAR_SOLVER* ls, CNumerics* m_num)
 {
     SetLinearSolverType(ls, m_num);
-    //#ifdef USE_MPI                                 //WW
+    // #ifdef USE_MPI                                 //WW
     //	InitVectorLinearSolver(ls);
-    //#else
+    // #else
     InitLinearSolver(ls);
-    //#endif
+    // #endif
     /* Internen Speicher allokieren */
     InitMemoryLinearSolver(ls, ls->memory_number);
     /* Speicher initialisieren */
