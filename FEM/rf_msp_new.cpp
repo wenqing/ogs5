@@ -16,15 +16,14 @@
 **************************************************************************/
 
 // C++ STL
-//#include <cmath>
-//#include <string>
-//#include <fstream>
-//#include <iostream>
-//#include <sstream>
+// #include <cmath>
+// #include <string>
+// #include <fstream>
+// #include <iostream>
+// #include <sstream>
 #include <cfloat>
 
 #include "Eigen/Dense"
-
 #include "display.h"
 
 // FEM-Makros
@@ -36,20 +35,17 @@
 #include "fem_ele_vec.h"
 #include "rf_msp_new.h"
 #include "rf_tim_new.h"
-//#include "rf_mmp_new.h"
-#include "pcs_dm.h"
-
-#include "StringTools.h"
-#include "files0.h"  // GetLineFromFile1
-#include "tools.h"   // GetLineFromFile
-#include "PhysicalConstant.h"
-
+// #include "rf_mmp_new.h"
+#include "LinAlg/GaussAlgorithm.h"
 #include "Material/Solid/BGRaCreep.h"
 #include "Material/Solid/MohrCoulombFailureCriterion.h"
-#include "minkley.h"
+#include "PhysicalConstant.h"
+#include "StringTools.h"
 #include "burgers.h"
-
-#include "LinAlg/GaussAlgorithm.h"
+#include "files0.h"  // GetLineFromFile1
+#include "minkley.h"
+#include "pcs_dm.h"
+#include "tools.h"  // GetLineFromFile
 
 std::vector<SolidProp::CSolidProperties*> msp_vector;
 std::vector<std::string> msp_key_word_vector;  // OK
@@ -67,6 +63,17 @@ double TemperatureUnitOffset()
     return process::isTemperatureUnitCesius()
                ? PhysicalConstant::CelsiusZeroInKelvin
                : 0.0;
+}
+
+void Cal_Inv_Matrix(int Size, Matrix* const A, Matrix* A_inv)
+{
+    Eigen::Map<
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >
+        A_map(A->getEntryArray(), Size, Size);
+    Eigen::Map<
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >
+        A_inv_map(A_inv->getEntryArray(), Size, Size);
+    A_inv_map = A_map.inverse();
 }
 
 /**************************************************************************
@@ -220,7 +227,7 @@ std::ios::pos_type CSolidProperties::Read(std::ifstream* msp_file)
                         in_sd.clear();
                     }
                     break;
-                case 1:  //  = const
+                case 1:   //  = const
                 case 11:  //  = const but no fluid phase
                     data_Capacity = new Matrix(1);
                     in_sd >> (*data_Capacity)(0);
@@ -307,7 +314,7 @@ std::ios::pos_type CSolidProperties::Read(std::ifstream* msp_file)
                     // WW
                     conductivity_pcs_name_vector.push_back("TEMPERATURE1");
                     break;
-                case 1:  //  = const
+                case 1:   //  = const
                 case 11:  //  = const but no fluid phase
                     data_Conductivity = new Matrix(1);
                     in_sd >> (*data_Conductivity)(0);
@@ -614,8 +621,8 @@ std::ios::pos_type CSolidProperties::Read(std::ifstream* msp_file)
                 Creep_mode = 21;
                 in_sd.str(GetLineFromFile1(msp_file));
                 double A, n, sigma_f, Q, refT, tolerance, max_iterations;
-                in_sd >> A >> n >> sigma_f >> Q >> refT >> tolerance
-                      >> max_iterations;
+                in_sd >> A >> n >> sigma_f >> Q >> refT >> tolerance >>
+                    max_iterations;
                 in_sd.clear();
                 _bgra_creep = new BGRaCreep(A, n, sigma_f, Q, refT, tolerance,
                                             max_iterations);
@@ -1225,7 +1232,8 @@ CSolidProperties::CSolidProperties()
       data_Conductivity(NULL),
       data_Plasticity(NULL),
       data_Creep(NULL),
-      _bgra_creep(NULL), _mohrCoulomb_failure_criterion(NULL)
+      _bgra_creep(NULL),
+      _mohrCoulomb_failure_criterion(NULL)
 {
     PoissonRatio = 0.2;
     ThermalExpansion = 0.0;
@@ -1466,9 +1474,9 @@ CSolidProperties::~CSolidProperties()
     material_burgers = NULL;
     smath = NULL;
 
-    if(_bgra_creep)
+    if (_bgra_creep)
         delete _bgra_creep;
-    if(_mohrCoulomb_failure_criterion)
+    if (_mohrCoulomb_failure_criterion)
         delete _mohrCoulomb_failure_criterion;
 }
 //----------------------------------------------------------------------------
@@ -1682,7 +1690,7 @@ double CSolidProperties::Enthalpy(double temperature,
                                   const double latent_factor)
 {
     double val = 0.0;
-    double T0 = 0.0;  //�C, a reference temperature
+    double T0 = 0.0;  // �C, a reference temperature
     double dT = 0.0;
 
     // 0. Wet capacity
@@ -2909,8 +2917,7 @@ void CSolidProperties::CalculateCoefficent_MOHR(
     }
 }
 
-void CSolidProperties::CalculateCoefficent_MOHRjoint(
-    double ep)  // LU:11.2019
+void CSolidProperties::CalculateCoefficent_MOHRjoint(double ep)  // LU:11.2019
 {
     int valid = 1;
     thetaj = (*data_Plasticity_joint)(1) * PI / 180;
@@ -4588,8 +4595,7 @@ int CSolidProperties::StressIntegrationMOHR_Joint(
                 for (i = 0; i < Size; i++)
                     for (j = 0; j < Size; j++)
                         (*TmpMatrix)(i, j) = dgs_dsig[i] * dfs_dsig[j];
-                Dep->multi(*TmpMatrix, *Dep,
-                           *TmpMatrix2);
+                Dep->multi(*TmpMatrix, *Dep, *TmpMatrix2);
                 for (i = 0; i < Size; i++)
                 {
                     for (j = 0; j < Size; j++)
@@ -4955,7 +4961,7 @@ int CSolidProperties::StressIntegrationMOHR_Aniso(
                             dTens_daPara *
                             dAniso_dsig_tens[i];  // dcsn/dsig=dcsn/deta
                                                   // * deta/dsig
-                }                                 // end if plasticity bedding
+                }  // end if plasticity bedding
                 if (first_step)
                 {
                     for (i = 0; i < Size; i++)
@@ -5315,7 +5321,7 @@ int CSolidProperties::StressIntegrationMOHR_Aniso(
                             dComp_daPara *
                             dAniso_dsig_comp[i];  // dcsn/dsig=dcsn/deta
                                                   // * deta/dsig
-                }                                 // end if plasticity bedding
+                }  // end if plasticity bedding
                 // counter++;
                 if (first_step)
                 {
@@ -6561,83 +6567,6 @@ void CSolidProperties::TangentialMohrTension(Matrix* Dep)
 {
     *Dep = *ConstitutiveMatrix;
 }
-// WX: calculate inverse matrix
-void CSolidProperties::Cal_Inv_Matrix(int Size, Matrix* MatrixA, Matrix* xx)
-{
-    int i, j, k, jj, lk, j_col = 0;  // i_row,
-    double var, R;
-    int L[6];
-    double rhs[6];
-    Matrix AA(Size, Size);
-    AA = *MatrixA;
-
-    for (i = 0; i < Size; i++)
-    {
-        L[i] = i;
-        var = 0.0;
-        for (j = 0; j < Size; j++)
-        {
-            if (fabs(AA(i, j)) > var)
-                var = fabs(AA(i, j));
-            L[i] = i;
-        }
-
-        for (j_col = 0; j_col < Size; j_col++)
-            (*xx)(i, j_col) = var;
-    }
-
-    for (k = 0; k < Size - 1; k++)
-    {
-        var = 0.0;
-        jj = 0;
-        for (i = k; i < Size; i++)
-        {
-            R = fabs(AA(L[i], k) / (*xx)(L[i], j_col));
-
-            if (R > var)
-            {
-                jj = i;
-                var = R;
-            }
-        }
-        lk = L[jj];
-        L[jj] = L[k];
-        L[k] = lk;
-
-        for (i = k + 1; i < Size; i++)
-        {
-            var = AA(L[i], k) / AA(lk, k);
-
-            for (j = k + 1; j < Size; j++)
-                AA(L[i], j) -= var * AA(lk, j);
-            AA(L[i], k) = var;
-        }
-    }
-
-    for (j_col = 0; j_col < Size; j_col++)
-    {
-        for (i = 0; i < std::min(6, Size); i++)
-        {
-            rhs[i] = 0.;
-            if (i == j_col)
-                rhs[i] = 1.;
-        }
-
-        /* Back substituting */
-        for (k = 0; k < Size - 1; k++)
-            for (i = k + 1; i < Size; i++)
-                rhs[L[i]] -= AA(L[i], k) * rhs[L[k]];
-
-        (*xx)(Size - 1, j_col) = rhs[L[Size - 1]] / AA(L[Size - 1], Size - 1);
-        for (i = Size - 2; i >= 0; i--)
-        {
-            var = rhs[L[i]];
-            for (j = i + 1; j < Size; j++)
-                var -= AA(L[i], j) * (*xx)(j, j_col);
-            (*xx)(i, j_col) = var / AA(L[i], i);
-        }
-    }
-}
 
 /**************************************************************************
    ROCKFLOW - Funktion: CSolidProperties::ConsistentTangentialDP
@@ -7592,7 +7521,7 @@ int CSolidProperties::CalStress_and_TangentialMatrix_SYS(
                     //----- Update the Newton-Raphson step
                     for (i = 0; i < LocDim; i++)
                     {
-                        x_l[i] =  rhs_l[i] * damping;
+                        x_l[i] = rhs_l[i] * damping;
                     }
 
                     for (i = 0; i < LengthStrs; i++)
@@ -7699,7 +7628,7 @@ int CSolidProperties::CalStress_and_TangentialMatrix_SYS(
             for (i = 0; i < LengthStrs; i++)
                 Mat_n[i] = Mat_n1[i];
         }  // End of Compute stresses by substepping
-    }      // If F>0.0
+    }  // If F>0.0
 
     // Save the current stresses
     if (Update > 0)
@@ -8369,7 +8298,7 @@ point values
    11/2003   WW  Erste Version
 
 **************************************************************************/
-//#define New
+// #define New
 #define associative
 void CSolidProperties::CalStress_and_TangentialMatrix_CC(
     const int GPiGPj, const ElementValue_DM* ele_val, double* dStrain,
@@ -9782,9 +9711,8 @@ bool MSPRead(const std::string& given_file_base_name)
         line_string = line;
         if (line_string.find("#STOP") != string::npos)
         {
-            ScreenMessage(
-                "done, read %d sets of solid properties terms\n",
-                msp_vector.size());
+            ScreenMessage("done, read %d sets of solid properties terms\n",
+                          msp_vector.size());
             return true;
         }
         //----------------------------------------------------------------------
@@ -9797,7 +9725,7 @@ bool MSPRead(const std::string& given_file_base_name)
             msp_vector.push_back(m_msp);
             msp_file.seekg(position, std::ios::beg);
         }  // keyword found
-    }      // eof
+    }  // eof
     return true;
     //========================================================================
 }

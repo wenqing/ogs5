@@ -18,9 +18,9 @@ last modified:
 #define rf_msp_new_INC
 
 // C++ STL
-//#include <fstream>
-//#include <string>
-//#include <vector>
+// #include <fstream>
+// #include <string>
+// #include <vector>
 
 #include "invariants.h"
 
@@ -468,8 +468,6 @@ private:
     int MohrCheckFailure(double* NormStr, int& failurestate, int Size);
     void TangentialMohrShear(Math_Group::Matrix* Dep);
     void TangentialMohrTension(Math_Group::Matrix* Dep);
-    void Cal_Inv_Matrix(int Size, Math_Group::Matrix* MatrixA,
-                        Math_Group::Matrix* xx);
     double CalVarP(double* vec1, double* vec2, double* sigma_B,
                    double* sigma_l);
     double CalVar_t(double* vecl, double* veclg, Math_Group::Matrix* D,
