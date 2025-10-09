@@ -508,7 +508,7 @@ CFiniteElementVec::~CFiniteElementVec()
     }
     if (nodal_dT)
     {
-        delete nodal_dT;
+        delete[] nodal_dT;
     }
 
     // NW
@@ -3876,6 +3876,7 @@ ElementValue_DM::ElementValue_DM(CElem* ele, const int NGP, bool HM_Staggered)
       pStrain(NULL),
       strain_v(NULL),
       dstrain_v_dt(NULL),
+      y_surface(NULL),
       prep0(NULL),
       e_i(NULL),
       xi(NULL),
