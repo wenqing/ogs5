@@ -457,6 +457,16 @@ ios::pos_type CNumerics::Read(ifstream* num_file)
             line >> error_method_name;
             line >> nls_max_iterations;
             line >> nls_relaxation;
+
+            if (pcs_type_name.compare("DEFORMATION_FLOW") == 0 &&
+                nls_method_name.find("PICARD") != string::npos)
+            {
+                ScreenMessage(
+                    "Error: For DEFORMATION_FLOW, only the NEWTON "
+                    "non-linear solver is allowed.\n");
+                exit(1);
+            }
+
             //
             setNonLinearErrorMethod(
                 FiniteElement::convertErrorMethod(error_method_name));
@@ -527,6 +537,16 @@ ios::pos_type CNumerics::Read(ifstream* num_file)
             //
             line.str(GetLineFromFile1(num_file));
             line >> nls_method_name;
+
+            if (pcs_type_name.compare("DEFORMATION_FLOW") == 0 &&
+                nls_method_name.find("PICARD") != string::npos)
+            {
+                ScreenMessage(
+                    "Error: For DEFORMATION_FLOW, only the NEWTON "
+                    "non-linear solver is allowed.\n");
+                exit(1);
+            }
+
             //
             nls_method = 0;
             if (nls_method_name.find("NEWTON") != string::npos)
