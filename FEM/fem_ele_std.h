@@ -500,6 +500,8 @@ protected:
     bool check_matrices;             // OK4104
     void AssembleRHSVector();        // OK
     void AssembleCapillaryEffect();  // PCH
+    void AssembleAddtionalJacobianHM();
+
 // PCH for debugging
 #if defined(USE_PETSC)  // || defined(other parallel libs)//03~04.3012. WW
     void add2GlobalMatrixII();

@@ -9637,6 +9637,133 @@ void CFiniteElementStd::Config()
         }
     }
 }
+
+void CFiniteElementStd::AssembleAddtionalJacobianHM()
+{
+    if (FluidProp->useDensityScaling() == true)
+    {
+        return;
+    }
+
+    // ---- Gauss integral
+    int gp_r = 0, gp_s = 0, gp_t = 0;
+    double const e_rel = 1.e-5;
+    double const e_abs = 1e3;
+
+    //----------------------------------------------------------------------
+    // Loop over Gauss points
+    double args[3];
+    for (int gp = 0; gp < nGaussPoints; gp++)
+    {
+        //---------------------------------------------------------
+        //  Get local coordinates and weights
+        //  Compute Jacobian matrix and its determinate
+        //---------------------------------------------------------
+        const double fkt = GetGaussData(gp, gp_r, gp_s, gp_t);
+
+        //---------------------------------------------------------
+        // Compute geometry
+        getGradShapefunctValues(gp, 1);
+        getGradShapefunctValues(gp, 2);
+        getShapefunctValues(gp, 1);
+
+        double* tensor =
+            MediaProp->PermeabilityTensor(MeshElement->GetIndex(), gp);
+
+        double const p_ip = interpolate(NodalVal1);
+
+        double const p_purterbation = std::max(e_rel * std::abs(p_ip), e_abs);
+
+        const IntegrationPointVariableBuffer val_ip = vapor_variable_buffer[gp];
+
+        double const rho_l = val_ip.rho_w;
+        args[0] = std::max(0.0, p_ip - p_purterbation);
+        args[1] = 297.15;
+        args[2] = 0.0;
+        double const rho_l_perturbed_b = FluidProp->Density(args);
+
+        args[0] = std::max(0.0, p_ip + p_purterbation);
+        double const rho_l_perturbed_f = FluidProp->Density(args);
+        double const drho_dp = 0.5 * (rho_l_perturbed_f - rho_l_perturbed_b) /
+                               p_purterbation;  // d rho / d p
+        double const drho_dp2 =
+            (rho_l_perturbed_f - 2.0 * rho_l + rho_l_perturbed_b) /
+            (p_purterbation * p_purterbation);  // d2 rho / d p2
+
+        double const mu = val_ip.viscosity_w;
+
+        for (size_t i = 0; i < dim * dim; i++)
+        {
+            tensor[i] /= mu;
+        }
+
+        double grad_p[3];
+        for (size_t i = 0; i < dim; i++)
+        {
+            grad_p[i] = 0.0;
+            for (int j = 0; j < nnodes; j++)
+            {
+                grad_p[i] += NodalVal1[j] * dshapefct[i * nnodes + j];
+            }
+        }
+
+        // K * grad_p * drho_dp +  rho_l * drho_dp * g* K * grad_z
+        double K_vec[3];
+        for (size_t i = 0; i < dim; i++)
+        {
+            K_vec[i] = 0.0;
+            for (size_t j = 0; j < dim; j++)
+            {
+                K_vec[i] += drho_dp * tensor[i * dim + j] * grad_p[j];
+            }
+            K_vec[i] +=
+                rho_l * drho_dp * tensor[i * dim + dim - 1] * gravity_constant;
+        }
+
+        double const p_ip_old = interpolate(NodalVal0);
+        double const dp_dt = (p_ip - p_ip_old) / dt;
+        const double poro_val =
+            MediaProp->Porosity(Index, pcs->m_num->ls_theta);
+        double coef_mass = poro_val * drho_dp2 * dp_dt;
+
+#if defined(USE_PETSC)  // || defined(other parallel libs)//03~04.3012. WW
+        //---------------------------------------------------------
+        for (int i = 0; i < act_nodes; i++)
+        {
+            const int ia = local_idx[i];
+            for (int j = 0; j < nnodes; j++)
+            {
+                (*StiffMatrix)(ia, j) +=
+                    fkt * coef_mass * shapefct[ia] * shapefct[j];
+                for (size_t k = 0; k < dim; k++)
+                {
+                    const int ksh = k * nnodes + ia;
+                    (*StiffMatrix)(ia, j) +=
+                        fkt * dshapefct[ksh] * K_vec[k] * shapefct[j];
+                }
+            }  // j: nodes
+        }  // i: nodes
+#else
+        //---------------------------------------------------------
+        for (int i = 0; i < nnodes; i++)
+        {
+            for (int j = 0; j < nnodes; j++)
+            {
+                (*StiffMatrix)(i, j) +=
+                    fkt * coef_mass * shapefct[i] * shapefct[j];
+
+                for (size_t k = 0; k < dim; k++)
+                {
+                    const int ksh = k * nnodes + i;
+                    (*StiffMatrix)(i, j) +=
+                        fkt * dshapefct[ksh] * K_vec[k] * shapefct[j];
+                }
+            }  // j: nodes
+        }  // i: nodes
+#endif
+    }
+}
+
 /**************************************************************************
    FEMLib-Method:
    Task: Assemble local matrices to the global system
@@ -9673,7 +9800,13 @@ void CFiniteElementStd::Assembly()
             Assemble_Gravity();
             Assemble_RHS_LIQUIDFLOW();
             if (dm_pcs)
+            {
                 Assemble_strainCPL();
+                if (dm_pcs->type == 41)
+                {
+                    AssembleAddtionalJacobianHM();
+                }
+            }
             add2GlobalMatrixII();
             break;
         //....................................................................
