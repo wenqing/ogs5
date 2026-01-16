@@ -14,22 +14,21 @@
    08/2004 OK Implementation
    last modified:
 **************************************************************************/
-#include "makros.h"
-
 #include <cfloat>
 #include <limits>
 
 #include "display.h"
 #include "eos.h"  //NB
+#include "makros.h"
 // GeoSys-GeoLib
 #include "files0.h"
 // GeoSys-FEMLib
 #include "fem_ele_std.h"
 //
 #include "rf_mfp_new.h"
-//#include "rf_mmp_new.h"
+// #include "rf_mmp_new.h"
 extern double InterpolValue(long number, int ndx, double r, double s, double t);
-//#include "rf_pcs.h"
+// #include "rf_pcs.h"
 #include "rfmat_cp.h"
 extern double GetCurveValue(int, int, double, int*);
 #include "tools.h"  //GetLineFromFile
@@ -362,6 +361,7 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
                 in >> drho_dp;
                 density_pcs_name_vector.push_back("PRESSURE1");
                 compressibility_model_pressure = 6;
+                use_density_scaling = false;
             }
             if (density_model == 3)  // rho(C) = rho_0*(1+beta_C*(C-C_0))
             {
@@ -405,7 +405,7 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
                 in >> T_0;
                 T_0 += TemperatureUnitOffset();
                 in >> drho_dT;
-
+                use_density_scaling = false;
                 if (density_model == 61)
                 {
                     in >> rho_pressure_cutoff;
@@ -419,11 +419,13 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
             }
             if (density_model == 7)  // rho(p,p_v,T)
             {
+                use_density_scaling = false;
                 compressibility_model_temperature = 7;
                 compressibility_model_pressure = 7;
             }
             if (density_model == 8)  // rho(p,T,C)
             {
+                use_density_scaling = false;
                 densityIAPWS =
                     new MaterialLib::Fluid::WaterDensityIAPWSIF97Region1();
                 compressibility_model_temperature = 8;
@@ -433,6 +435,7 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
             }
             if (density_model == 28)  // rho_0 exp( beta(pL- pL0)+alpha T) 
             {
+                use_density_scaling = false;
                 compressibility_model_temperature = 28;
                 compressibility_model_pressure = 28;
                 density_pcs_name_vector.push_back("PRESSURE1");
@@ -440,6 +443,7 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
             }
             if (density_model == 9)  // WW
             {
+                use_density_scaling = false;
                 // Molar mass
                 in >> molar_mass;
                 compressibility_model_temperature = 7;
@@ -455,6 +459,7 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
                     12)  // NB 4.9.05  Redlich-Kwong Equation of State
                 || (density_model == 13))  // NB JUN 09  Fundamental equation
             {
+                use_density_scaling = false;
                 std::string arg1, arg2, arg3;
                 in >> arg1 >> arg2 >>
                     arg3;  // get up to three arguments for density model
@@ -509,6 +514,7 @@ std::ios::pos_type CFluidProperties::Read(std::ifstream* mfp_file)
                                       // for water, range p < 100 MPa, 0 <= T <=
             // 350 °C   Magri GFZ thesis
             {  // JOD 2014-11-10
+                use_density_scaling = false;
                 in >> C_0;
                 in >> drho_dC;
                 density_pcs_name_vector.push_back("PRESSURE1");
@@ -968,7 +974,7 @@ bool MFPRead(std::string file_base_name)
             mfp_vector.push_back(m_mfp);
             mfp_file.seekg(position, std::ios::beg);
         }  // keyword found
-    }      // eof
+    }  // eof
     //========================================================================
     // Configuration
     int i;
@@ -3790,8 +3796,8 @@ double CFluidProperties::drhodP(double* variables)
             // in case 3, compressibility_pressure acts as delta P
             drhodP = (rho1 - rho2) / compressibility_pressure;
 
-            break;             // use of difference quotient
-        case 6:                //
+            break;  // use of difference quotient
+        case 6:     //
             return rho_0 * drho_dp;
         case 7:  // Pefect gas. WW
             return molar_mass / (PhysicalConstant::IdealGasConstant * T);
@@ -4282,4 +4288,4 @@ double Hash_Table::CalcValue(double* var, const int var_id) const
         }
     return 0.;
 }
-#endif  //#ifdef MFP_TEST
+#endif  // #ifdef MFP_TEST
