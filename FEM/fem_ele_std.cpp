@@ -6036,6 +6036,13 @@ void CFiniteElementStd::CalcStrainCoupling(int phase)
         }
         //
         fkt *= CalCoefStrainCouping(gp, phase);
+
+        IntegrationPointVariableBuffer const val_ip = vapor_variable_buffer[gp];
+        if (!FluidProp->useDensityScaling())
+        {
+            fkt *= val_ip.rho_w;
+        }
+
         for (size_t i = 0; i < dim; i++)
         {
             for (int k = 0; k < nnodes; k++)
