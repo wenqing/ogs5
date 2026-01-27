@@ -10,11 +10,11 @@
 #ifndef EOS_H_
 #define EOS_H_
 
-//#include <math.h>
-//#include <fstream>
-//#include <iostream>
-//#include <stdio.h>
-//#include <string>
+// #include <math.h>
+// #include <fstream>
+// #include <iostream>
+// #include <stdio.h>
+#include <string>
 
 class CFluidProperties;  // 14.11.2012. WW
 double pressure(double rho, double T, int fluid);
