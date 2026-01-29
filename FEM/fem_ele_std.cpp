@@ -9650,6 +9650,26 @@ void CFiniteElementStd::AssembleAddtionalJacobianHM()
     double const e_rel = 1.e-5;
     double const e_abs = 1e3;
 
+// Use J_up for coupling with deformation may cause instability and is not
+// recommended.
+// #define USE_J_pu
+#ifdef USE_J_pu
+    // du is stored in u_0
+    for (int i = 0; i < nnodesHQ; i++)
+    {
+        NodalVal2[i] = (pcs->GetNodeValue(nodes[i], Idx_dm1[0]) -
+                        pcs->GetNodeValue(nodes[i], Idx_dm0[0])) /
+                       dt;
+        NodalVal3[i] = (pcs->GetNodeValue(nodes[i], Idx_dm1[1]) -
+                        pcs->GetNodeValue(nodes[i], Idx_dm0[1])) /
+                       dt;
+        if (dim == 3)  // 3D.
+            NodalVal4[i] = (pcs->GetNodeValue(nodes[i], Idx_dm1[2]) -
+                            pcs->GetNodeValue(nodes[i], Idx_dm0[2])) /
+                           dt;
+    }
+#endif
+
     //----------------------------------------------------------------------
     // Loop over Gauss points
     double args[3];
@@ -9707,6 +9727,33 @@ void CFiniteElementStd::AssembleAddtionalJacobianHM()
             }
         }
 
+#ifdef USE_J_pu
+        double eps_v_dt = 0.0;
+
+        for (size_t i = 0; i < dim; i++)
+        {
+            for (int j = 0; j < nnodesHQ; j++)
+            {
+                if (i == 0)
+                    eps_v_dt += NodalVal2[j] * dshapefctHQ[i * nnodesHQ + j];
+                else if (i == 1)
+                    eps_v_dt += NodalVal3[j] * dshapefctHQ[i * nnodesHQ + j];
+                else if (i == 2)
+                    eps_v_dt += NodalVal4[j] * dshapefctHQ[i * nnodesHQ + j];
+            }
+        }
+        if (axisymmetry)
+        {
+            double radius = 0.0;
+            for (int i = 0; i < nnodes; i++)
+                radius += shapefct[i] * X[i];
+            for (int j = 0; j < nnodesHQ; j++)
+            {
+                eps_v_dt += NodalVal2[j] * shapefctHQ[j] / radius;
+            }
+        }
+#endif
+
         // K * grad_p * drho_dp +  rho_l * drho_dp * g* K * grad_z
         double K_vec[3];
         for (size_t i = 0; i < dim; i++)
@@ -9725,6 +9772,10 @@ void CFiniteElementStd::AssembleAddtionalJacobianHM()
         const double poro_val =
             MediaProp->Porosity(Index, pcs->m_num->ls_theta);
         double coef_mass = poro_val * drho_dp2 * dp_dt;
+
+#ifdef USE_J_pu
+        coef_mass += drho_dp * eps_v_dt;
+#endif
 
 #if defined(USE_PETSC)  // || defined(other parallel libs)//03~04.3012. WW
         //---------------------------------------------------------
