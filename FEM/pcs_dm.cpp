@@ -3163,6 +3163,12 @@ void CRFProcessDeformation::ReadGaussPointStress()
 
     ScreenMessage("-> Read initial stress \n");
     fstream file_stress(StressFileName.data(), ios::binary | ios::in);
+    if (!file_stress.good())
+    {
+        ScreenMessage("Error: cannot open file %s\n", StressFileName.data());
+        abort();
+    }
+
     ElementValue_DM* eleV_DM = NULL;
     //
     std::size_t ActiveElements;
