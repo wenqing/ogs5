@@ -1233,7 +1233,6 @@ void CRFProcessDeformation::InitGauss(void)
         if (_init_domain_data_type == FiniteElement::READ ||
             _init_domain_data_type == FiniteElement::READ_WRITE)
         {
-            ccounter = 0;
             _has_initial_stress_data = false;
         }
     }
