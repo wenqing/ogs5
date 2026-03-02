@@ -114,7 +114,9 @@ CRFProcessDeformation::~CRFProcessDeformation()
             WriteGaussPointStress(this->_is_last_time_step);
             if (type == 41 &&
                 (_init_domain_data_type == FiniteElement::WRITE ||
-                 _init_domain_data_type == FiniteElement::READ_WRITE))
+                 _init_domain_data_type == FiniteElement::READ_WRITE ||
+                 _init_domain_data_type ==
+                     FiniteElement::READ_WITH_IC_AND_WRITE))
             {
                 // mono-deformation-liquid
                 WriteSolution();
@@ -3076,7 +3078,8 @@ void CRFProcessDeformation::WriteGaussPointStress(const bool last_step)
     }
 
     if (!(_init_domain_data_type == FiniteElement::WRITE ||
-          _init_domain_data_type == FiniteElement::READ_WRITE))
+          _init_domain_data_type == FiniteElement::READ_WRITE ||
+          _init_domain_data_type == FiniteElement::READ_WITH_IC_AND_WRITE))
         return;
 
     if ((aktueller_zeitschritt % nwrite_restart) > 0 && (!last_step) &&
