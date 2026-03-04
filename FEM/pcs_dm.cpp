@@ -1238,8 +1238,11 @@ void CRFProcessDeformation::InitGauss(void)
             _has_initial_stress_data = false;
         }
     }
-
-    if (ccounter > 0)
+    // Initial stresses are given in .ic
+    // file, reload
+    if (ccounter > 0 &&
+        (_init_domain_data_type == FiniteElement::READ_WITH_IC ||
+         _init_domain_data_type == FiniteElement::READ_WITH_IC_AND_WRITE))
     {
         for (i = 0; i < m_msh->ele_vector.size(); i++)
         {
